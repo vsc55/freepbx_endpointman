@@ -36,4 +36,4 @@
 		<module>fw_ari</module>
 	</requirements>
 <md5sum>85ae420a16561d5482bc12d6cb2877b6</md5sum>
-</module>
+<supported><version>2.10</version></supported></module>
