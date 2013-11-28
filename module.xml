@@ -28,4 +28,4 @@
 		<module>fw_ari</module>
 	</requirements>
 <md5sum>2832e12476c29c6a72c85225fb7ad143</md5sum>
-</module>
+<supported><version>2.10</version></supported></module>
