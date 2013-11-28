@@ -34,4 +34,4 @@
         <phpversion>5.1.0</phpversion>
 	</requirements>
 <md5sum>a3f341e28698ea988c987efd72d0d9c8</md5sum>
-</module>
+<supported><version>2.11</version></supported></module>
