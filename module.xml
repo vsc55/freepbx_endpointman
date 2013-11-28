@@ -32,4 +32,4 @@
         <phpversion>5.1.0</phpversion>
 	</requirements>
 <md5sum>ca102c2a63a441f9ae5fd9a532aa3bca</md5sum>
-</module>
+<supported><version>2.11</version></supported></module>
