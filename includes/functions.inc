@@ -320,7 +320,7 @@ class endpointmanager {
         return($phone_info);
     }
 
-    function add_device($mac, $model, $ext, $template=NULL, $line=NULL, $displayname=NULL) {
+    function add_device($mac, $model, $ext, $template, $line=NULL, $displayname=NULL) {
 
         $mac = $this->mac_check_clean($mac);
         if ($mac) {
