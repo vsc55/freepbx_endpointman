@@ -48,9 +48,15 @@ switch ($_REQUEST['subpage']) {
 
                                             $sql_model = "SELECT id FROM endpointman_model_list WHERE brand = " . $brand_id . " AND model LIKE '%" . $device[2] . "%' LIMIT 1";
                                             $sql_ext = "SELECT extension, name FROM users WHERE extension LIKE '%" . $device[3] . "%' LIMIT 1";
-											$sql_template = "Select id From endpointman_template_list WHERE name LIKE '%" . $device[5] . "%' LIMIT 1"; 
-	                                        $template = $endpoint->eda->sql($sql_template, 'getOne');
-                                            $template = $template[0];
+					    
+                                           if ($device[5] != "") {
+                                            	$sql_template = "Select id From endpointman_template_list WHERE name LIKE '%" . $device[5] . "%' LIMIT 1"; 
+	                                    	$template = $endpoint->eda->sql($sql_template, 'getOne');
+                                            	$template = $template[0];
+                                            } else {
+						$template = 0;
+                                            }
+
 
                                             $line_id = isset($device[4]) ? $device[4] : 1;
 
