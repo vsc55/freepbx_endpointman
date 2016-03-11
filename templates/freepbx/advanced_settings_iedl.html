@@ -17,14 +17,15 @@
 <font style="font-size: 0.8em"><i class='icon-warning-sign'></i><strong>Warning:</strong> The extensions need to be added into FreePBX before you import.</font></p>
 
 <h5><?php echo _('CSV File Format')?></h5>
-<code class='inline'>&lt;<?php echo _('MAC Address')?>&gt;,&lt;<?php echo _('Brand')?>&gt;,&lt;<?php echo _('Model')?>&gt;,&lt;<?php echo _('Extension')?>&gt;,&lt;<?php echo _('Line')?>&gt;</code>
+<code class='inline'>&lt;<?php echo _('MAC Address')?>&gt;,&lt;<?php echo _('Brand')?>&gt;,&lt;<?php echo _('Model')?>&gt;,&lt;<?php echo _('Extension')?>&gt;,&lt;<?php echo _('Line')?>&gt;,&lt;<?php echo _('Template')?>&gt;</code>
 <ul class='nobullets'>
 <li><code class='inline'><?php echo _('MAC Address')?></code> - <?php echo _('is required')?></li>
-<li><code class='inline'><?php echo _('Brand')?></code> - <?php echo _('can be blank')?></li>
-<li><code class='inline'><?php echo _('Model')?></code> - <?php echo _('can be blank')?></li>
-<li><code class='inline'><?php echo _('Extension')?></code> - <?php echo _('can be blank')?></li>
+<li><code class='inline'><?php echo _('Brand')?></code> - <?php echo _('is required')?></li>
+<li><code class='inline'><?php echo _('Model')?></code> - <?php echo _('is required')?></li>
+<li><code class='inline'><?php echo _('Extension')?></code> - <?php echo _('is required')?></li>
 <li><code class='inline'><?php echo _('Line')?></code> - <?php echo _('can be blank')?></li>
+<li><code class='inline'><?php echo _('Template')?></code> - <?php echo _('can be blank')?></li>
 </ul>
 <h6><?php echo _('Examples')?>:</h6>
-<code class='inline'>001122334455,Cisco/Linksys,7940,4321,1</code><br/>
+<code class='inline'>001122334455,Cisco/Linksys,7940,4321,1,Template</code><br/>
 <code class='inline'>112233445566,Cisco/Linksys,7945,,</code>
