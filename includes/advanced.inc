@@ -50,9 +50,14 @@ switch ($_REQUEST['subpage']) {
                                             $sql_ext = "SELECT extension, name FROM users WHERE extension LIKE '%" . $device[3] . "%' LIMIT 1";
 					    
                                            if ($device[5] != "") {
-                                            	$sql_template = "Select id From endpointman_template_list WHERE name ='" . $device[5] . "' LIMIT 1"; 
-	                                    		$template = $endpoint->eda->sql($sql_template, 'getOne');
-                                            	$template = $template[0];
+                                           		$sql_template = "Select id From endpointman_template_list WHERE name ='" . $device[5] . "' LIMIT 1"; 
+	                                    		$res_template = $endpoint->eda->sql($sql_template);
+	                                    		if ($res_template->numRows()) {
+	                                    			$template = $endpoint->eda->sql($sql_template, 'getRow', DB_FETCHMODE_ASSOC);
+                                            		$template = $template['id'];
+                                            	} else {
+                                            	    $endpoint->error['csv_upload'] .= "Invalid Template Specified on line " . $i . "<br />";
+												}
                                             } else {
 												$template = 0;
                                             }
