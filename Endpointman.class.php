@@ -12,16 +12,16 @@ namespace FreePBX\modules;
 
 function format_txt($texto = "", $css_class = "", $remplace_txt = array())
 {
-	if (count($remplace_txt) > 0) 
+	if (count($remplace_txt) > 0)
 	{
 		foreach ($remplace_txt as $clave => $valor) {
 			$texto = str_replace($clave, $valor, $texto);
 		}
 	}
-	return '<p ' . ($css_class != '' ? 'class="' . $css_class . '"' : '') . '>'.$texto.'</p>';	
+	return '<p ' . ($css_class != '' ? 'class="' . $css_class . '"' : '') . '>'.$texto.'</p>';
 }
 
-function generate_xml_from_array ($array, $node_name, &$tab = -1) 
+function generate_xml_from_array ($array, $node_name, &$tab = -1)
 {
 	$tab++;
 	$xml ="";
@@ -30,11 +30,11 @@ function generate_xml_from_array ($array, $node_name, &$tab = -1)
 			if (is_numeric($key)) {
 				$key = $node_name;
 			}
-			
+
 			$xml .= str_repeat("	", $tab). '<' . $key . '>' . "\n";
 			$xml .= generate_xml_from_array($value, $node_name, $tab);
 			$xml .= str_repeat("	", $tab). '</' . $key . '>' . "\n";
-			
+
 		}
 	} else {
 		$xml = str_repeat("	", $tab) . htmlspecialchars($array, ENT_QUOTES) . "\n";
@@ -45,25 +45,25 @@ function generate_xml_from_array ($array, $node_name, &$tab = -1)
 
 
 class Endpointman implements \BMO {
-	
+
 	//public $epm_config;
-	
-	
+
+
 	public $db; //Database from FreePBX
 	public $eda; //endpoint data abstraction layer
 	public $tpl; //Template System Object (RAIN TPL)
 	//public $system;
-	
+
     public $error; //error construct
     public $message; //message construct
-	
+
 	public $UPDATE_PATH;
     public $MODULES_PATH;
 	public $LOCAL_PATH;
 	public $PHONE_MODULES_PATH;
 	public $PROVISIONER_BASE;
-	
-	
+
+
 	public function __construct($freepbx = null) {
 		if ($freepbx == null) {
 			throw new \Exception("Not given a FreePBX Object");
@@ -74,41 +74,45 @@ class Endpointman implements \BMO {
 		require_once('lib/datetimezone.class.php');
 		require_once('lib/epm_data_abstraction.class.php');
 		//require_once("lib/RainTPL.class.php");
-		
+
 		$this->freepbx = $freepbx;
 		$this->db = $freepbx->Database;
 		$this->config = $freepbx->Config;
 		$this->configmod = new Endpointman\Config();
 		$this->system = new epm_system();
 		$this->eda = new epm_data_abstraction($this->config, $this->configmod);
-		
-		
+
+
 		$this->configmod->set('disable_epm', FALSE);
 		$this->eda->global_cfg = $this->configmod->getall();
-		
+
         //Generate empty array
         $this->error = array();
         $this->message = array();
-		
-		
+
+
 		$this->configmod->set('tz', $this->config->get('PHPTIMEZONE'));
 		date_default_timezone_set($this->configmod->get('tz'));
-		
+
 		$this->UPDATE_PATH = $this->configmod->get('update_server');
         $this->MODULES_PATH = $this->config->get('AMPWEBROOT') . '/admin/modules/';
-        
-define("UPDATE_PATH", $this->UPDATE_PATH);
-define("MODULES_PATH", $this->MODULES_PATH);
-        
-		
+
+if(!defined("UPDATE_PATH")) {
+	define("UPDATE_PATH", $this->UPDATE_PATH);
+	define("MODULES_PATH", $this->MODULES_PATH);
+}
+
+
         //Determine if local path is correct!
         if (file_exists($this->MODULES_PATH . "endpointman/")) {
             $this->LOCAL_PATH = $this->MODULES_PATH . "endpointman/";
-define("LOCAL_PATH", $this->LOCAL_PATH);
+						if(!defined("LOCAL_PATH")) {
+							define("LOCAL_PATH", $this->LOCAL_PATH);
+						}
         } else {
             die("Can't Load Local Endpoint Manager Directory!");
         }
-		
+
         //Define the location of phone modules, keeping it outside of the module directory so that when the user updates endpointmanager they don't lose all of their phones
         if (file_exists($this->MODULES_PATH . "_ep_phone_modules/")) {
             $this->PHONE_MODULES_PATH = $this->MODULES_PATH . "_ep_phone_modules/";
@@ -124,16 +128,10 @@ define("LOCAL_PATH", $this->LOCAL_PATH);
                 die('Endpoint Manager can not create the modules folder!');
             }
         }
-define("PHONE_MODULES_PATH", $this->PHONE_MODULES_PATH);
-		
-        //Define error reporting
-        if (($this->configmod->get('debug')) AND (!isset($_REQUEST['quietmode']))) {
-            error_reporting(E_ALL);
-            ini_set('display_errors', 1);
-        } else {
-            ini_set('display_errors', 0);
-        }
-		
+				if(!defined("PHONE_MODULES_PATH")) {
+					define("PHONE_MODULES_PATH", $this->PHONE_MODULES_PATH);
+				}
+
         //Check if config location is writable and/or exists!
         if ($this->configmod->isExiste('config_location')) {
 			$config_location = $this->configmod->get('config_location');
@@ -153,25 +151,29 @@ define("PHONE_MODULES_PATH", $this->PHONE_MODULES_PATH);
 				$this->configmod->set('disable_epm', TRUE);
             }
         }
-        
+
         //$this->tpl = new RainTPL(LOCAL_PATH . '_old/templates/freepbx', LOCAL_PATH . '_old/templates/freepbx/compiled', '/admin/assets/endpointman/images');
 		//$this->tpl = new RainTPL('/admin/assets/endpointman/images');
-		
-		
+
+
 		require_once('Endpointman_Config.class.php');
 		$this->epm_config = new Endpointman_Config($freepbx, $this->configmod, $this->system);
-		
+
 		require_once('Endpointman_Advanced.class.php');
 		$this->epm_advanced = new Endpointman_Advanced($freepbx, $this->configmod, $this->epm_config);
-		
+
 		require_once('Endpointman_Templates.class.php');
 		$this->epm_templates = new Endpointman_Templates($freepbx, $this->configmod, $this->epm_config, $this->eda);
-		
+
 		require_once('Endpointman_Devices.class.php');
 		$this->epm_devices = new Endpointman_Devices($freepbx, $this->configmod);
-		
+
 	}
-	
+
+	public function epm_advanced_config_loc_is_writable() {
+		return true;
+	}
+
 	public function chownFreepbx() {
 		$webroot = $this->config->get('AMPWEBROOT');
 		$modulesdir = $webroot . '/admin/modules/';
@@ -187,77 +189,73 @@ define("PHONE_MODULES_PATH", $this->PHONE_MODULES_PATH);
 						'perms' => 0755);
 		return $files;
 	}
-	
+
 	public function ajaxRequest($req, &$setting) {
 		//AVISO!!!!!!!!!!!!!!!!!!!!!!!!!!
 		//PERMITE TODO!!!!!!!!!!!!!!!!!!!
 		//$setting['authenticate'] = true;
 		//$setting['allowremote'] = true;
 		//return true;
-		
+
 		$module_sec = isset($_REQUEST['module_sec'])? trim($_REQUEST['module_sec']) : '';
 		if ($module_sec == "") { return false; }
-		
+
 		switch($module_sec)
 		{
-			case "epm_devices": 
+			case "epm_devices":
 				return $this->epm_devices->ajaxRequest($req, $setting);
 				break;
-			
-			case "epm_config": 
+
+			case "epm_config":
 				return $this->epm_config->ajaxRequest($req, $setting);
 				break;
-				
-			case "epm_advanced": 
+
+			case "epm_advanced":
 				return $this->epm_advanced->ajaxRequest($req, $setting);
 				break;
-				
-			case "epm_templates": 
+
+			case "epm_templates":
 				return $this->epm_templates->ajaxRequest($req, $setting);
 				break;
 		}
         return false;
     }
-	
+
     public function ajaxHandler() {
 		$module_sec = isset($_REQUEST['module_sec'])? trim($_REQUEST['module_sec']) : '';
 		$module_tab = isset($_REQUEST['module_tab'])? trim($_REQUEST['module_tab']) : '';
 		$command = isset($_REQUEST['command'])? trim($_REQUEST['command']) : '';
-		
-		if ($command == "") { 
+
+		if ($command == "") {
 			return array("status" => false, "message" => _("No command was sent!"));
 		}
-		
+
 		$arrVal['mod_sec'] = array("epm_devices", "epm_templates", "epm_config", "epm_advanced");
 		if (! in_array($module_sec, $arrVal['mod_sec'])) {
 			return array("status" => false, "message" => _("Invalid section module!"));
 		}
-		
-		switch ($module_sec) 
+
+		switch ($module_sec)
 		{
-			case "epm_devices": 
+			case "epm_devices":
 				return $this->epm_devices->ajaxHandler($module_tab, $command);
 				break;
-				
+
 			case "epm_templates":
 				return $this->epm_templates->ajaxHandler($module_tab, $command);
 				break;
-				
+
 			case "epm_config":
 				return $this->epm_config->ajaxHandler($module_tab, $command);
 				break;
-				
+
 			case "epm_advanced":
 				return $this->epm_advanced->ajaxHandler($module_tab, $command);
 				break;
 		}
 		return false;
     }
-	
-	public static function myDialplanHooks() {
-		return true;
-	}
-	
+
 	public function doConfigPageInit($page) {
 		//TODO: Pendiente revisar y eliminar moule_tab.
 		$module_tab = isset($_REQUEST['module_tab'])? trim($_REQUEST['module_tab']) : '';
@@ -265,64 +263,64 @@ define("PHONE_MODULES_PATH", $this->PHONE_MODULES_PATH);
 			$module_tab = isset($_REQUEST['subpage'])? trim($_REQUEST['subpage']) : '';
 		}
 		$command = isset($_REQUEST['command'])? trim($_REQUEST['command']) : '';
-		
-		
+
+
 		$arrVal['mod_sec'] = array("epm_devices","epm_templates", "epm_config", "epm_advanced");
 		if (! in_array($page, $arrVal['mod_sec'])) {
 			die(_("Invalid section module!"));
 		}
-		
-		switch ($page) 
+
+		switch ($page)
 		{
-			case "epm_devices": 
+			case "epm_devices":
 				$this->epm_devices->doConfigPageInit($module_tab, $command);
 				break;
-				
+
 			case "epm_templates":
 				$this->epm_templates->doConfigPageInit($module_tab, $command);
 				break;
-				
+
 			case "epm_config":
 				$this->epm_config->doConfigPageInit($module_tab, $command);
 				break;
-				
+
 			case "epm_advanced":
 				$this->epm_advanced->doConfigPageInit($module_tab, $command);
 				break;
 		}
 	}
-	
+
 	public function doGeneralPost() {
 		if (!isset($_REQUEST['Submit'])) 	{ return; }
 		if (!isset($_REQUEST['display'])) 	{ return; }
-		
+
 		needreload();
 	}
-	
+
 	public function myShowPage() {
 		if (! isset($_REQUEST['display']))
 			return $this->pagedata;
-		
-		switch ($_REQUEST['display']) 
+
+		switch ($_REQUEST['display'])
 		{
 			case "epm_devices":
 				$this->epm_devices->myShowPage($this->pagedata);
 				break;
-				
+
 			case "epm_templates":
 				$this->epm_templates->myShowPage($this->pagedata);
 				return $this->pagedata;
 				break;
-				
+
 			case "epm_config":
 				$this->epm_config->myShowPage($this->pagedata);
 				break;
-				
+
 			case "epm_advanced":
 				$this->epm_advanced->myShowPage($this->pagedata);
 				break;
 		}
-		
+
 		if(! empty($this->pagedata)) {
 			foreach($this->pagedata as &$page) {
 				ob_start();
@@ -333,86 +331,86 @@ define("PHONE_MODULES_PATH", $this->PHONE_MODULES_PATH);
 			return $this->pagedata;
 		}
 	}
-	
+
 	public function getActiveModules() {
-		
+
 	}
-	
+
 	//http://wiki.freepbx.org/display/FOP/Adding+Floating+Right+Nav+to+Your+Module
 	public function getRightNav($request) {
-		if (! isset($_REQUEST['display'])) 
+		if (! isset($_REQUEST['display']))
 			return '';
-		
+
 		switch($_REQUEST['display'])
 		{
-			case "epm_devices": 
+			case "epm_devices":
 				return $this->epm_devices->getRightNav($request);
 				break;
-			
-			case "epm_config": 
+
+			case "epm_config":
 				return $this->epm_config->getRightNav($request);
 				break;
-				
-			case "epm_advanced": 
+
+			case "epm_advanced":
 				return $this->epm_advanced->getRightNav($request);
 				break;
-				
-			case "epm_templates": 
+
+			case "epm_templates":
 				return $this->epm_templates->getRightNav($request);
 				break;
-				
+
 			default:
 		        return '';
-			
+
 		}
 	}
-	
+
 	//http://wiki.freepbx.org/pages/viewpage.action?pageId=29753755
 	public function getActionBar($request) {
-			if (! isset($_REQUEST['display'])) 
+			if (! isset($_REQUEST['display']))
 			return '';
-		
+
 		switch($_REQUEST['display'])
 		{
-			case "epm_devices": 
+			case "epm_devices":
 				return $this->epm_devices->getActionBar($request);
 				break;
-			
-			case "epm_config": 
+
+			case "epm_config":
 				return $this->epm_config->getActionBar($request);
 				break;
-				
-			case "epm_advanced": 
+
+			case "epm_advanced":
 				return $this->epm_advanced->getActionBar($request);
 				break;
-				
-			case "epm_templates": 
+
+			case "epm_templates":
 				return $this->epm_templates->getActionBar($request);
 				break;
-				
+
 			default:
 		        return '';
-			
+
 		}
 	}
-	
+
 	public function install() {
-		
+
 	}
-	
+
     public function uninstall() {
     	out(_("Removing Phone Modules Directory"));
     	$this->system->rmrf($this->PHONE_MODULES_PATH);
     	exec("rm -R ". $this->PHONE_MODULES_PATH);
-    	
+
     	out(_('Removing symlink to web provisioner'));
     	$provisioning_path = $this->config->get('AMPWEBROOT')."/provisioning";
     	if(is_link($provisioning_path)) { unlink($provisioning_path); }
-    	
+
     	if(!is_link($this->config->get('AMPWEBROOT').'/admin/assets/endpointman')) {
     		$this->system->rmrf($this->config->get('AMPWEBROOT').'/admin/assets/endpointman');
     	}
-    	
+
     	out(_("Dropping all relevant tables"));
     	$sql = "DROP TABLE `endpointman_brand_list`";
     	$sth = $this->db->prepare($sql);
@@ -446,40 +444,40 @@ define("PHONE_MODULES_PATH", $this->PHONE_MODULES_PATH);
     	$sth->execute();
     	return true;
 	}
-	
+
     public function backup() {
 	}
-	
+
     public function restore($backup) {
 	}
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 	private function epm_config_manual_install($install_type = "", $package ="")
 	{
 		if ($install_type == "") {
 			throw new \Exception("Not send install_type!");
 		}
-	
+
 		switch($install_type) {
 			case "export_brand":
 
 				break;
-	
+
 			case "upload_master_xml":
 				if (file_exists($this->PHONE_MODULES_PATH."temp/master.xml")) {
 					$handle = fopen($this->PHONE_MODULES_PATH."temp/master.xml", "rb");
@@ -498,30 +496,30 @@ define("PHONE_MODULES_PATH", $this->PHONE_MODULES_PATH);
 				} else {
 				}
 				break;
-	
+
 			case "upload_provisioner":
-				
+
 				break;
-	
+
 			case "upload_brand":
-			
+
 				break;
 		}
 	}
-	
-	
-	
-	
-	
-	
+
+
+
+
+
+
 	/*****************************************
 	****** CODIGO ANTIGUO -- REVISADO ********
 	*****************************************/
-	
-	
-	
-	
-	
+
+
+
+
+
 	//TODO: DUPLICADO AQUI Y EN epm_advandec
 	/**
      * This function takes a string and tries to determine if it's a valid mac addess, return FALSE if invalid
@@ -567,22 +565,22 @@ define("PHONE_MODULES_PATH", $this->PHONE_MODULES_PATH);
     		return(FALSE);
     	}
     }
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 	/**
      * Returns list of Brands that are installed and not hidden and that have at least one model enabled under them
      * @param integer $selected ID Number of the brand that is supposed to be selected in a drop-down list box
@@ -609,7 +607,7 @@ define("PHONE_MODULES_PATH", $this->PHONE_MODULES_PATH);
         }
         return($temp);
     }
-	
+
 	function listTZ($selected) {
         require_once('lib/datetimezone.class.php');
         $data = \DateTimeZone::listIdentifiers();
@@ -627,7 +625,7 @@ define("PHONE_MODULES_PATH", $this->PHONE_MODULES_PATH);
 
         return($temp);
     }
-	
+
 	function has_git() {
         exec('which git', $output);
 
@@ -642,7 +640,7 @@ define("PHONE_MODULES_PATH", $this->PHONE_MODULES_PATH);
         return!empty($matches[0]) ? $git : false;
         echo!empty($matches[0]) ? 'installed' : 'nope';
     }
-	
+
 	function tftp_check() {
         //create a simple block here incase people have strange issues going on as we will kill http
         //by running this if the server isn't really running!
@@ -685,8 +683,8 @@ echo 'TFTP Server is not running. <br />See here for instructions on how to inst
 echo 'TFTP Server check failed on last past. Skipping';
         }
     }
-	
-	
+
+
     /**
      * Used to send sample configurations to provisioner.net
      * NOTE: The user has to explicitly click a link that states they are sending the configuration to the project
@@ -698,14 +696,14 @@ echo 'TFTP Server check failed on last past. Skipping';
      */
     function submit_config($brand, $product, $orig_name, $data) {
     	$posturl = 'http://www.provisioner.net/submit_config.php';
-    
+
     	$fp = fopen($this->LOCAL_PATH . 'data.txt', 'w');
     	fwrite($fp, $data);
     	fclose($fp);
     	$file_name_with_full_path = $this->LOCAL_PATH . "data.txt";
-    
+
     	$postvars = array('brand' => $brand, 'product' => $product, 'origname' => htmlentities(addslashes($orig_name)), 'file_contents' => '@' . $file_name_with_full_path);
-    
+
     	$ch = curl_init($posturl);
     	curl_setopt($ch, CURLOPT_POST, 1);
     	curl_setopt($ch, CURLOPT_POSTFIELDS, $postvars);
@@ -713,21 +711,21 @@ echo 'TFTP Server check failed on last past. Skipping';
     	curl_setopt($ch, CURLOPT_HEADER, 0);  // DO NOT RETURN HTTP HEADERS
     	curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);  // RETURN THE CONTENTS OF THE CALL, probably not needed
     	$Rec_Data = curl_exec($ch);
-    
+
     	ob_start();
     	header("Content-Type: text/html");
     	$Final_Out = ob_get_clean();
     	curl_close($ch);
     	unlink($file_name_with_full_path);
-    
+
     	return($Final_Out);
     }
-	
-    
 
-    
-    
-    
+
+
+
+
+
     function add_device($mac, $model, $ext, $template=NULL, $line=NULL, $displayname=NULL) {
     	$mac = $this->mac_check_clean($mac);
     	if ($mac) {
@@ -741,12 +739,12 @@ $this->error['add_device'] = _("You Must Select an Extension/Device From the Dro
     			if ($this->sync_model($model)) {
     				$sql = "SELECT id,template_id FROM endpointman_mac_list WHERE mac = '" . $mac . "'";
     				$dup = sql($sql, 'getRow', DB_FETCHMODE_ASSOC);
-    
+
     				if ($dup) {
     					if (!isset($template)) {
     						$template = $dup['template_id'];
     					}
-    
+
     					$sql = "UPDATE endpointman_mac_list SET model = " . $model . ", template_id =  " . $template . " WHERE id = " . $dup['id'];
     					sql($sql);
 						$return = $this->add_line($dup['id'], $line, $ext);
@@ -759,38 +757,38 @@ $this->error['add_device'] = _("You Must Select an Extension/Device From the Dro
     					if (!isset($template)) {
     						$template = 0;
     					}
-    
+
     					$sql = "SELECT mac_id FROM endpointman_line_list WHERE ext = " . $ext;
     					$used = sql($sql, 'getOne');
-    
+
 						if (($used) AND (! $this->configmod->get('show_all_registrations'))) {
 $this->error['add_device'] = "You can't assign the same user to multiple devices!";
     						return(FALSE);
     					}
-    
+
     					if (!isset($displayname)) {
     						$sql = 'SELECT description FROM devices WHERE id = ' . $ext;
     						$name = & sql($sql, 'getOne');
     					} else {
     						$name = $displayname;
     					}
-    
+
     					$sql = 'SELECT endpointman_product_list. * , endpointman_model_list.template_data, endpointman_brand_list.directory FROM endpointman_model_list, endpointman_brand_list, endpointman_product_list WHERE endpointman_model_list.id =  \'' . $model . '\' AND endpointman_model_list.brand = endpointman_brand_list.id AND endpointman_model_list.product_id = endpointman_product_list.id';
     					$row = & sql($sql, 'getRow', DB_FETCHMODE_ASSOC);
-    
+
     					$sql = "INSERT INTO `endpointman_mac_list` (`mac`, `model`, `template_id`) VALUES ('" . $mac . "', '" . $model . "', '" . $template . "')";
     					sql($sql);
-    
+
     					$sql = 'SELECT last_insert_id()';
     					$ext_id = & sql($sql, 'getOne');
-    
+
     					if (empty($line)) {
     						$line = 1;
     					}
-    
+
     					$sql = "INSERT INTO `endpointman_line_list` (`mac_id`, `ext`, `line`, `description`) VALUES ('" . $ext_id . "', '" . $ext . "', '" . $line . "', '" . addslashes($name) . "')";
     					sql($sql);
-    
+
 $this->message['add_device'][] = "Added " . $name . " to line " . $line;
     					return($ext_id);
     				}
@@ -804,32 +802,32 @@ $this->error['add_device'] = _("Invalid MAC Address") . "!";
     		return(FALSE);
     	}
     }
-    
-    
+
+
     function add_line($mac_id, $line=NULL, $ext=NULL, $displayname=NULL) {
     	if ((!isset($line)) AND (!isset($ext))) {
     		if ($this->linesAvailable(NULL, $mac_id)) {
     			if ($this->eda->all_unused_registrations()) {
     				$sql = 'SELECT * FROM endpointman_line_list WHERE mac_id = ' . $mac_id;
     				$lines_list = sql($sql, 'getAll', DB_FETCHMODE_ASSOC);
-    
+
     				foreach ($lines_list as $row) {
     					$sql = "SELECT description FROM devices WHERE id = " . $row['ext'];
     					$name = sql($sql, 'getOne');
-    
+
     					$sql = "UPDATE endpointman_line_list SET line = '" . $row['line'] . "', ext = '" . $row['ext'] . "', description = '" . $this->eda->escapeSimple($name) . "' WHERE luid =  " . $row['luid'];
     					sql($sql);
     				}
-    
+
     				$reg = array_values($this->display_registration_list());
     				$lines = array_values($this->linesAvailable(NULL, $mac_id));
-    
+
     				$sql = "SELECT description FROM devices WHERE id = " . $reg[0]['value'];
     				$name = sql($sql, 'getOne');
-    
+
     				$sql = "INSERT INTO `endpointman_line_list` (`mac_id`, `ext`, `line`, `description`) VALUES ('" . $mac_id . "', '" . $reg[0]['value'] . "', '" . $lines[0]['value'] . "', '" . addslashes($name) . "')";
     				sql($sql);
-    
+
 $this->message['add_line'] = "Added '<i>" . $name . "</i>' to line '<i>" . $lines[0]['value'] . "</i>' on device '<i>" . $reg[0]['value'] . "</i>' <br/> Configuration Files will not be Generated until you click Save!";
     				return($mac_id);
     			} else {
@@ -844,10 +842,10 @@ $this->error['add_line'] = _("No Lines Left to Add") . "!";
     		if ($this->linesAvailable(NULL, $mac_id)) {
     			if ($this->eda->all_unused_registrations()) {
     				$lines = array_values($this->linesAvailable(NULL, $mac_id));
-    
+
     				$sql = "INSERT INTO `endpointman_line_list` (`mac_id`, `ext`, `line`, `description`) VALUES ('" . $mac_id . "', '" . $ext . "', '" . $lines[0]['value'] . "', '" . addslashes($displayname) . "')";
     				sql($sql);
-    
+
 $this->message['add_line'] = "Added '<i>" . $name . "</i>' to line '<i>" . $lines[0]['value'] . "</i>' on device '<i>" . $reg[0]['value'] . "</i>' <br/> Configuration Files will not be Generated until you click Save!";
     				return($mac_id);
     			} else {
@@ -871,7 +869,7 @@ $this->error['add_line'] = "This line has already been assigned!";
     			} else {
     				$name = $displayname;
     			}
-    
+
     			$sql = "INSERT INTO `endpointman_line_list` (`mac_id`, `ext`, `line`, `description`) VALUES ('" . $mac_id . "', '" . $ext . "', '" . $line . "', '" . addslashes($name) . "')";
     			sql($sql);
 $this->message['add_line'] .= "Added " . $name . " to line " . $line . "<br/>";
@@ -880,25 +878,25 @@ $this->message['add_line'] .= "Added " . $name . " to line " . $line . "<br/>";
     	}
     }
 
-    
+
     function linesAvailable($lineid=NULL, $macid=NULL) {
     	if (isset($lineid)) {
     		$sql = "SELECT max_lines FROM endpointman_model_list WHERE id = (SELECT endpointman_mac_list.model FROM endpointman_mac_list, endpointman_line_list WHERE endpointman_line_list.luid = " . $lineid . " AND endpointman_line_list.mac_id = endpointman_mac_list.id)";
-    
+
     		$sql_l = "SELECT line, mac_id FROM `endpointman_line_list` WHERE luid = " . $lineid;
     		$line = sql($sql_l, 'getRow', DB_FETCHMODE_ASSOC);
-    
+
     		$sql_lu = "SELECT line FROM endpointman_line_list WHERE mac_id = " . $line['mac_id'];
     	} elseif (isset($macid)) {
     		$sql = "SELECT max_lines FROM endpointman_model_list WHERE id = (SELECT model FROM endpointman_mac_list WHERE id =" . $macid . ")";
     		$sql_lu = "SELECT line FROM endpointman_line_list WHERE mac_id = " . $macid;
-    
+
     		$line['line'] = 0;
     	}
-    
+
     	$max_lines = sql($sql, 'getOne');
     	$lines_used = sql($sql_lu, 'getAll');
-    
+
     	for ($i = 1; $i <= $max_lines; $i++) {
     		if ($i == $line['line']) {
     			$temp[$i]['value'] = $i;
@@ -917,15 +915,15 @@ $this->message['add_line'] .= "Added " . $name . " to line " . $line . "<br/>";
     		return FALSE;
     	}
     }
-    
-    
-    
+
+
+
     /**
      * Display all unused registrations from whatever manager we are using!
      * @return <type>
      */
     function display_registration_list($line_id=NULL) {
-    
+
     	if (isset($line_id)) {
     		$result = $this->eda->all_unused_registrations();
     		$line_data = $this->eda->get_line_information($line_id);
@@ -933,7 +931,7 @@ $this->message['add_line'] .= "Added " . $name . " to line " . $line . "<br/>";
     		$result = $this->eda->all_unused_registrations();
     		$line_data = NULL;
     	}
-    
+
     	$i = 1;
     	$temp = array();
     	foreach ($result as $row) {
@@ -941,17 +939,17 @@ $this->message['add_line'] .= "Added " . $name . " to line " . $line . "<br/>";
     		$temp[$i]['text'] = $row['id'] . " --- " . $row['description'];
     		$i++;
     	}
-    
+
     	if (isset($line_data)) {
     		$temp[$i]['value'] = $line_data['ext'];
     		$temp[$i]['text'] = $line_data['ext'] . " --- " . $line_data['description'];
     		$temp[$i]['selected'] = "selected";
     	}
-    
+
     	return($temp);
     }
-	
-    
+
+
     /**
      * Send this function an ID from the mac devices list table and you'll get all the information we have on that particular phone
      * @param integer $mac_id ID number reference from the MySQL database referencing the table endpointman_mac_list
@@ -1005,24 +1003,24 @@ $this->error['get_phone_info'] = "Mac ID is not set";
     		return(FALSE);
     	}
     	$sql = "SELECT id FROM endpointman_mac_list WHERE model > 0 AND id =" . $mac_id;
-    
+
     	//$res = sql($sql);
 		$res = sql($sql, 'getAll', DB_FETCHMODE_ASSOC);
     	if ($res->numRows()) {
     		//Returns Brand Name, Brand Directory, Model Name, Mac Address, Extension (FreePBX), Custom Configuration Template, Custom Configuration Data, Product Name, Product ID, Product Configuration Directory, Product Configuration Version, Product XML name,
     		$sql = "SELECT endpointman_mac_list.specific_settings, endpointman_mac_list.config_files_override, endpointman_mac_list.global_user_cfg_data, endpointman_model_list.id as model_id, endpointman_brand_list.id as brand_id, endpointman_brand_list.name, endpointman_brand_list.directory, endpointman_model_list.model, endpointman_mac_list.mac, endpointman_mac_list.template_id, endpointman_mac_list.global_custom_cfg_data, endpointman_product_list.long_name, endpointman_product_list.id as product_id, endpointman_product_list.cfg_dir, endpointman_product_list.cfg_ver, endpointman_model_list.template_data, endpointman_model_list.enabled, endpointman_mac_list.global_settings_override FROM endpointman_line_list, endpointman_mac_list, endpointman_model_list, endpointman_brand_list, endpointman_product_list WHERE endpointman_mac_list.model = endpointman_model_list.id AND endpointman_brand_list.id = endpointman_model_list.brand AND endpointman_product_list.id = endpointman_model_list.product_id AND endpointman_mac_list.id = endpointman_line_list.mac_id AND endpointman_mac_list.id = " . $mac_id;
     		$phone_info = sql($sql, 'getRow', DB_FETCHMODE_ASSOC);
-    
+
     		if (!$phone_info) {
 $this->error['get_phone_info'] = "Error with SQL Statement";
     		}
-    
+
     		//If there is a template associated with this phone then pull that information and put it into the array
     		if ($phone_info['template_id'] > 0) {
     			$sql = "SELECT name, global_custom_cfg_data, config_files_override, global_settings_override FROM endpointman_template_list WHERE id = " . $phone_info['template_id'];
     			$phone_info['template_data_info'] = sql($sql, 'getRow', DB_FETCHMODE_ASSOC);
     		}
-    
+
     		$sql = "SELECT endpointman_line_list.*, sip.data as secret, devices.*, endpointman_line_list.description AS epm_description FROM endpointman_line_list, sip, devices WHERE endpointman_line_list.ext = devices.id AND endpointman_line_list.ext = sip.id AND sip.keyword = 'secret' AND mac_id = " . $mac_id . " ORDER BY endpointman_line_list.line ASC";
     		$lines_info = sql($sql, 'getAll', DB_FETCHMODE_ASSOC);
     		foreach ($lines_info as $line) {
@@ -1034,7 +1032,7 @@ $this->error['get_phone_info'] = "Error with SQL Statement";
     		$sql = "SELECT id, mac FROM endpointman_mac_list WHERE id =" . $mac_id;
     		//Phone is unknown, we need to display this to the end user so that they can make corrections
     		$row = sql($sql, 'getRow', DB_FETCHMODE_ASSOC);
-    
+
 			$brand = $this->get_brand_from_mac($row['mac']);
     		if ($brand) {
     			$phone_info['brand_id'] = $brand['id'];
@@ -1043,7 +1041,7 @@ $this->error['get_phone_info'] = "Error with SQL Statement";
     			$phone_info['brand_id'] = 0;
     			$phone_info['name'] = 'Unknown';
     		}
-    
+
     		$phone_info['id'] = $mac_id;
     		$phone_info['model_id'] = 0;
     		$phone_info['product_id'] = 0;
@@ -1057,7 +1055,7 @@ $this->error['get_phone_info'] = "Error with SQL Statement";
     	}
     	return $phone_info;
     }
-	
+
     /**
      * Get the brand from any mac sent to this function
      * @param string $mac
@@ -1068,16 +1066,16 @@ $this->error['get_phone_info'] = "Error with SQL Statement";
 		if (!$this->mac_check_clean($mac)) {
     		return(FALSE);
     	}
-    
+
     	//Get the OUI only
     	$oui = substr($this->mac_check_clean($mac), 0, 6);
     	//Find the matching brand model to the oui
     	$oui_sql = "SELECT endpointman_brand_list.name, endpointman_brand_list.id FROM endpointman_oui_list, endpointman_brand_list WHERE oui LIKE '%" . $oui . "%' AND endpointman_brand_list.id = endpointman_oui_list.brand AND endpointman_brand_list.installed = 1 LIMIT 1";
     	$brand = sql($oui_sql, 'getRow', DB_FETCHMODE_ASSOC);
-    
+
     	$res = sql($oui_sql);
     	$brand_count = $res->numRows();
-    
+
     	if (!$brand_count) {
     		//oui doesn't have a matching mysql reference, probably a PC/router/wap/printer of some sort.
     		$phone_info['id'] = 0;
@@ -1086,19 +1084,19 @@ $this->error['get_phone_info'] = "Error with SQL Statement";
     		$phone_info['id'] = $brand['id'];
     		$phone_info['name'] = $brand['name'];
     	}
-    
+
     	return($phone_info);
     }
-	
-	
-	
+
+
+
     /**
      * Prepare and then send the data that Provisioner expects, then take what provisioner gives us and do what it says
      * @param array $phone_info Everything from get_phone_info
      * @param bool  $reboot Reboot the Phone after write
      * @param bool  $write  Write out Directory structure.
      */
-    function prepare_configs($phone_info, $reboot=TRUE, $write=TRUE) 
+    function prepare_configs($phone_info, $reboot=TRUE, $write=TRUE)
     {
     	$this->PROVISIONER_BASE = $this->PHONE_MODULES_PATH;
 //define('PROVISIONER_BASE', $this->PROVISIONER_BASE);
@@ -1106,7 +1104,7 @@ $this->error['get_phone_info'] = "Error with SQL Statement";
     		if (!class_exists('ProvisionerConfig')) {
     			require($this->PHONE_MODULES_PATH . 'autoload.php');
     		}
-    
+
     		//Load Provisioner
     		$class = "endpoint_" . $phone_info['directory'] . "_" . $phone_info['cfg_dir'] . '_phone';
     		$base_class = "endpoint_" . $phone_info['directory'] . '_base';
@@ -1120,10 +1118,10 @@ $this->error['get_phone_info'] = "Error with SQL Statement";
     		if (!class_exists($class)) {
     			ProvisionerConfig::endpointsAutoload($class);
     		}
-    
+
     		if (class_exists($class)) {
 				$provisioner_lib = new $class();
-    
+
     			//Determine if global settings have been overridden
     			if ($phone_info['template_id'] > 0) {
     				if (isset($phone_info['template_data_info']['global_settings_override'])) {
@@ -1144,25 +1142,25 @@ $this->error['get_phone_info'] = "Error with SQL Statement";
     					$settings['tz'] = $this->configmod->get('tz');
     				}
     			}
-    
-    
-    
+
+
+
     			//Tell the system who we are and were to find the data.
     			$provisioner_lib->root_dir = $this->PHONE_MODULES_PATH;
     			$provisioner_lib->engine = 'asterisk';
     			$provisioner_lib->engine_location = $this->configmod->get('asterisk_location','asterisk');
     			$provisioner_lib->system = 'unix';
-    
+
     			//have to because of versions less than php5.3
     			$provisioner_lib->brand_name = $phone_info['directory'];
     			$provisioner_lib->family_line = $phone_info['cfg_dir'];
-    
-    
-    
+
+
+
     			//Phone Model (Please reference family_data.xml in the family directory for a list of recognized models)
     			//This has to match word for word. I really need to fix this....
     			$provisioner_lib->model = $phone_info['model'];
-    
+
     			//Timezone
     			try {
     				$provisioner_lib->DateTimeZone = new DateTimeZone($settings['tz']);
@@ -1170,7 +1168,7 @@ $this->error['get_phone_info'] = "Error with SQL Statement";
 $this->error['parse_configs'] = 'Error Returned From Timezone Library: ' . $e->getMessage();
     				return(FALSE);
     			}
-    
+
     			$temp = "";
     			$template_data = unserialize($phone_info['template_data']);
     			$global_user_cfg_data = unserialize($phone_info['global_user_cfg_data']);
@@ -1205,7 +1203,7 @@ $this->error['parse_configs'] = 'Error Returned From Timezone Library: ' . $e->g
     					}
     				}
     			}
-    
+
     			if (!empty($global_custom_cfg_data)) {
     				if (array_key_exists('data', $global_custom_cfg_data)) {
     					$global_custom_cfg_ari = $global_custom_cfg_data['ari'];
@@ -1215,7 +1213,7 @@ $this->error['parse_configs'] = 'Error Returned From Timezone Library: ' . $e->g
     					$global_custom_cfg_ari = array();
     				}
     			}
-    
+
     			$new_template_data = array();
     			$line_ops = array();
     			if (is_array($global_custom_cfg_data)) {
@@ -1250,7 +1248,7 @@ $this->error['parse_configs'] = 'Error Returned From Timezone Library: ' . $e->g
     					}
     				}
     			}
-    
+
     			if (!$write) {
     				$new_template_data['provision']['type'] = 'dynamic';
     				$new_template_data['provision']['protocol'] = 'http';
@@ -1262,9 +1260,9 @@ $this->error['parse_configs'] = 'Error Returned From Timezone Library: ' . $e->g
     				$new_template_data['provision']['path'] = $settings['srvip'];
     				$new_template_data['provision']['encryption'] = FALSE;
     			}
-    
+
     			$new_template_data['ntp'] = $settings['ntp'];
-    
+
     			//Overwrite all specific settings variables now
     			if (!empty($phone_info['specific_settings'])) {
     				$specific_settings = unserialize($phone_info['specific_settings']);
@@ -1272,24 +1270,24 @@ $this->error['parse_configs'] = 'Error Returned From Timezone Library: ' . $e->g
     			} else {
     				$specific_settings = array();
     			}
-    
+
     			//Set Variables according to the template_data files included. We can include different template.xml files within family_data.xml also one can create
     			//template_data_custom.xml which will get included or template_data_<model_name>_custom.xml which will also get included
     			//line 'global' will set variables that aren't line dependant
-    
-    
+
+
     			$provisioner_lib->settings = $new_template_data;
-    
+
     			//Loop through Lines!
     			$li = 0;
     			foreach ($phone_info['line'] as $line) {
     				$line_options = is_array($line_ops[$line['line']]) ? $line_ops[$line['line']] : array();
     				$line_statics = array('line' => $line['line'], 'username' => $line['ext'], 'authname' => $line['ext'], 'secret' => $line['secret'], 'displayname' => $line['description'], 'server_host' => $this->global_cfg['srvip'], 'server_port' => '5060', 'user_extension' => $line['user_extension']);
-    
+
     				$provisioner_lib->settings['line'][$li] = array_merge($line_options, $line_statics);
     				$li++;
     			}
-    
+
     			if (array_key_exists('data', $specific_settings)) {
     				foreach ($specific_settings['data'] as $key => $data) {
     					$default_exp = preg_split("/\|/i", $key);
@@ -1337,20 +1335,20 @@ $this->error['parse_configs'] = 'Error Returned From Timezone Library: ' . $e->g
     					}
     				}
     			}
-    
+
     			$provisioner_lib->settings['mac'] = $phone_info['mac'];
     			$provisioner_lib->mac = $phone_info['mac'];
-    
+
     			//Setting a line variable here...these aren't defined in the template_data.xml file yet. however they will still be parsed
     			//and if they have defaults assigned in a future template_data.xml or in the config file using pipes (|) those will be used, pipes take precedence
     			$provisioner_lib->processor_info = "EndPoint Manager Version " . $this->global_cfg['version'];
-    
+
     			// Because every brand is an extension (eventually) of endpoint, you know this function will exist regardless of who it is
     			//Start timer
     			$time_start = microtime(true);
-    
+
     			$provisioner_lib->debug = TRUE;
-    
+
     			try {
     				$returned_data = $provisioner_lib->generate_all_files();
     			} catch (Exception $e) {
@@ -1379,7 +1377,7 @@ $this->error['parse_configs'] = "Can't Load the Autoloader!";
     		return(FALSE);
     	}
     }
-	
+
     function write_configs($provisioner_lib, $reboot, $write_path, $phone_info, $returned_data) {
     	//Create Directory Structure (If needed)
     	if (isset($provisioner_lib->directory_structure)) {
@@ -1408,7 +1406,7 @@ $this->error['parse_configs'] = "Could Not Create Directory: " . $data;
     			}
     		}
     	}
-    
+
     	//Copy Files (If needed)
     	if (isset($provisioner_lib->copy_files)) {
     		foreach ($provisioner_lib->copy_files as $data) {
@@ -1432,7 +1430,7 @@ $this->error['parse_configs'] = "Could Not Create File: " . $data;
     			}
     		}
     	}
-    
+
     	foreach ($returned_data as $file => $data) {
     		if (((file_exists($write_path . $file)) AND (is_writable($write_path . $file)) AND (!in_array($file, $provisioner_lib->protected_files))) OR (!file_exists($write_path . $file))) {
     			//Move old file to backup
@@ -1458,116 +1456,116 @@ $this->error['parse_configs'] = "File not written to hard drive!";
     			return(FALSE);
     		}
     	}
-    
+
     	if ($reboot) {
     		$provisioner_lib->reboot();
     	}
     }
-	
-    
-    
-    
-    
-   
-    
-    
-    
-    
-    
-    
-   
-    
-    
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-	
-	
-	
-	
-	
-	
-	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 	/*********************************************
 	****** CODIGO ANTIGUO -- SIN REVISADO ********
 	*********************************************/
-	
-	
-	
-	
-	
-	
-	
-	
 
-    
+
+
+
+
+
+
+
+
+
 
     function download_json($location, $directory=NULL) {
         $temp_directory = $this->sys_get_temp_dir() . "/epm_temp/";
@@ -1603,9 +1601,9 @@ $this->error['parse_configs'] = "File not written to hard drive!";
         }
     }
 
-   
 
-	
+
+
 
     /**
     * Send process to run in background
@@ -1631,7 +1629,7 @@ $this->error['parse_configs'] = "File not written to hard drive!";
         return(count($ProcessState) >= 2);
     }
 
-    
+
 
     /**
     * Uses which to find executables that asterisk can run/use
@@ -1669,9 +1667,9 @@ $this->error['parse_configs'] = "File not written to hard drive!";
         return FALSE;
     }
 
-    
 
-    
+
+
 
     /**
      * Check for valid netmast to avoid security issues
@@ -1771,7 +1769,7 @@ $this->error['parse_configs'] = "File not written to hard drive!";
         return !is_array($final) ? FALSE : $final;
     }
 
-    
+
 
     function in_array_recursive($needle, $haystack) {
 
@@ -1785,10 +1783,10 @@ $this->error['parse_configs'] = "File not written to hard drive!";
         return FALSE;
     }
 
-    
-    
 
-    
+
+
+
 
     function display_templates($product_id, $temp_select = NULL) {
         $i = 0;
@@ -1797,7 +1795,7 @@ $this->error['parse_configs'] = "File not written to hard drive!";
 
         $sql = "SELECT * FROM  endpointman_template_list WHERE  product_id = '" . $id . "'";
         $data = sql($sql, 'getAll', DB_FETCHMODE_ASSOC);
-		
+
         foreach ($data as $row) {
             $temp[$i]['value'] = $row['id'];
             $temp[$i]['text'] = $row['name'];
@@ -1821,23 +1819,23 @@ $this->error['parse_configs'] = "File not written to hard drive!";
         return(TRUE);
     }
 
-	
-	
-	
-	
-	
-    
 
 
 
-   
-
-    
-   
 
 
 
-    
+
+
+
+
+
+
+
+
+
+
+
 
     function update_device($macid, $model, $template, $luid=NULL, $name=NULL, $line=NULL, $update_lines=TRUE) {
         $sql = "UPDATE endpointman_mac_list SET model = " . $model . ", template_id =  " . $template . " WHERE id = " . $macid;
@@ -1936,11 +1934,11 @@ $this->error['parse_configs'] = "File not written to hard drive!";
     }
 
 
-    
 
-    
 
-    
+
+
+
 
     /**
      * Save template from the template view pain
@@ -2089,23 +2087,23 @@ $this->error['parse_configs'] = "File not written to hard drive!";
         }
     }
 
-    
+
 
     function display_configs() {
 
     }
 
-   
-   
-   
-   
-   
-   
-   
-   
-   
-   
-   
+
+
+
+
+
+
+
+
+
+
+
     //BORRAR!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 	//OBSOLETO, ANTIGUAMENTE VENTANAS EMERGENTES, AHORA SON DIALOGOS JQUERY.
     function prepare_message_box() {
@@ -2144,10 +2142,10 @@ $this->error['parse_configs'] = "File not written to hard drive!";
             $this->display_message_box($error_message, 1);
         }
     }
-	
-	
-	
-	
+
+
+
+
 
 }
 ?>

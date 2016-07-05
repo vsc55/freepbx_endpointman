@@ -47,8 +47,8 @@ global $db;
 
 out("Endpoint Manager Installer");
 
-define("PHONE_MODULES_PATH", $amp_conf['AMPWEBROOT'] . '/admin/modules/_ep_phone_modules/');
-define("LOCAL_PATH", $amp_conf['AMPWEBROOT'] . '/admin/modules/endpointman/');
+//define("PHONE_MODULES_PATH", $amp_conf['AMPWEBROOT'] . '/admin/modules/_ep_phone_modules/');
+//define("LOCAL_PATH", $amp_conf['AMPWEBROOT'] . '/admin/modules/endpointman/');
 
 
 if (!file_exists(PHONE_MODULES_PATH)) {
@@ -933,7 +933,7 @@ if (empty($epmdbversion)) {
             (4, 'gmthr', ''),
             (5, 'config_location', '/tftpboot/'),
             (6, 'update_server', 'http://mirror.freepbx.org/provisioner/v3/'),
-            (7, 'version', '" . $xml_full_version . "'),
+            (7, 'version', '" . $epmxmlversion . "'),
             (8, 'enable_ari', '0'),
             (9, 'debug', '0'),
             (10, 'arp_location', '" . $arp . "'),

@@ -70,7 +70,7 @@ class phonesettings {
         $endpoint = new endpointmanager();
 
         $sql = "SELECT mac_id, line FROM endpointman_line_list WHERE ext = '".$_SESSION['ari_user']['extension']."' ";
-        $mac_row =& $endpoint->eda->sql($sql, 'getrow', DB_FETCHMODE_ASSOC);
+        $mac_row = $endpoint->eda->sql($sql, 'getrow', DB_FETCHMODE_ASSOC);
 
         $mac_id = $mac_row['mac_id'];
         $line = $mac_row['line'];
@@ -157,10 +157,10 @@ class phonesettings {
 
         $sql = "SELECT mac_id, line FROM endpointman_line_list WHERE ext = '".$_SESSION['ari_user']['extension']."' ";
 
-        $res =& $endpoint->eda->sql($sql);
+        $res = $endpoint->eda->sql($sql);
         if($res->numRows()) {
 
-            $mac_row =& $endpoint->eda->sql($sql, 'getrow', DB_FETCHMODE_ASSOC);
+            $mac_row = $endpoint->eda->sql($sql, 'getrow', DB_FETCHMODE_ASSOC);
 
             $mac_id = $mac_row['mac_id'];
             $line = $mac_row['line'];

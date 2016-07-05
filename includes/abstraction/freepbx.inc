@@ -44,19 +44,19 @@ class epm_data_abstraction {
 
     function get_stored_globals() {
         //Get all global variables
-        $temp =& $this->sql("SELECT var_name, value FROM endpointman_global_vars",'getAssoc');
+        $temp = $this->sql("SELECT var_name, value FROM endpointman_global_vars",'getAssoc');
         $this->global_cfg = $temp;
         return($temp);
     }
 
     function all_products() {
-        $temp =& $this->sql("SELECT * FROM endpointman_product_list WHERE id > 0",'getAll',DB_FETCHMODE_ASSOC);
+        $temp = $this->sql("SELECT * FROM endpointman_product_list WHERE id > 0",'getAll',DB_FETCHMODE_ASSOC);
         return($temp);
     }
 
     function all_devices() {
         $sql = 'SELECT endpointman_mac_list.id , endpointman_mac_list.mac , endpointman_model_list.model, endpointman_model_list.enabled , endpointman_brand_list.name, endpointman_mac_list.global_custom_cfg_data, endpointman_mac_list.template_id FROM endpointman_mac_list , endpointman_model_list , endpointman_brand_list WHERE ( endpointman_model_list.id = endpointman_mac_list.model ) AND ( endpointman_model_list.brand = endpointman_brand_list.id )';
-        $temp =& $this->sql($sql,'getAll',DB_FETCHMODE_ASSOC);
+        $temp = $this->sql($sql,'getAll',DB_FETCHMODE_ASSOC);
         return($temp);
     }
 
@@ -95,7 +95,7 @@ class epm_data_abstraction {
      */
     function all_models() {
         $sql="SELECT endpointman_model_list.* FROM endpointman_model_list, endpointman_product_list WHERE endpointman_model_list.product_id = endpointman_product_list.id AND endpointman_model_list.enabled = 1 AND endpointman_product_list.hidden = 0";
-        $result1 =& $this->sql($sql, 'getAll',DB_FETCHMODE_ASSOC);
+        $result1 = $this->sql($sql, 'getAll',DB_FETCHMODE_ASSOC);
         return($result1);
     }
 
@@ -115,25 +115,25 @@ class epm_data_abstraction {
      */
     function all_active_brands() {
         $sql="SELECT DISTINCT endpointman_brand_list.name, endpointman_brand_list.id FROM  endpointman_brand_list,endpointman_model_list WHERE endpointman_model_list.brand = endpointman_brand_list.id AND endpointman_model_list.enabled = 1 AND endpointman_model_list.hidden = 0 AND endpointman_brand_list.installed = 1 AND endpointman_brand_list.hidden = 0";
-        $data =& $this->sql($sql,'getAll', DB_FETCHMODE_ASSOC);
+        $data = $this->sql($sql,'getAll', DB_FETCHMODE_ASSOC);
         return($data);
     }
 
     function all_models_by_product($product_id) {
         $sql="SELECT * FROM endpointman_model_list WHERE product_id = ".$product_id;
-        $result1 =& $this->sql($sql, 'getAll',DB_FETCHMODE_ASSOC);
+        $result1 = $this->sql($sql, 'getAll',DB_FETCHMODE_ASSOC);
         return($result1);
     }
 
     function all_models_by_brand($brand_id) {
         $sql="SELECT endpointman_model_list.* FROM endpointman_model_list, endpointman_product_list WHERE endpointman_model_list.product_id = endpointman_product_list.id AND endpointman_model_list.enabled = 1 AND endpointman_product_list.hidden = 0 AND endpointman_model_list.brand = " . $brand_id;
-        $result1 =& $this->sql($sql, 'getAll',DB_FETCHMODE_ASSOC);
+        $result1 = $this->sql($sql, 'getAll',DB_FETCHMODE_ASSOC);
         return($result1);
     }
 
     function all_unknown_devices() {
         $sql = 'SELECT * FROM  endpointman_mac_list WHERE model = 0';
-        $unknown_list =& $this->sql($sql,'getAll',DB_FETCHMODE_ASSOC);
+        $unknown_list = $this->sql($sql,'getAll',DB_FETCHMODE_ASSOC);
         return($unknown_list);
     }
 
@@ -143,25 +143,25 @@ class epm_data_abstraction {
         } else {
             $not_added="SELECT devices.id, devices.description FROM devices WHERE tech in('sip','pjsip') AND devices.id not in (SELECT devices.id FROM devices, endpointman_line_list WHERE tech in ('sip','pjsip') AND devices.id = endpointman_line_list.ext ) ORDER BY devices.id";
         }
-        $result =& $this->sql($not_added,'getAll', DB_FETCHMODE_ASSOC);
+        $result = $this->sql($not_added,'getAll', DB_FETCHMODE_ASSOC);
         return($result);
     }
 
     function all_used_registrations() {
         $not_added="SELECT devices.id, devices.description FROM devices WHERE tech in ('sip','pjsip') AND devices.id in (SELECT devices.id FROM devices, endpointman_line_list WHERE tech in ('sip','pjsip') AND devices.id = endpointman_line_list.ext ) ORDER BY devices.id";
-        $result =& $this->sql($not_added,'getAll', DB_FETCHMODE_ASSOC);
+        $result = $this->sql($not_added,'getAll', DB_FETCHMODE_ASSOC);
         return($result);
     }
 
     function get_lines_from_device($device_id) {
         $sql = 'SELECT * FROM endpointman_line_list WHERE mac_id = '.$device_id. ' ORDER BY  endpointman_line_list.line ASC';
-        $line_list =& $this->sql($sql,'getAll',DB_FETCHMODE_ASSOC);
+        $line_list = $this->sql($sql,'getAll',DB_FETCHMODE_ASSOC);
         return($line_list);
     }
 
     function get_line_information($line_id) {
         $sql = 'SELECT * FROM endpointman_line_list WHERE luid = '.$line_id;
-        $line_list =& $this->sql($sql,'getRow',DB_FETCHMODE_ASSOC);
+        $line_list = $this->sql($sql,'getRow',DB_FETCHMODE_ASSOC);
         return($line_list);
     }
 }

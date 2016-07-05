@@ -67,7 +67,7 @@ switch ($_REQUEST['subpage']) {
         }
 
         $sql="SELECT * from endpointman_brand_list WHERE id > 0 AND hidden = 0 ORDER BY id ASC ";
-        $brand_list =& $endpoint->eda->sql($sql,'getAll',DB_FETCHMODE_ASSOC);
+        $brand_list = $endpoint->eda->sql($sql,'getAll',DB_FETCHMODE_ASSOC);
         $i = 0;
         $note = "";
         $row_out = array();
@@ -95,7 +95,7 @@ switch ($_REQUEST['subpage']) {
             if($row['installed']){
                 $j = 0;
                 $sql = 'SELECT * FROM endpointman_product_list WHERE hidden = 0 AND brand = '.$row['id'].' ORDER BY long_name ASC';
-                        $product_list =& $endpoint->eda->sql($sql,'getAll',DB_FETCHMODE_ASSOC);
+                        $product_list = $endpoint->eda->sql($sql,'getAll',DB_FETCHMODE_ASSOC);
                         foreach($product_list as $row2) {
                     $row_out[$i]['products'][$j] = $row2;
                     if($check_for_updates) {
@@ -113,7 +113,7 @@ switch ($_REQUEST['subpage']) {
 
                     if(1 == 1) {
                         $sql = "SELECT * FROM endpointman_model_list WHERE hidden = 0 AND product_id = '".$row2['id']."'";
-                                        $model_list =& $endpoint->eda->sql($sql,'getAll',DB_FETCHMODE_ASSOC);
+                                        $model_list = $endpoint->eda->sql($sql,'getAll',DB_FETCHMODE_ASSOC);
                         $k = 0;
                         foreach($model_list as $row3) {
                             $row_out[$i]['products'][$j]['models'][$k] = $row3;

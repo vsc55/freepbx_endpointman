@@ -54,21 +54,32 @@ class endpointmanager {
             $this->global_cfg['disable_epm'] = TRUE;
         }
 
-        //define("UPDATE_PATH", $this->global_cfg['update_server']);
-        //define("MODULES_PATH", dirname(dirname(dirname(__FILE__))) . '/');
+				if(!defined("UPDATE_PATH")) {
+					define("UPDATE_PATH", $this->global_cfg['update_server']);
+				}
+				if(!defined("MODULES_PATH")) {
+					define("MODULES_PATH", dirname(dirname(dirname(__FILE__))) . '/');
+				}
+
 
         //Determine if local path is correct!
         if (file_exists(MODULES_PATH . "endpointman/")) {
-            //define("LOCAL_PATH", MODULES_PATH . "endpointman/");
+					if(!defined("LOCAL_PATH")) {
+						define("LOCAL_PATH", MODULES_PATH . "endpointman/");
+					}
         } else {
             die("Can't Load Local Endpoint Manager Directory!");
         }
 
         //Define the location of phone modules, keeping it outside of the module directory so that when the user updates endpointmanager they don't lose all of their phones
         if (file_exists(MODULES_PATH . "_ep_phone_modules/")) {
-            //define("PHONE_MODULES_PATH", MODULES_PATH . "_ep_phone_modules/");
+					if(!defined("PHONE_MODULES_PATH")) {
+						define("PHONE_MODULES_PATH", MODULES_PATH . "_ep_phone_modules/");
+					}
         } else {
-            //define("PHONE_MODULES_PATH", MODULES_PATH . "_ep_phone_modules/");
+					if(!defined("PHONE_MODULES_PATH")) {
+						define("PHONE_MODULES_PATH", MODULES_PATH . "_ep_phone_modules/");
+					}
             if (!file_exists(PHONE_MODULES_PATH)) {
                 mkdir(PHONE_MODULES_PATH, 0775);
             }
@@ -89,14 +100,6 @@ class endpointmanager {
             } else {
                 die("Can't Load the Template Class");
             }
-        }
-
-        //Define error reporting
-        if (($this->global_cfg['debug']) AND (!isset($_REQUEST['quietmode']))) {
-            error_reporting(E_ALL);
-            ini_set('display_errors', 1);
-        } else {
-            ini_set('display_errors', 0);
         }
 
         //Check if config location is writable and/or exists!

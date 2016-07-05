@@ -5,7 +5,7 @@
 				<h4 class="modal-title"><?php echo _("Add New Template") ?></h4>
 			</div>
 			<div class="modal-body">
-			
+
 				<div class="element-container">
 					<div class="row">
 						<div class="col-md-12">
@@ -28,7 +28,7 @@
 						</div>
 					</div>
 				</div>
-				
+
 				<div class="element-container">
 					<div class="row">
 						<div class="col-md-12">
@@ -43,14 +43,14 @@
 											<option value=""><?php echo _("Select Product:")?></option>
 											<?php
 											$sql = "SELECT DISTINCT endpointman_product_list.* FROM endpointman_product_list, endpointman_model_list WHERE endpointman_product_list.id = endpointman_model_list.product_id AND endpointman_model_list.hidden = 0 AND endpointman_model_list.enabled = 1 AND endpointman_product_list.hidden != 1 AND endpointman_product_list.cfg_dir !=  ''";
-											$template_list = sql($sql, getAll, DB_FETCHMODE_ASSOC);
+											$template_list = sql($sql, 'getAll', DB_FETCHMODE_ASSOC);
 											foreach($template_list as $row) {
 												echo '<option value="'.$row['id'].'">'.$row['short_name'].'</option>';
 											}
 											unset ($template_list);
 											unset ($sql);
 											?>
-		        						</select>	
+		        						</select>
 									</div>
 								</div>
 							</div>
@@ -62,7 +62,7 @@
 						</div>
 					</div>
 				</div>
-				
+
 				<div class="element-container">
 					<div class="row">
 						<div class="col-md-12">
@@ -85,7 +85,7 @@
 						</div>
 					</div>
 				</div>
-				
+
 			</div>
 			<div class="modal-footer">
 				<button type="button" class="btn btn-danger" data-dismiss="modal"><i class='fa fa-times'></i> <?php echo _("Cancel")?></button>

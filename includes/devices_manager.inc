@@ -21,8 +21,8 @@ $searched = NULL;
 $edit = NULL;
 $mode = NULL;
 
-$family_list =& $endpoint->eda->all_products();
-$full_device_list =& $endpoint->eda->all_devices();
+$family_list = $endpoint->eda->all_products();
+$full_device_list = $endpoint->eda->all_devices();
 $ava_exts = $endpoint->display_registration_list();
 
 if((empty($family_list)) && (empty($full_device_list))) {
@@ -162,7 +162,7 @@ switch ($sub_type) {
         break;
     case "rebuild_configs_for_all_phones" :
         $sql = "SELECT endpointman_mac_list.id FROM endpointman_mac_list, endpointman_brand_list, endpointman_product_list, endpointman_model_list WHERE endpointman_brand_list.id = endpointman_product_list.brand AND endpointman_product_list.id = endpointman_model_list.product_id AND endpointman_mac_list.model = endpointman_model_list.id ORDER BY endpointman_product_list.cfg_dir ASC";
-        $mac_list =& $endpoint->eda->sql($sql,'getAll',DB_FETCHMODE_ASSOC);
+        $mac_list = $endpoint->eda->sql($sql,'getAll',DB_FETCHMODE_ASSOC);
         foreach($mac_list as $data) {
             $phone_info = $endpoint->get_phone_info($data['id']);
             foreach($phone_info['line'] as $line) {
@@ -182,7 +182,7 @@ switch ($sub_type) {
     case "reboot_brand" :
         if($_REQUEST['rb_brand'] != "") {
             $sql = 'SELECT endpointman_mac_list.id FROM endpointman_mac_list , endpointman_model_list , endpointman_brand_list , endpointman_product_list WHERE endpointman_brand_list.id = endpointman_model_list.brand AND endpointman_model_list.id = endpointman_mac_list.model AND endpointman_model_list.product_id = endpointman_product_list.id AND endpointman_brand_list.id = '.$_REQUEST['rb_brand'].' ORDER BY endpointman_product_list.cfg_dir ASC';
-            $data =& $endpoint->eda->sql($sql,'getAll',DB_FETCHMODE_ASSOC);
+            $data = $endpoint->eda->sql($sql,'getAll',DB_FETCHMODE_ASSOC);
             if(!empty($data)) {
                 foreach($data as $row) {
                     if(!class_exists('ProvisionerConfig')) {
@@ -246,7 +246,7 @@ switch ($sub_type) {
                 $final[$key] = $data;
                 $final[$key]['id'] = $key;
                 $sqln = "SELECT * FROM endpointman_model_list WHERE enabled = 1 AND brand =".$data['brand_id'];
-                $model_list =& $endpoint->eda->sql($sqln,'getAll',DB_FETCHMODE_ASSOC);
+                $model_list = $endpoint->eda->sql($sqln,'getAll',DB_FETCHMODE_ASSOC);
                 $j = 0;
                 foreach($model_list as $row) {
                     $final[$key]['list'][$j] = $row;
@@ -358,7 +358,7 @@ switch ($sub_type) {
 }
 
 //Refresh the list after processing
-$devices_list =& $endpoint->eda->all_devices();;
+$devices_list = $endpoint->eda->all_devices();;
 
 $i = 0;
 $list = array();
@@ -381,7 +381,7 @@ foreach($device_statuses as $key => $data) {
 }
 
 foreach($devices_list as $devices_row) {
-    $line_list =& $endpoint->eda->get_lines_from_device($devices_row['id']);
+    $line_list = $endpoint->eda->get_lines_from_device($devices_row['id']);
     $list[$i] = $devices_row;
     $z = 0;
     if (($devices_row['template_id'] == 0) && (isset($devices_row['global_custom_cfg_data'])) ) {
@@ -390,7 +390,7 @@ foreach($devices_list as $devices_row) {
         $list[$i]['template_name'] = "N/A";
     } else {
         $sql = "SELECT name FROM endpointman_template_list WHERE id =".$devices_row['template_id'];
-        $template_name =& $endpoint->eda->sql($sql,'getOne');
+        $template_name = $endpoint->eda->sql($sql,'getOne');
         $list[$i]['template_name'] = $template_name;
     }
     if (!$devices_row['enabled']) {
@@ -413,7 +413,7 @@ foreach($devices_list as $devices_row) {
     $i++;
 }
 
-$unknown_list =& $endpoint->eda->all_unknown_devices();
+$unknown_list = $endpoint->eda->all_unknown_devices();
 
 foreach($unknown_list as $row) {	#Displays unknown phones in the database with edit and delete buttons
     $list[$i] = $row;
@@ -432,7 +432,7 @@ $amp_send['AMPDBNAME'] = $amp_conf['AMPDBNAME'];
 
 $sql = "SELECT DISTINCT endpointman_product_list.* FROM endpointman_product_list, endpointman_model_list WHERE endpointman_product_list.id = endpointman_model_list.product_id AND endpointman_model_list.hidden = 0 AND endpointman_model_list.enabled = 1 AND endpointman_product_list.hidden != 1 AND endpointman_product_list.cfg_dir !=  ''";
 
-$template_list =& $endpoint->eda->sql($sql, 'getAll', DB_FETCHMODE_ASSOC);
+$template_list = $endpoint->eda->sql($sql, 'getAll', DB_FETCHMODE_ASSOC);
 $i = 1;
 $product_list = array();
 $product_list[0]['value'] = 0;
@@ -444,7 +444,7 @@ foreach($template_list as $row) {
 }
 
 $sql = "SELECT DISTINCT endpointman_model_list.* FROM endpointman_product_list, endpointman_model_list WHERE endpointman_product_list.id = endpointman_model_list.product_id AND endpointman_model_list.hidden = 0 AND endpointman_model_list.enabled = 1 AND endpointman_product_list.hidden != 1 AND endpointman_product_list.cfg_dir !=  ''";
-$template_list =& $endpoint->eda->sql($sql, 'getAll', DB_FETCHMODE_ASSOC);
+$template_list = $endpoint->eda->sql($sql, 'getAll', DB_FETCHMODE_ASSOC);
 $i = 1;
 $model_list = array();
 $model_list[0]['value'] = 0;
