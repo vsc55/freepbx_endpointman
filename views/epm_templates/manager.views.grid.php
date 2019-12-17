@@ -1,7 +1,7 @@
 <div class="container-fluid">
 	<div class="row">
 		<div class="col-sm-12">
-			<div id="toolbar-all">
+			<div id="toolbar-grid">
 				<button type="button" class="btn btn-primary btn-lg" data-toggle="modal" data-target="#AddDlgModal"><i class='fa fa-plus'></i> <?php echo _('Add New Template')?></button>
 				<a class='btn btn-default' href="javascript:epm_global_refresh_table('#mygrid', true);" ><i class='fa fa-refresh fa-spin'></i> <?php echo _('Refresh Table')?></a>
 			</div>
@@ -11,7 +11,8 @@
 				data-cache="false"
 				data-cookie="true"
 				data-cookie-id-table="template_custom_table"
-				data-toolbar="#toolbar-all"
+				data-toolbar="#toolbar-grid"
+				data-escape="true"
 				data-maintain-selected="true"
 				data-show-columns="true"
 				data-show-toggle="true"
