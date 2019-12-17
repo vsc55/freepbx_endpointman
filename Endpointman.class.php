@@ -472,6 +472,15 @@ define("PHONE_MODULES_PATH", $this->PHONE_MODULES_PATH);
     public function restore($backup) {
 	}
 
+	public function setDatabase($pdo){
+		$this->db = $pdo;
+		return $this;
+	}
+	
+	public function resetDatabase(){
+		$this->db = $this->FreePBX->Database;
+		return $this;
+	}
 
 	private function epm_config_manual_install($install_type = "", $package ="")
 	{
