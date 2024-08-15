@@ -1,7 +1,9 @@
 <?php
 	if (!defined('FREEPBX_IS_AUTH')) { die('No direct script access allowed'); }
 ?>
-<div class="alert alert-info" role="alert"><?php echo _("Select brands, products or models that do not need to hide from the list."); ?></div>
+<div class="alert alert-info" role="alert">
+	<?php echo _("Select brands, products or models that do not need to hide from the list."); ?>
+</div>
 
 <div class="section-title" data-for="epm_edit_show_hide">
 	<h3><i class="fa fa-minus"></i><?php echo _("Brands/Modules") ?></h3>

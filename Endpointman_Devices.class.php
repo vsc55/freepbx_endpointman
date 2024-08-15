@@ -9,14 +9,17 @@
 
 namespace FreePBX\modules;
 
+#[\AllowDynamicProperties]
 class Endpointman_Devices
 {
-	public function __construct($freepbx = null, $cfgmod = null) 
+	// public function __construct($freepbx = null, $cfgmod = null) 
+	public function __construct($epm) 
 	{
-		$this->freepbx = $freepbx;
-		$this->db = $freepbx->Database;
-		$this->config = $freepbx->Config;
-		$this->configmod = $cfgmod;			
+		$epm			 = $epm;
+		$this->freepbx   = $epm->freepbx;
+		$this->db 	     = $epm->freepbx->Database;
+		$this->config    = $epm->freepbx->Config;
+		$this->configmod = $epm->configmod;			
 	}
 
 	public function myShowPage(&$pagedata) {

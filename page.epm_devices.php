@@ -1,7 +1,7 @@
 <?php
 global $active_modules;
 
-if (!empty($active_modules[endpoint][rawname])) {
+if (!empty($active_modules['endpoint']['rawname'])) {
 	if (FreePBX::Endpointman()->configmod->get("disable_endpoint_warning") !== "1") {
 		include('page.epm_warning.php');  
 	}
@@ -52,7 +52,7 @@ if (isset($_REQUEST['page'])) {
 } else {
 	$page = "";
 }
-if($global_cfg['debug']) {
+if(isset($global_cfg['debug']) && $global_cfg['debug']) {
 	$debug .= "Request Variables: \n".print_r($_REQUEST, TRUE);
 }
 include LOCAL_PATH.'includes/devices_manager.inc';

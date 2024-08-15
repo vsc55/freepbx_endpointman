@@ -10,38 +10,50 @@
 namespace FreePBX\modules;
 use FreePBX;
 
+#[\AllowDynamicProperties]
 class Endpointman_Advanced
 {
     public $MODULES_PATH;
 	public $LOCAL_PATH;
 	public $PHONE_MODULES_PATH;
 
-	public function __construct($freepbx = null, $cfgmod = null, $epm_config)
+	// public function __construct($freepbx = null, $cfgmod = null, $epm_config)
+	public function __construct($epm)
 	{
-		$this->freepbx = $freepbx;
-		$this->db = $freepbx->Database;
-		$this->config = $freepbx->Config;
-		$this->configmod = $cfgmod;
-		$this->epm_config = $epm_config;
+		$this->epm 		  = $epm;
+		$this->freepbx    = $epm->freepbx;
+		$this->db 		  = $epm->freepbx->Database;
+		$this->config 	  = $epm->freepbx->Config;
+		$this->configmod  = $epm->configmod;
+		$this->epm_config = $epm->epm_config;
 
         $this->MODULES_PATH = $this->config->get('AMPWEBROOT') . '/admin/modules/';
-        if (file_exists($this->MODULES_PATH . "endpointman/")) {
+        if (file_exists($this->MODULES_PATH . "endpointman/"))
+		{
             $this->LOCAL_PATH = $this->MODULES_PATH . "endpointman/";
-        } else {
-            die("Can't Load Local Endpoint Manager Directory!");
         }
-		if (file_exists($this->MODULES_PATH . "_ep_phone_modules/")) {
+		else
+		{
+            die(_("Can't Load Local Endpoint Manager Directory!"));
+        }
+		if (file_exists($this->MODULES_PATH . "_ep_phone_modules/"))
+		{
             $this->PHONE_MODULES_PATH = $this->MODULES_PATH . "_ep_phone_modules/";
-        } else {
+        }
+		else
+		{
             $this->PHONE_MODULES_PATH = $this->MODULES_PATH . "_ep_phone_modules/";
-            if (!file_exists($this->PHONE_MODULES_PATH)) {
+            if (!file_exists($this->PHONE_MODULES_PATH))
+			{
                 mkdir($this->PHONE_MODULES_PATH, 0775);
             }
-            if (file_exists($this->PHONE_MODULES_PATH . "setup.php")) {
+            if (file_exists($this->PHONE_MODULES_PATH . "setup.php"))
+			{
                 unlink($this->PHONE_MODULES_PATH . "setup.php");
             }
-            if (!file_exists($this->MODULES_PATH . "_ep_phone_modules/")) {
-                die('Endpoint Manager can not create the modules folder!');
+            if (!file_exists($this->MODULES_PATH . "_ep_phone_modules/"))
+			{
+                die(_('Endpoint Manager can not create the modules folder!'));
             }
         }
 	}
@@ -86,10 +98,10 @@ class Endpointman_Advanced
 	{
 		$txt = array();
 		$txt['settings'] = array(
-			'error' => _("Error!"),
-			'save_changes' => _("Saving Changes..."),
+			'error' 		  => _("Error!"),
+			'save_changes' 	  => _("Saving Changes..."),
 			'save_changes_ok' => _("Saving Changes... Ok!"),
-			'opt_invalid' => _("Invalid Option!")
+			'opt_invalid' 	  => _("Invalid Option!")
 		);
 
 		if ($module_tab == "settings")
@@ -517,7 +529,7 @@ class Endpointman_Advanced
 
 			//TODO: remove
 			$template_file_list[0]['value'] = "template_data_custom.xml";
-			$template_file_list[0]['text'] = "template_data_custom.xml";
+			$template_file_list[0]['text']  = "template_data_custom.xml";
 
 			$sql = "SELECT id, model FROM endpointman_model_list WHERE product_id = '" . $dget['product_select'] . "' AND enabled = 1 AND hidden = 0";
 			$data = sql($sql, 'getAll', DB_FETCHMODE_ASSOC);
@@ -529,12 +541,12 @@ class Endpointman_Advanced
 			}
 
 			$retarr = array("status" => true,
-							"message" => "OK",
-							"product_select" => $dget['product_select'],
+							"message" 		 	  => _("OK"),
+							"product_select" 	  => $dget['product_select'],
 							"product_select_info" => $product_select_info,
-							"file_list" => $file_list,
-							"template_file_list" => $template_file_list,
-							"sql_file_list" => $sql_file_list);
+							"file_list" 		  => $file_list,
+							"template_file_list"  => $template_file_list,
+							"sql_file_list" 	  => $sql_file_list);
 			unset($dget);
 		}
 		return $retarr;
@@ -556,22 +568,22 @@ class Endpointman_Advanced
 		}
 
 		$dget['product_select'] = $_REQUEST['product_select'];
-		$dget['file_name'] = $_REQUEST['file_name'];
-		$dget['file_id'] = $_REQUEST['file_id'];
-		$dget['type_file'] = $_REQUEST['type_file'];
+		$dget['file_name'] 		= $_REQUEST['file_name'];
+		$dget['file_id'] 		= $_REQUEST['file_id'];
+		$dget['type_file'] 		= $_REQUEST['type_file'];
 
 		if ($dget['type_file'] == "sql") {
 			$sql = 'SELECT * FROM endpointman_custom_configs WHERE id =' . $dget['file_id'];
 			$row = sql($sql, 'getrow', DB_FETCHMODE_ASSOC);
 
-			$type = $dget['type_file'];
-			$sendidt = $row['id'];
-			$product_select = $row['product_id'];
+			$type 				= $dget['type_file'];
+			$sendidt 			= $row['id'];
+			$product_select 	= $row['product_id'];
 			$save_as_name_value = $row['name'];
-			$original_name = $row['original_name'];
-			$filename =  $row['name'];
-			$location = "SQL: ". $row['name'];
-			$config_data = $this->display_htmlspecialchars($row['data']);
+			$original_name 		= $row['original_name'];
+			$filename 			= $row['name'];
+			$location 			= "SQL: ". $row['name'];
+			$config_data 		= $this->display_htmlspecialchars($row['data']);
 
 		}
 		elseif ($dget['type_file'] == "file") {
@@ -587,7 +599,7 @@ class Endpointman_Advanced
 
 			if (is_readable($pathfile)) {
 				if(filesize($pathfile)>0) {
-					$handle = fopen($pathfile, "rb");
+					$handle   = fopen($pathfile, "rb");
 					$contents = fread($handle, filesize($pathfile));
 					fclose($handle);
 					$contents = $this->display_htmlspecialchars($contents);
@@ -596,14 +608,14 @@ class Endpointman_Advanced
 					$contents = "";
 				}
 
-				$type = $dget['type_file'];
-				$sendidt = $dget['file_id'];
-				$product_select = $dget['product_select'];
+				$type 				= $dget['type_file'];
+				$sendidt 			= $dget['file_id'];
+				$product_select 	= $dget['product_select'];
 				$save_as_name_value = $filename;
-				$original_name = $filename;
-				$filename =  $filename;
-				$location = $pathfile;
-				$config_data = $contents;
+				$original_name 		= $filename;
+				$filename 			= $filename;
+				$location 			= $pathfile;
+				$config_data 		= $contents;
 			}
 			else {
 				$retarr = array("status" => false, "message" => _("File not readable, check the permission! ").$filename);
@@ -635,16 +647,17 @@ class Endpointman_Advanced
 			$location = $dget['file_name'];
 		}
 
-		$retarr = array("status" => true,
-						"message" => "OK",
-						"type" => $type,
-						"sendidt" => $sendidt,
-						"product_select" => $product_select,
+		$retarr = array("status" 			 => true,
+						"message" 			 => _("OK"),
+						"type" 				 => $type,
+						"sendidt" 			 => $sendidt,
+						"product_select" 	 => $product_select,
 						"save_as_name_value" => $save_as_name_value,
-						"original_name" => $original_name,
-						"filename" => $filename,
-						"location" => $location,
-						"config_data" => $config_data);
+						"original_name" 	 => $original_name,
+						"filename" 			 => $filename,
+						"location" 			 => $location,
+						"config_data" 		 => $config_data
+					);
 
 		unset($dget);
 		return $retarr;
@@ -866,21 +879,25 @@ class Endpointman_Advanced
 					$pathandfile = $path_tmp_dir.$archivo;
 					$brand = substr(pathinfo($archivo, PATHINFO_FILENAME), 0, -11);
 					$ftime = substr(pathinfo($archivo, PATHINFO_FILENAME), -10);
+					$datetime = new \DateTime();
+					$datetime->setTimestamp($ftime);
 
 					$array_count_brand[] = $brand;
-					$array_list_files[$i] = array("brand" => $brand,
-							"pathall" => $pathandfile,
-							"path" => $path_tmp_dir,
-							"file" => $archivo,
-							"filename" => pathinfo($archivo, PATHINFO_FILENAME),
+					$array_list_files[$i] = array(
+							"brand" 	=> $brand,
+							"pathall" 	=> $pathandfile,
+							"path" 		=> $path_tmp_dir,
+							"file" 		=> $archivo,
+							"filename" 	=> pathinfo($archivo, PATHINFO_FILENAME),
 							"extension" => pathinfo($archivo, PATHINFO_EXTENSION),
-							"timer" => $ftime,
-							"timestamp" => strftime("[%Y-%m-%d %H:%M:%S]", $ftime),
+							"timer" 	=> $ftime,
+							"timestamp" => $datetime->format('[Y-m-d H:i:s]'),
 							"mime_type" => mime_content_type($pathandfile),
-							"is_dir" => is_dir($pathandfile),
-							"is_file" => is_file($pathandfile),
-							"is_link" => is_link($pathandfile),
-							"readlink" => (is_link($pathandfile) == true ? readlink ($pathandfile) : NULL));
+							"is_dir" 	=> is_dir($pathandfile),
+							"is_file"	=> is_file($pathandfile),
+							"is_link" 	=> is_link($pathandfile),
+							"readlink" 	=> (is_link($pathandfile) == true ? readlink($pathandfile) : NULL)
+						);
 
 					$i++;
 				}
@@ -894,7 +911,13 @@ class Endpointman_Advanced
 					$array_count_brand_end[] = array('name' => $key , 'num' => $value);
 				}
 
-				$retarr = array("status" => true, "message" => _("List Done!"), "countlist" => count($array_list_files), "list_files" => $array_list_files, "list_brands" => $array_count_brand_end );
+				$retarr = array(
+					"status" 	  => true,
+					"message" 	  => _("List Done!"),
+					"countlist"   => count($array_list_files),
+					"list_files"  => $array_list_files,
+					"list_brands" => $array_count_brand_end
+				);
 				unset ($array_count_brand_end);
 				unset ($array_count_brand);
 				unset ($array_list_files);
@@ -1171,7 +1194,7 @@ class Endpointman_Advanced
 										//$res = sql($sql);
 										$res = sql($sql, 'getAll', DB_FETCHMODE_ASSOC);
 
-										if (count($res) > 0) {
+										if (count(array($res)) > 0) {
 											$brand_id = sql($sql, 'getOne');
 										//	$brand_id = $brand_id[0];
 
@@ -1181,12 +1204,12 @@ class Endpointman_Advanced
 											$line_id = isset($device[4]) ? $device[4] : 1;
 
 											$res_model = sql($sql_model);
-											if (count($res_model)) {
+											if (count(array($res_model))) {
 												$model_id = sql($sql_model, 'getRow', DB_FETCHMODE_ASSOC);
 												$model_id = $model_id['id'];
 
 												$res_ext = sql($sql_ext);
-												if (count($res_ext)) {
+												if (count(array($res_ext))) {
 													$ext = sql($sql_ext, 'getRow', DB_FETCHMODE_ASSOC);
 													$description = $ext['name'];
 													$ext = $ext['extension'];

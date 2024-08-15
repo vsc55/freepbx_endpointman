@@ -210,58 +210,58 @@ function endpointman_configpageload() {
         $tech = isset($_REQUEST['tech_hardware']) ? $_REQUEST['tech_hardware'] : null;
     }
 
- $extension_address = $astman->database_get("SIP","Registry"."/$extdisplay");
+    $extension_address = $astman->database_get("SIP","Registry"."/$extdisplay");
     $extension_address = explode(":",$extension_address);
-  // echo $extension_address['0'];
+    // echo $extension_address['0'];
 
     if (isset($tech) && (($tech == 'sip') OR ($tech == 'pjsip') OR ($tech == 'sip_generic'))) {
         // Don't display this stuff it it's on a 'This xtn has been deleted' page.
-        if ($action != 'del') {
-
+        if ($action != 'del')
+        {
             $js = "
-                        $.ajaxSetup({ cache: false });
+                $.ajaxSetup({ cache: false });
 
-                        $.getJSON(\"config.php?type=tool&quietmode=1&handler=file&module=endpointman&file=ajax_select.html.php&atype=model\",{id: value}, function(j){
-                                var options = '';
-                                for (var i = 0; i < j.length; i++) {
-                                        options += '<option value=\"' + j[i].optionValue + '\">' + j[i].optionDisplay + '</option>';
-                                }
-                                $('#epm_model').html(options);
-                                $('#epm_model option:first').attr('selected', 'selected');
-                                $('#epm_temps').html('<option></option>');
-                                $('#epm_temps option:first').attr('selected', 'selected');
-                                $('#epm_line').html('<option></option>');
-                                $('#epm_line option:first').attr('selected', 'selected');
-                        })
-                    ";
+                $.getJSON(\"config.php?type=tool&quietmode=1&handler=file&module=endpointman&file=ajax_select.html.php&atype=model\",{id: value}, function(j){
+                        var options = '';
+                        for (var i = 0; i < j.length; i++) {
+                                options += '<option value=\"' + j[i].optionValue + '\">' + j[i].optionDisplay + '</option>';
+                        }
+                        $('#epm_model').html(options);
+                        $('#epm_model option:first').attr('selected', 'selected');
+                        $('#epm_temps').html('<option></option>');
+                        $('#epm_temps option:first').attr('selected', 'selected');
+                        $('#epm_line').html('<option></option>');
+                        $('#epm_line option:first').attr('selected', 'selected');
+                })
+            ";
             $currentcomponent->addjsfunc('brand_change(value)', $js);
 
             $section = _('End Point Manager');
 
             $sql = "SELECT mac_id,luid,line FROM endpointman_line_list WHERE ext = '" . $extdisplay . "' ";
             $line_info = $endpoint->eda->sql($sql, 'getRow', DB_FETCHMODE_ASSOC);
-            if ($line_info) {
-
+            if ($line_info)
+            {
                 $js = "
-                        $.ajaxSetup({ cache: false });
-                        $.getJSON('config.php?type=tool&quietmode=1&handler=file&module=endpointman&file=ajax_select.html.php&atype=template2',{id: value}, function(j){
-                                var options = '';
-                                for (var i = 0; i < j.length; i++) {
-                                        options += '<option value=\"' + j[i].optionValue + '\">' + j[i].optionDisplay + '</option>';
-                                }
-                                $('#epm_temps').html(options);
-                                $('#epm_temps option:first').attr('selected', 'selected');
-                        }),
-                        $.ajaxSetup({ cache: false });
-                        $.getJSON('config.php?type=tool&quietmode=1&handler=file&module=endpointman&file=ajax_select.html.php&macid='+ macid +'&atype=lines',{id: value}, function(j){
-                                var options = '';
-                                for (var i = 0; i < j.length; i++) {
-                                        options += '<option value=\"' + j[i].optionValue + '\">' + j[i].optionDisplay + '</option>';
-                                }
-                                $('#epm_line').html(options);
-                                $('#epm_line option:first').attr('selected', 'selected');
-                        })
-                    ";
+                    $.ajaxSetup({ cache: false });
+                    $.getJSON('config.php?type=tool&quietmode=1&handler=file&module=endpointman&file=ajax_select.html.php&atype=template2',{id: value}, function(j){
+                            var options = '';
+                            for (var i = 0; i < j.length; i++) {
+                                    options += '<option value=\"' + j[i].optionValue + '\">' + j[i].optionDisplay + '</option>';
+                            }
+                            $('#epm_temps').html(options);
+                            $('#epm_temps option:first').attr('selected', 'selected');
+                    }),
+                    $.ajaxSetup({ cache: false });
+                    $.getJSON('config.php?type=tool&quietmode=1&handler=file&module=endpointman&file=ajax_select.html.php&macid='+ macid +'&atype=lines',{id: value}, function(j){
+                            var options = '';
+                            for (var i = 0; i < j.length; i++) {
+                                    options += '<option value=\"' + j[i].optionValue + '\">' + j[i].optionDisplay + '</option>';
+                            }
+                            $('#epm_line').html(options);
+                            $('#epm_line option:first').attr('selected', 'selected');
+                    })
+                ";
                 $currentcomponent->addjsfunc('model_change(value,macid)', $js);
 
                 $info = $endpoint->get_phone_info($line_info['mac_id']);
@@ -280,15 +280,17 @@ function endpointman_configpageload() {
                 $checked = false;
 
                 $currentcomponent->addguielem($section, new gui_checkbox('epm_delete', $checked, 'Delete', 'Delete this Extension from Endpoint Manager'), 9);
-// phone web interface link
-	class gui_link_nw_tab extends guitext {
-    function __construct($elemname, $text, $url, $userlang = true) {
-        $parent_class = get_parent_class($this);
-        $this->html_text = "<a href=\"$url\" target=\"_blank\" id =\"$this->elemname\">$text</a>";
-    }
-}        
+
+                // phone web interface link
+	            class gui_link_nw_tab extends guitext {
+                    function __construct($elemname, $text, $url, $userlang = true) {
+                        $parent_class = get_parent_class($this);
+                        $this->html_text = "<a href=\"$url\" target=\"_blank\" id =\"$this->elemname\">$text</a>";
+                    }
+                }        
 				$currentcomponent->addguielem($section, new gui_link_nw_tab('epm_account_phone', 'Go to phone web interface', "http://$extension_address[0]"));
-//
+                //
+
 				$currentcomponent->addguielem($section, new gui_textbox('epm_mac', $info['mac'], 'MAC Address', 'The MAC Address of the Phone Assigned to this Extension/Device. <br />(Leave Blank to Remove from Endpoint Manager)', '', 'Please enter a valid MAC Address', true, 17, false), 9);
                 $currentcomponent->addguielem($section, new gui_selectbox('epm_brand', $brand_list, $info['brand_id'], 'Brand', 'The Brand of this Phone.', false, 'frm_' . $display . '_brand_change(this.options[this.selectedIndex].value)', false), 9);
                 $currentcomponent->addguielem($section, new gui_selectbox('epm_model', $model_list, $info['model_id'], 'Model', 'The Model of this Phone.', false, 'frm_' . $display . '_model_change(this.options[this.selectedIndex].value,\'' . $line_info['luid'] . '\')', false), 9);
@@ -298,25 +300,25 @@ function endpointman_configpageload() {
             } else {
 
                 $js = "
-                        $.ajaxSetup({ cache: false });
-                        $.getJSON('config.php?type=tool&quietmode=1&handler=file&module=endpointman&file=ajax_select.html.php&atype=template2',{id: value}, function(j){
-                                var options = '';
-                                for (var i = 0; i < j.length; i++) {
-                                        options += '<option value=\"' + j[i].optionValue + '\">' + j[i].optionDisplay + '</option>';
-                                }
-                                $('#epm_temps').html(options);
-                                $('#epm_temps option:first').attr('selected', 'selected');
-                        }),
-                        $.ajaxSetup({ cache: false });
-                        $.getJSON('config.php?type=tool&quietmode=1&handler=file&module=endpointman&file=ajax_select.html.php&mac='+ mac +'&atype=lines',{id: value}, function(j){
-                                var options = '';
-                                for (var i = 0; i < j.length; i++) {
-                                        options += '<option value=\"' + j[i].optionValue + '\">' + j[i].optionDisplay + '</option>';
-                                }
-                                $('#epm_line').html(options);
-                                $('#epm_line option:first').attr('selected', 'selected');
-                        })
-                    ";
+                    $.ajaxSetup({ cache: false });
+                    $.getJSON('config.php?type=tool&quietmode=1&handler=file&module=endpointman&file=ajax_select.html.php&atype=template2',{id: value}, function(j){
+                            var options = '';
+                            for (var i = 0; i < j.length; i++) {
+                                    options += '<option value=\"' + j[i].optionValue + '\">' + j[i].optionDisplay + '</option>';
+                            }
+                            $('#epm_temps').html(options);
+                            $('#epm_temps option:first').attr('selected', 'selected');
+                    }),
+                    $.ajaxSetup({ cache: false });
+                    $.getJSON('config.php?type=tool&quietmode=1&handler=file&module=endpointman&file=ajax_select.html.php&mac='+ mac +'&atype=lines',{id: value}, function(j){
+                            var options = '';
+                            for (var i = 0; i < j.length; i++) {
+                                    options += '<option value=\"' + j[i].optionValue + '\">' + j[i].optionDisplay + '</option>';
+                            }
+                            $('#epm_line').html(options);
+                            $('#epm_line option:first').attr('selected', 'selected');
+                    })
+                ";
                 $currentcomponent->addjsfunc('model_change(value,mac)', $js);
 
                 $brand_list = $endpoint->brands_available(NULL, true);
@@ -324,12 +326,12 @@ function endpointman_configpageload() {
                 $line_list = array();
                 $template_list = array();
 
-                $currentcomponent->addguielem($section, new gui_textbox('epm_mac', $info['mac'], 'MAC Address', 'The MAC Address of the Phone Assigned to this Extension/Device. <br />(Leave Blank to Remove from Endpoint Manager)', '', 'Please enter a valid MAC Address', true, 17, false), 9);
-                $currentcomponent->addguielem($section, new gui_selectbox('epm_brand', $brand_list, $info['brand_id'], 'Brand', 'The Brand of this Phone.', false, 'frm_' . $display . '_brand_change(this.options[this.selectedIndex].value)', false), 9);
-                $currentcomponent->addguielem($section, new gui_selectbox('epm_model', $model_list, $info['model_id'], 'Model', 'The Model of this Phone.', false, 'frm_' . $display . '_model_change(this.options[this.selectedIndex].value,document.getElementById(\'epm_mac\').value)', false), 9);
-                $currentcomponent->addguielem($section, new gui_selectbox('epm_line', $line_list, $line_info['line'], 'Line', 'The Line of this Extension/Device.', false, '', false), 9);
-                $currentcomponent->addguielem($section, new gui_selectbox('epm_temps', $template_list, $info['template_id'], 'Template', 'The Template of this Phone.', false, '', false), 9);
-                $currentcomponent->addguielem($section, new guitext('epm_note', 'Note: This might reboot the phone if it\'s already registered to Asterisk'));
+                $currentcomponent->addguielem($section, new gui_textbox('epm_mac', $info['mac'], _('MAC Address'), _('The MAC Address of the Phone Assigned to this Extension/Device. <br />(Leave Blank to Remove from Endpoint Manager)', '', 'Please enter a valid MAC Address'), true, 17, false), 9);
+                $currentcomponent->addguielem($section, new gui_selectbox('epm_brand', $brand_list, $info['brand_id'], _('Brand'), _('The Brand of this Phone.'), false, 'frm_' . $display . '_brand_change(this.options[this.selectedIndex].value)', false), 9);
+                $currentcomponent->addguielem($section, new gui_selectbox('epm_model', $model_list, $info['model_id'], _('Model'), _('The Model of this Phone.'), false, 'frm_' . $display . '_model_change(this.options[this.selectedIndex].value,document.getElementById(\'epm_mac\').value)', false), 9);
+                $currentcomponent->addguielem($section, new gui_selectbox('epm_line', $line_list, $line_info['line'], _('Line'), _('The Line of this Extension/Device.'), false, '', false), 9);
+                $currentcomponent->addguielem($section, new gui_selectbox('epm_temps', $template_list, $info['template_id'], _('Template'), _('The Template of this Phone.'), false, '', false), 9);
+                $currentcomponent->addguielem($section, new guitext('epm_note', _('Note: This might reboot the phone if it\'s already registered to Asterisk')));
 		
             }
         }
@@ -348,14 +350,16 @@ function endpointman_module_install_check_callback($mods = array()) {
     $conflicting_mods = array('restart');
 
 	foreach($mods as $k => $v) {
-		if (in_array($k, $conflicting_mods) && !in_array($active_modules[$current_mod]['status'],array(MODULE_STATUS_NOTINSTALLED,MODULE_STATUS_BROKEN))) {
+		if (in_array($k, $conflicting_mods) && !in_array($active_modules[$current_mod]['status'], array(MODULE_STATUS_NOTINSTALLED,MODULE_STATUS_BROKEN)))
+        {
 			$ret[] = $v['name'];
 		}
 	}
 
-	if (!empty($ret)) {
-		$modules = implode(',',$ret);
-		return _('Failed to install ' . $modules . ' due to the following conflicting module(s): ' . $active_modules[$current_mod]['displayname']);
+	if (!empty($ret))
+    {
+		$modules = implode(',', $ret);
+		return sprintf(_('Failed to install %s due to the following conflicting module(s): %s'), $modules, $active_modules[$current_mod]['displayname']);
 	}
 
 	return TRUE;

@@ -529,17 +529,21 @@ if (isset($template_editor)) {
     $endpoint->tpl->assign("mode", $mode);
 
 	
-    $edit_row['id'] = isset($edit_row['id']) ? $edit_row['id'] : '0';
+    $edit_row['id'] = $edit_row['id'] ?? '0';
     $endpoint->tpl->assign("edit_id", $edit_row['id']);
+
+    $edit_row['template_id'] = $edit_row['template_id'] ?? '0';
 	$endpoint->tpl->assign("template_id", $edit_row['template_id']);
 	
-	if ($edit_row['template_id'] == "0"){
-	$endpoint->tpl->assign("custom", 1);
+	if ($edit_row['template_id'] == "0")
+    {
+	    $endpoint->tpl->assign("custom", 1);
 	
-	$endpoint->tpl->assign("template_id", $edit_row['id']);
+	    $endpoint->tpl->assign("template_id", $edit_row['id']);
 	}
-	else{
-	$endpoint->tpl->assign("custom", 0);
+	else
+    {
+	    $endpoint->tpl->assign("custom", 0);
 	}
 
     if(isset($final)) {

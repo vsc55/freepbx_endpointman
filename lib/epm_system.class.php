@@ -153,7 +153,7 @@ class epm_system {
     function download_file_with_progress_bar($url_file, $destination_file, &$error = array()) {
 	    set_time_limit(0);
 	    $headers = get_headers($url_file, 1);
-	    $size = $headers['Content-Length'];
+	    $size = $headers['Content-Length'] ?? 0;
 	    $randnumid = sprintf("%08d", mt_rand(1,99999999));
 
 	    $dir = dirname($destination_file);

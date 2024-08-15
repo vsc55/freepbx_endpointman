@@ -6,12 +6,20 @@
  */
 
 namespace FreePBX\modules;
- 
-class epm_data_abstraction {
-    function __construct($config, $configmod) {
-    	
-    	$this->config = $config;
-    	$this->configmod = $configmod;
+
+#[\AllowDynamicProperties]
+class epm_data_abstraction
+{
+    public $emp       = null;
+    public $config    = null;
+    public $configmod = null;
+
+    // function __construct($config, $configmod)
+    function __construct($epm)
+    {
+        $this->epm       = $epm;
+    	$this->config    = $epm->config;
+    	$this->configmod = $epm->configmod;
     }
 	
     function all_products() {

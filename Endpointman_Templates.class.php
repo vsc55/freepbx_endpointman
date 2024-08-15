@@ -9,16 +9,19 @@
 
 namespace FreePBX\modules;
 
+#[\AllowDynamicProperties]
 class Endpointman_Templates
 {
-	public function __construct($freepbx = null, $cfgmod = null, $epm_config, $eda) 
+	// public function __construct($freepbx = null, $cfgmod = null, $epm_config, $eda) 
+	public function __construct($epm)
 	{
-		$this->freepbx = $freepbx;
-		$this->db = $freepbx->Database;
-		$this->config = $freepbx->Config;
-		$this->configmod = $cfgmod;
-		$this->epm_config = $epm_config;
-		$this->eda = $eda;
+		$this->epm 		  = $epm;
+		$this->freepbx 	  = $epm->freepbx;
+		$this->db 	   	  = $epm->freepbx->Database;
+		$this->config  	  = $epm->freepbx->Config;
+		$this->configmod  = $epm->configmod;
+		$this->epm_config = $epm->epm_config;
+		$this->eda 		  = $epm->eda;
 	}
 
 	public function myShowPage(&$pagedata) {
@@ -511,7 +514,7 @@ class Endpointman_Templates
 			$sql = "SELECT * FROM  endpointman_custom_configs WHERE product_id = '" . $row['product_id'] . "' AND original_name = '" . $files . "'";
 			$alt_configs_list = sql($sql, 'getAll', DB_FETCHMODE_ASSOC );
 			
-			if ( count($alt_configs_list) > 0) 
+			if ( count(array($alt_configs_list)) > 0) 
 			{
 				$files = str_replace(".", "_", $files);
 				foreach ($alt_configs_list as $ccf) 

@@ -148,7 +148,7 @@ class phonesettings {
             die('No Database?');
         }
 
-	global $amp_conf;
+	    global $amp_conf;
 
         $doc_root =	$amp_conf['AMPWEBROOT'] ."/admin/modules/endpointman/";
         require($doc_root . "includes/functions.inc");
@@ -158,7 +158,7 @@ class phonesettings {
         $sql = "SELECT mac_id, line FROM endpointman_line_list WHERE ext = '".$_SESSION['ari_user']['extension']."' ";
 
         $res = $endpoint->eda->sql($sql);
-        if(count($res)) {
+        if(count(array($res))) {
 
             $mac_row = $endpoint->eda->sql($sql, 'getrow', DB_FETCHMODE_ASSOC);
 

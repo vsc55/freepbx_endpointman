@@ -43,7 +43,7 @@ function generate_xml_from_array ($array, $node_name, &$tab = -1)
 	return $xml;
 }
 
-
+#[\AllowDynamicProperties]
 class Endpointman implements \BMO {
 
 	//public $epm_config;
@@ -68,19 +68,17 @@ class Endpointman implements \BMO {
 		if ($freepbx == null) {
 			throw new \Exception("Not given a FreePBX Object");
 		}
-		require_once('lib/json.class.php');
 		require_once('lib/Config.class.php');
 		require_once('lib/epm_system.class.php');
-		require_once('lib/datetimezone.class.php');
 		require_once('lib/epm_data_abstraction.class.php');
 		//require_once("lib/RainTPL.class.php");
 
-		$this->freepbx = $freepbx;
-		$this->db = $freepbx->Database;
-		$this->config = $freepbx->Config;
+		$this->freepbx 	 = $freepbx;
+		$this->db 		 = $freepbx->Database;
+		$this->config 	 = $freepbx->Config;
 		$this->configmod = new Endpointman\Config();
-		$this->system = new epm_system();
-		$this->eda = new epm_data_abstraction($this->config, $this->configmod);
+		$this->system 	 = new epm_system();
+		$this->eda 		 = new epm_data_abstraction($this);
 
 
 		$this->configmod->set('disable_epm', FALSE);
@@ -159,22 +157,18 @@ define("PHONE_MODULES_PATH", $this->PHONE_MODULES_PATH);
 
 
 		require_once('Endpointman_Config.class.php');
-		$this->epm_config = new Endpointman_Config($freepbx, $this->configmod, $this->system);
+		$this->epm_config = new Endpointman_Config($this);
 
 		require_once('Endpointman_Advanced.class.php');
-		$this->epm_advanced = new Endpointman_Advanced($freepbx, $this->configmod, $this->epm_config);
+		$this->epm_advanced = new Endpointman_Advanced($this);
 
 		require_once('Endpointman_Templates.class.php');
-		$this->epm_templates = new Endpointman_Templates($freepbx, $this->configmod, $this->epm_config, $this->eda);
+		$this->epm_templates = new Endpointman_Templates($this);
 
 		require_once('Endpointman_Devices.class.php');
-		$this->epm_devices = new Endpointman_Devices($freepbx, $this->configmod);
-
-		require_once('Endpointman_Devices.class.php');
-		$this->epm_oss = new Endpointman_Devices($freepbx, $this->configmod);
-
-		//require_once('Endpointman_Devices.class.php');
-		$this->epm_placeholders = new Endpointman_Devices($freepbx, $this->configmod);
+		$this->epm_devices 		= new Endpointman_Devices($this);
+		$this->epm_oss 		    = new Endpointman_Devices($this);
+		$this->epm_placeholders = new Endpointman_Devices($this);
 
 	}
 
@@ -194,12 +188,15 @@ define("PHONE_MODULES_PATH", $this->PHONE_MODULES_PATH);
 		return $files;
 	}
 
-	public function ajaxRequest($req, &$setting) {
-		//AVISO!!!!!!!!!!!!!!!!!!!!!!!!!!
-		//PERMITE TODO!!!!!!!!!!!!!!!!!!!
-		$setting['authenticate'] = true;
-		$setting['allowremote'] = true;
-		return true;
+	public function ajaxRequest($req, &$setting)
+	{
+
+		// ** Allow remote consultation with Postman **
+		// ********************************************
+		// $setting['authenticate'] = false;
+		// $setting['allowremote'] = true;
+		// return true;
+		// ********************************************
 
 		$module_sec = isset($_REQUEST['module_sec'])? trim($_REQUEST['module_sec']) : '';
 		if ($module_sec == "") { return false; }
@@ -240,7 +237,10 @@ define("PHONE_MODULES_PATH", $this->PHONE_MODULES_PATH);
 		$command = isset($_REQUEST['command'])? trim($_REQUEST['command']) : '';
 
 		if ($command == "") {
-			return array("status" => false, "message" => _("No command was sent!"));
+			return array(
+				"status" => false,
+				"message" => _("No command was sent!")
+			);
 		}
 
 		$arrVal['mod_sec'] = array("epm_devices", "epm_oss", "epm_placeholders", "epm_templates", "epm_config", "epm_advanced");
@@ -371,41 +371,27 @@ define("PHONE_MODULES_PATH", $this->PHONE_MODULES_PATH);
 	}
 
 	//http://wiki.freepbx.org/display/FOP/Adding+Floating+Right+Nav+to+Your+Module
-	public function getRightNav($request) {
-		if (! isset($_REQUEST['display']))
-			return '';
-		else {
-			//return load_view(dirname(__FILE__).'/views/rnav.php',array());
-			return load_view(dirname(__FILE__) . '/views/rnav.php', $var);
-		}
-		switch($_REQUEST['display'])
+	public function getRightNav($request, $params = array())
+	{
+		$data_return = "";
+		$data = array(
+			"epm" 	  => $this,
+			"request" => $request
+		);
+		$data = array_merge($data, $params);
+
+		switch($request['display'])
 		{
-			case "epm_devices":
-				return load_view(dirname(__FILE__) . '/views/rnav.php', $var);
-				break;
-			case "epm_oss":
-				return load_view(dirname(__FILE__) . '/views/rnav.php', $var);
-				break;
-			case "epm_placeholders":
-				return load_view(dirname(__FILE__) . '/views/rnav.php', $var);
-				break;
-
-			case "epm_config":
-				return load_view(dirname(__FILE__) . '/views/rnav.php', $var);
-				break;
-
-			case "epm_advanced":
-				return load_view(dirname(__FILE__) . '/views/rnav.php', $var);
-				break;
-
-			case "epm_templates":
-				return load_view(dirname(__FILE__) . '/views/rnav.php', $var);
-				break;
-
-			default:
-		        return '';
-
+			case 'epm_oss':
+			case 'epm_devices':
+			case 'epm_placeholders':
+			case 'epm_config':
+			case 'epm_advanced':
+			case 'epm_templates':
+				$data_return = load_view(__DIR__.'/views/rnav.php', $data);
+			break;
 		}
+		return $data_return;
 	}
 
 	//http://wiki.freepbx.org/pages/viewpage.action?pageId=29753755
@@ -580,8 +566,6 @@ define("PHONE_MODULES_PATH", $this->PHONE_MODULES_PATH);
     		return(FALSE);
     	}
     }
-
-
      */
 
 
@@ -603,6 +587,7 @@ define("PHONE_MODULES_PATH", $this->PHONE_MODULES_PATH);
      */
     function brands_available($selected = NULL, $show_blank=TRUE) {
         $data = $this->eda->all_active_brands();
+		$temp = [];
         if ($show_blank) {
             $temp[0]['value'] = "";
             $temp[0]['text'] = "";
@@ -624,7 +609,6 @@ define("PHONE_MODULES_PATH", $this->PHONE_MODULES_PATH);
     }
 
 	function listTZ($selected) {
-        require_once('lib/datetimezone.class.php');
         $data = \DateTimeZone::listIdentifiers();
         $i = 0;
         foreach ($data as $key => $row) {
@@ -664,38 +648,45 @@ define("PHONE_MODULES_PATH", $this->PHONE_MODULES_PATH);
             $sql = 'UPDATE endpointman_global_vars SET value = \'1\' WHERE var_name = \'tftp_check\'';
             sql($sql);
             $subject = shell_exec("netstat -luan --numeric-ports");
-            if (preg_match('/:69\s/i', $subject)) {
+            if (preg_match('/:69\s/i', $subject))
+			{
                 $rand = md5(rand(10, 2000));
-                if (file_put_contents($this->configmod->get('config_location') . 'TEST', $rand)) {
+                if (file_put_contents($this->configmod->get('config_location') . 'TEST', $rand))
+				{
                     if ($this->system->tftp_fetch('127.0.0.1', 'TEST') != $rand) {
-                        $this->error['tftp_check'] = 'Local TFTP Server is not correctly configured';
-echo 'Local TFTP Server is not correctly configured';
+                        $this->error['tftp_check'] = _('Local TFTP Server is not correctly configured');
+echo $this->error['tftp_check'];
                     }
                     unlink($this->configmod->get('config_location') . 'TEST');
-                } else {
-                    $this->error['tftp_check'] = 'Unable to write to ' . $this->configmod->get('config_location');
-echo 'Unable to write to ' . $this->configmod->get('config_location');
+                }
+				else
+				{
+                    $this->error['tftp_check'] = sprintf(_('Unable to write to %s'), $this->configmod->get('config_location'));
+echo $this->error['tftp_check'];
                 }
             } else {
                 $dis = FALSE;
                 if (file_exists('/etc/xinetd.d/tftp')) {
                     $contents = file_get_contents('/etc/xinetd.d/tftp');
                     if (preg_match('/disable.*=.*yes/i', $contents)) {
-                        $this->error['tftp_check'] = 'Disabled is set to "yes" in /etc/xinetd.d/tftp. Please fix <br />Then restart your TFTP service';
-echo 'Disabled is set to "yes" in /etc/xinetd.d/tftp. Please fix <br />Then restart your TFTP service';
+                        $this->error['tftp_check'] = _('Disabled is set to "yes" in /etc/xinetd.d/tftp. Please fix <br />Then restart your TFTP service');
+echo $this->error['tftp_check'];
                         $dis = TRUE;
                     }
                 }
-                if (!$dis) {
-                    $this->error['tftp_check'] = 'TFTP Server is not running. <br />See here for instructions on how to install one: <a href="http://wiki.provisioner.net/index.php/Tftp" target="_blank">http://wiki.provisioner.net/index.php/Tftp</a>';
-echo 'TFTP Server is not running. <br />See here for instructions on how to install one: <a href="http://wiki.provisioner.net/index.php/Tftp" target="_blank">http://wiki.provisioner.net/index.php/Tftp</a>';
+                if (!$dis)
+				{
+                    $this->error['tftp_check'] = _('TFTP Server is not running. <br />See here for instructions on how to install one: <a href="http://wiki.provisioner.net/index.php/Tftp" target="_blank">http://wiki.provisioner.net/index.php/Tftp</a>');
+echo $this->error['tftp_check'];
                 }
             }
             $sql = 'UPDATE endpointman_global_vars SET value = \'0\' WHERE var_name = \'tftp_check\'';
             sql($sql);
-        } else {
-            $this->error['tftp_check'] = 'TFTP Server check failed on last past. Skipping';
-echo 'TFTP Server check failed on last past. Skipping';
+        }
+		else
+		{
+            $this->error['tftp_check'] = _('TFTP Server check failed on last past. Skipping');
+echo $this->error['tftp_check'];
         }
     }
 
@@ -1039,7 +1030,7 @@ echo 'TFTP Server check failed on last past. Skipping';
 
     	//$res = sql($sql);
 		$res = sql($sql, 'getAll', DB_FETCHMODE_ASSOC);
-    	if (count($res)) {
+    	if (count(array($res))) {
     		//Returns Brand Name, Brand Directory, Model Name, Mac Address, Extension (FreePBX), Custom Configuration Template, Custom Configuration Data, Product Name, Product ID, Product Configuration Directory, Product Configuration Version, Product XML name,
     		$sql = "SELECT endpointman_mac_list.specific_settings, endpointman_mac_list.config_files_override, endpointman_mac_list.global_user_cfg_data, endpointman_model_list.id as model_id, endpointman_brand_list.id as brand_id, endpointman_brand_list.name, endpointman_brand_list.directory, endpointman_model_list.model, endpointman_mac_list.mac, endpointman_mac_list.template_id, endpointman_mac_list.global_custom_cfg_data, endpointman_product_list.long_name, endpointman_product_list.id as product_id, endpointman_product_list.cfg_dir, endpointman_product_list.cfg_ver, endpointman_model_list.template_data, endpointman_model_list.enabled, endpointman_mac_list.global_settings_override FROM endpointman_line_list, endpointman_mac_list, endpointman_model_list, endpointman_brand_list, endpointman_product_list WHERE endpointman_mac_list.model = endpointman_model_list.id AND endpointman_brand_list.id = endpointman_model_list.brand AND endpointman_product_list.id = endpointman_model_list.product_id AND endpointman_mac_list.id = endpointman_line_list.mac_id AND endpointman_mac_list.id = " . $mac_id;
     		$phone_info = sql($sql, 'getRow', DB_FETCHMODE_ASSOC);
@@ -1109,7 +1100,7 @@ echo 'TFTP Server check failed on last past. Skipping';
     	$brand = sql($oui_sql, 'getRow', DB_FETCHMODE_ASSOC);
 
     	$res = sql($oui_sql);
-    	$brand_count = count($res);
+    	$brand_count = count(array($res));
 
     	if (!$brand_count) {
     		//oui doesn't have a matching mysql reference, probably a PC/router/wap/printer of some sort.
@@ -1216,7 +1207,7 @@ $this->error['parse_configs'] = 'Error Returned From Timezone Library: ' . $e->g
     						$sql = "SELECT original_name,data FROM endpointman_custom_configs WHERE id = " . $list;
     						//$res = sql($sql);
 							$res = sql($sql, 'getAll', DB_FETCHMODE_ASSOC);
-    						if (count($res)) {
+    						if (count(array($res))) {
     							$data = sql($sql, 'getRow', DB_FETCHMODE_ASSOC);
     							$provisioner_lib->config_files_override[$data['original_name']] = $data['data'];
     						}
@@ -1231,7 +1222,7 @@ $this->error['parse_configs'] = 'Error Returned From Timezone Library: ' . $e->g
     						$sql = "SELECT original_name,data FROM endpointman_custom_configs WHERE id = " . $list;
     						//$res = sql($sql);
 							$res = sql($sql, 'getAll', DB_FETCHMODE_ASSOC);
-    						if (count($res)) {
+    						if (count(array($res))) {
     							$data = sql($sql, 'getRow', DB_FETCHMODE_ASSOC);
     							$provisioner_lib->config_files_override[$data['original_name']] = $data['data'];
     						}
@@ -1782,7 +1773,7 @@ $this->error['parse_configs'] = "File not written to hard drive!";
                 $brand = $this->eda->sql($oui_sql, 'getRow', DB_FETCHMODE_ASSOC);
 
                 $res = $this->eda->sql($oui_sql);
-                $brand_count = count($res);
+                $brand_count = count(array($res));
 
                 if (!$brand_count) {
                     //oui doesn't have a matching mysql reference, probably a PC/router/wap/printer of some sort.
@@ -1796,7 +1787,7 @@ $this->error['parse_configs'] = "File not written to hard drive!";
 
                 $res = $this->eda->sql($epm_sql);
 
-                $epm = count($res) ? TRUE : FALSE;
+                $epm = count(array($res)) ? TRUE : FALSE;
 
                 //Add into a final array
                 $final[$z] = array("ip" => $ip, "mac" => $mac, "mac_strip" => $mac_strip, "oui" => $oui, "brand" => $brand['name'], "brand_id" => $brand['id'], "endpoint_managed" => $epm);
@@ -2068,9 +2059,9 @@ $this->error['parse_configs'] = "File not written to hard drive!";
         while ($i < count($config_files)) {
             $config_files[$i] = str_replace(".", "_", $config_files[$i]);
 
-            if (isset($variables[config_files][$i])) {
+            if (isset($variables['config_files'][$i])) {
 
-                $variables[$config_files[$i]] = explode("_", $variables[config_files][$i], 2);
+                $variables[$config_files[$i]] = explode("_", $variables['config_files'][$i], 2);
 
                 $variables[$config_files[$i]] = $variables[$config_files[$i]][0];
                 if ($variables[$config_files[$i]] > 0) {

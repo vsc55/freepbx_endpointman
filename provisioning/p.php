@@ -1,11 +1,14 @@
 <?PHP
 
-function getMethod() {
-	$method = $_SERVER['REQUEST_METHOD'];
+function getMethod()
+{
+	$method   = $_SERVER['REQUEST_METHOD'];
 	$override = isset($_SERVER['HTTP_X_HTTP_METHOD_OVERRIDE']) ? $_SERVER['HTTP_X_HTTP_METHOD_OVERRIDE'] : (isset($_GET['method']) ? $_GET['method'] : '');
 	if ($method == 'POST' && strtoupper($override) == 'PUT') {
 		$method = 'PUT';
-	} elseif ($method == 'POST' && strtoupper($override) == 'DELETE') {
+	}
+    elseif ($method == 'POST' && strtoupper($override) == 'DELETE')
+    {
 		$method = 'DELETE';
 	}
 	return $method;
@@ -59,7 +62,8 @@ if(((getMethod() == 'PUT') OR (getMethod() == 'POST'))) {
     die();
 }
 
-if(getMethod() == "GET") {
+if(getMethod() == "GET")
+{
     # Workaround for SPAs that don't actually request their type of device
     # Assume they're 504G's. Faulty in firmware 7.4.3a
     $filename = basename($_SERVER["REQUEST_URI"]);
@@ -112,9 +116,12 @@ if(getMethod() == "GET") {
             die();
         }
         
-        if (array_key_exists($filename, $files)) {
+        if (array_key_exists($filename, $files))
+        {
             echo $files[$filename];
-        } else {
+        }
+        else
+        {
             header("HTTP/1.0 404 Not Found", true, 404);
             echo "<h1>"._("Error 404 Not Found")."</h1>";
             echo _("File not Found!");

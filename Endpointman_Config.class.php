@@ -9,6 +9,7 @@
 
 namespace FreePBX\modules;
 
+#[\AllowDynamicProperties]
 class Endpointman_Config
 {
 	public $UPDATE_PATH;
@@ -17,47 +18,63 @@ class Endpointman_Config
 	public $PHONE_MODULES_PATH;
 	public $PROVISIONER_BASE;
 
-	public function __construct($freepbx = null, $cfgmod = null, $system = null)
+	// public function __construct($freepbx = null, $cfgmod = null, $system = null)
+	public function __construct($epm)
 	{
-		$this->freepbx = $freepbx;
-		$this->db = $freepbx->Database;
-		$this->config = $freepbx->Config;
-		$this->configmod = $cfgmod;
-		$this->system = $system;
+		$this->epm 		 = $epm;
+		$this->freepbx 	 = $epm->freepbx;
+		$this->db 		 = $epm->freepbx->Database;
+		$this->config 	 = $epm->freepbx->Config;
+		$this->configmod = $epm->configmod;
+		$this->system 	 = $epm->system;
 
-
-		$this->UPDATE_PATH = $this->configmod->get('update_server');
+		$this->UPDATE_PATH 	= $this->configmod->get('update_server');
         $this->MODULES_PATH = $this->config->get('AMPWEBROOT') . '/admin/modules/';
-        if (file_exists($this->MODULES_PATH . "endpointman/")) {
+        if (file_exists($this->MODULES_PATH . "endpointman/"))
+		{
             $this->LOCAL_PATH = $this->MODULES_PATH . "endpointman/";
-        } else {
-            die("Can't Load Local Endpoint Manager Directory!");
         }
-        if (file_exists($this->MODULES_PATH . "_ep_phone_modules/")) {
+		else
+		{
+            die(_("Can't Load Local Endpoint Manager Directory!"));
+        }
+        if (file_exists($this->MODULES_PATH . "_ep_phone_modules/"))
+		{
             $this->PHONE_MODULES_PATH = $this->MODULES_PATH . "_ep_phone_modules/";
-        } else {
+        }
+		else
+		{
             $this->PHONE_MODULES_PATH = $this->MODULES_PATH . "_ep_phone_modules/";
-            if (!file_exists($this->PHONE_MODULES_PATH)) {
+            if (!file_exists($this->PHONE_MODULES_PATH))
+			{
                 mkdir($this->PHONE_MODULES_PATH, 0775);
             }
-            if (file_exists($this->PHONE_MODULES_PATH . "setup.php")) {
+            if (file_exists($this->PHONE_MODULES_PATH . "setup.php"))
+			{
                 unlink($this->PHONE_MODULES_PATH . "setup.php");
             }
-            if (!file_exists($this->MODULES_PATH . "_ep_phone_modules/")) {
-                die('Endpoint Manager can not create the modules folder!');
+            if (!file_exists($this->MODULES_PATH . "_ep_phone_modules/"))
+			{
+                die(_('Endpoint Manager can not create the modules folder!'));
             }
         }
-
 	}
 
 	public function myShowPage(&$pagedata) {
+
 	}
 
-	public function ajaxRequest($req, &$setting) {
-		$arrVal = array("saveconfig", "list_all_brand", "list_brand_model_hide");
+	public function ajaxRequest($req, &$setting)
+	{
+		$arrVal = array(
+			"saveconfig",
+			"list_all_brand",
+			"list_brand_model_hide"
+		);
+
 		if (in_array($req, $arrVal)) {
 			$setting['authenticate'] = true;
-			$setting['allowremote'] = false;
+			$setting['allowremote']   = false;
 			return true;
 		}
 		return false;
@@ -66,33 +83,33 @@ class Endpointman_Config
     public function ajaxHandler($module_tab = "", $command = "")
 	{
 		$txt = array(
-			'ayuda_model' => _("If we can activate the model set terminals of the models.<br /> If this model is disabled will not appear in the list of models that can be configured for PBX."),
-			'ayuda_producto' => _('The button "Install Firmware" installs the necessary files to the server for the terminal alone are updated via TFTP or HTTP.<br /> The button "Remove frimware" delete files server products.<br /> The button "Update frimware" appears if a newer frimware detected on the server and asks if you want to update.<br /> The "Update" button appears when a new version of this model pack is detected.'),
-			'ayuda_marca' => _('The "Install" button installs the configuration package brand models we selected.<br /> The "Uninstall" button removes the package configuration models of the brand selected.<br /> The "Update" button appears if a new version of the package that is already installed to upgrade to the latest version is detected.'),
-			'new_pack_mod' => _("New Package Modified"),
-			'pack_last_mod' => _("Package Last Modified"),
-			'check_update' => _("Check for Update "),
-			'check_online' => _("Check Online "),
-			'install' => _("Install"),
-			'uninstall' => _("Uninstall"),
-			'update' => _("Update"),
-			'fw_install' => _('FW Install'),
-			'fw_uninstall' =>  _('FW Delete'),
-			'fw_update' => _('FW Update'),
-			'enable' => _('Enable'),
-			'disable' => _('Disable'),
-			'show' => _("Show"),
-			'hide' => _("Hide"),
-			'ready' => _("Ready!"),
-			'error' => _("Error!"),
-			'title_update' => _("Update!"),
-			'save_changes' => _("Saving Changes..."),
-			'save_changes_ok' => _("Saving Changes... Ok!"),
+			'ayuda_model' 		 => _("If we can activate the model set terminals of the models.<br /> If this model is disabled will not appear in the list of models that can be configured for PBX."),
+			'ayuda_producto'	 => _('The button "Install Firmware" installs the necessary files to the server for the terminal alone are updated via TFTP or HTTP.<br /> The button "Remove frimware" delete files server products.<br /> The button "Update frimware" appears if a newer frimware detected on the server and asks if you want to update.<br /> The "Update" button appears when a new version of this model pack is detected.'),
+			'ayuda_marca' 		 => _('The "Install" button installs the configuration package brand models we selected.<br /> The "Uninstall" button removes the package configuration models of the brand selected.<br /> The "Update" button appears if a new version of the package that is already installed to upgrade to the latest version is detected.'),
+			'new_pack_mod' 		 => _("New Package Modified"),
+			'pack_last_mod' 	 => _("Package Last Modified"),
+			'check_update' 		 => _("Check for Update "),
+			'check_online' 		 => _("Check Online "),
+			'install'			 => _("Install"),
+			'uninstall' 	 	 => _("Uninstall"),
+			'update' 		 	 => _("Update"),
+			'fw_install' 	 	 => _('FW Install'),
+			'fw_uninstall' 	 	 =>  _('FW Delete'),
+			'fw_update' 	 	 => _('FW Update'),
+			'enable' 			 => _('Enable'),
+			'disable' 			 => _('Disable'),
+			'show' 				 => _("Show"),
+			'hide' 				 => _("Hide"),
+			'ready' 			 => _("Ready!"),
+			'error' 			 => _("Error!"),
+			'title_update' 		 => _("Update!"),
+			'save_changes'		 => _("Saving Changes..."),
+			'save_changes_ok' 	 => _("Saving Changes... Ok!"),
 			'err_upload_content' => _("Upload Content!"),
-			'check' => _("Check for Updates..."),
-			'check_ok' => _("Check for Updates... Ok!"),
-			'update_content' => _("Update Content..."),
-			'opt_invalid' => _("Invalid Option!")
+			'check' 			 => _("Check for Updates..."),
+			'check_ok' 			 => _("Check for Updates... Ok!"),
+			'update_content' 	 => _("Update Content..."),
+			'opt_invalid' 		 => _("Invalid Option!")
 		);
 
 		switch ($command)
@@ -241,9 +258,9 @@ class Endpointman_Config
 	/**** FUNCIONES SEC MODULO "epm_config\manager" ****/
 	private function epm_config_manager_check_for_updates ()
 	{
-		out("<h3>Update data...</h3>");
+		out("<h3>"._("Update data...")."</h3>");
 		$this->update_check(true);
-		out ("All Done!");
+		out (_("All Done!"));
 	}
 
 	private function epm_config_manager_brand()
@@ -406,7 +423,7 @@ class Endpointman_Config
 			$row_out[$i]['installed'] = $row['installed'];
 			$row_out[$i]['hidden'] = $row['hidden'];
 			$row_out[$i]['count'] = $i;
-			$row_out[$i]['products'] = "";
+			$row_out[$i]['products'] = array();
 			if ($row['hidden'] == 1)
 			{
 				$i++;
@@ -423,7 +440,7 @@ class Endpointman_Config
 				$row_out[$i]['products'][$j]['short_name'] = $row2['short_name'];
 				$row_out[$i]['products'][$j]['hidden'] = $row2['hidden'];
 				$row_out[$i]['products'][$j]['count'] = $j;
-				$row_out[$i]['products'][$j]['models'] = "";
+				$row_out[$i]['products'][$j]['models'] = array();
 				if ($row2['hidden'] == 1)
 				{
 					$j++;
@@ -644,12 +661,17 @@ class Endpointman_Config
         //$temp_location = $this->system->sys_get_temp_dir() . "/epm_temp/";
 		$temp_location = $this->PHONE_MODULES_PATH . "temp/provisioner/";
         if (!$this->configmod->get('use_repo')) {
+
+dbug($this->UPDATE_PATH . "master.json");
+
         	if ($echomsg == true) {
         		$master_result = $this->system->download_file_with_progress_bar($this->UPDATE_PATH . "master.json", $this->PHONE_MODULES_PATH . "endpoint/master.json");
         	} else {
         		$master_result = $this->system->download_file($this->UPDATE_PATH . "master.json", $this->PHONE_MODULES_PATH . "endpoint/master.json");
         	}
 
+			echo $master_result;
+			return;
 
             if (!$master_result || !file_exists($this->PHONE_MODULES_PATH . "endpoint/master.json")) {
             	$error['brand_update_check_master'] = _("Error: Not able to connect to repository. Using local master file instead.");
@@ -659,6 +681,8 @@ class Endpointman_Config
             }
 
             $temp = $this->file2json($this->PHONE_MODULES_PATH . 'endpoint/master.json');
+		
+
             $endpoint_package = $temp['data']['package'];
             $endpoint_last_mod = $temp['data']['last_modified'];
 			
@@ -1528,7 +1552,7 @@ if ($this->configmod->get('debug')) echo format_txt(_("---Inserting Model %_NAME
         $sql = "SELECT * FROM  endpointman_product_list WHERE hidden = 0 AND id ='" . $id . "'";
         $res = sql($sql, 'getAll', DB_FETCHMODE_ASSOC);
 
-        if (count($res) > 0) {
+        if (count(array($res)) > 0) {
             $row = sql($sql, 'getRow', DB_FETCHMODE_ASSOC);
 
             $sql = "SELECT directory FROM  endpointman_brand_list WHERE hidden = 0 AND id ='" . $row['brand'] . "'";

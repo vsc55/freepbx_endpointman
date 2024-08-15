@@ -4,6 +4,7 @@
  *
  * @author Andrew
  */
+#[\AllowDynamicProperties]
 class epm_data_abstraction {
 
     public $db;
