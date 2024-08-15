@@ -4,6 +4,7 @@
 *  Kevin Batdorf
 *
 *  http://kevinbatdorf.github.com/codaslider
+*  https://github.com/KevinBatdorf/codaslider
 *
 *  GPL license & MIT license
 *

@@ -24,13 +24,13 @@
             name="epm_config_manager_select_hidens"
             multiple>
         </select>
-       
-    </div>
-
-    <div class="input-group-append">
+        <div class="input-group-append" style="padding-left: 10px;">
             <span class="help">
                 <i class="fa fa-question-circle"></i>
                 <span style="display: none;"><?php echo _("This list contains all the Brands <br /> that have been hidden. Clicking on any of them will unhide them.") ?></span>
             </span>
-        </div>
+        </div>   
+    </div>
+
+    
 </div>

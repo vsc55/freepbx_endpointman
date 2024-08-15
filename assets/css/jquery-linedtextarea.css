@@ -20,7 +20,7 @@
  *
  */
 
-.linedwrap {
+ .linedwrap {
 	border: 1px solid #c0c0c0;
 	padding: 3px;
 }
@@ -33,7 +33,7 @@
 .linedtextarea textarea, .linedwrap .codelines .lineno {
 	font-size: 10pt;
 	font-family: monospace;
-	line-height: normal !important;
+	line-height: 15px !important;
 }
 
 .linedtextarea textarea {
