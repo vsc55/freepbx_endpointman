@@ -2,7 +2,7 @@
 	<rawname>endpointman</rawname>
 	<repo>unsupported</repo>
 	<name>OSS PBX End Point Manager</name>
-	<version>14.0.3</version>
+	<version>17.0.1</version>
 	<type>setup</type>
 	<category>Settings</category>
 	<license>GPLv3+</license>
@@ -23,57 +23,7 @@
 		Pull Requests can be made to either of these and are encouraged.
 	</description>
 	<changelog>
-		*14.0.3* Support for PHP 7
-		*14.0.2.1* Line State icon was only red. The state green/red is now fixed and works.
-		*14.0.2* Fixed a Problem if Sysadmin is not installed. Sysadmin is a commercial module and should not be forced to be installed to use OSS EPM.
-		*14.0.1.9* Device Manager does not Group Lines by Device anymore. The MAC gets auto deleted if you remove the last line in the list	/ Fields in Device Manager are now sortable
-		*14.0.1.8* Add DND Featurecodes for Phone Provisioning / Fix Template Manager radio boxes Bug / Fix Extension Export including IPEI in export.
-		*14.0.1.7* Fix Provisioner Package Updater in Package Manager
-		*14.0.1.6* Add global Admin Password and User Password Placeholders and some more Placeholders / Add Sysadmin Pro HTTP/HTTPS Provisioning Port/User/PW Placeholders
-		*14.0.1.5* Creates a symlinks for devices which have values for "$additionalmacs". You can autoprovision Multicell Systems like Snom M700 and all additional Basestations with the MAC Adresses are symlinked to the original file.
-		*14.0.1.4* Add some more global values, prepare endpointman for using it together with commercial endpoint module.
-		*14.0.1.3* Fix some Bugs, Make Permission System Integration into Rnav Menu
-		*14.0.1.2* Move database definitions to xml
-		*14.0.0.5* Add more placeholder fields to allow create more packages.
-		*14.0.0.4* Add IPEI fields
-		*14.0.0.3* Endpointman 14.0.0.3 - Fix Template Manager
-		*14.0.0.2* Fix problems after merging 14.0.0.1
-		*14.0.0.1* Initial release of fork from OSS EPM inlcuding right Navigation, Bootstrap Device View and OSS Information Page
-		*13.0.7.18* Fix missing function numRows Fix DateTimeZone class init Use count() instead of broken numRow() function Fix selected in template editor dropdown Changed some Spanish words to English on non-locales files
-		*13.0.7.17* Fix Save button in custom template page
-		*13.0.7.16* Use PHP timezone as default timezone instead of static America/Los_Angeles
-		*13.0.7.15* Remove spanish wordages
-		*13.0.7.14* Fix totally broken random number generator, Fixes issue with variable in json
-		*13.0.7.13* Fix issue if directory doesnt exist during download
-		*13.0.7.12* pjsip_support: Add support for extensions using res_pjsip driver,, long name descriptions are truncated
-		*13.0.7.11* Add delete_device_by_mac func, Update Bootstrap-select 1.11.2, fix bugs epm_config JS
-		*13.0.7.10* Add new dialog loading..., continue upate...
-		*13.0.7.9* Add bootstrap-select, continue updating Template Editor...
-		*13.0.7.8* Fix bug multi sql query is not found. Continue updating Template Editor...
-		*13.0.7.7* Update i18n-es, global config dialog save, load config for ajax....
-		*13.0.7.6* Add new function  getActionBar all class, update style textbox, textare Template Editor....
-		*13.0.7.5* Update CSS Plugin JQuery (Liquid Slider), Fix Bug RightNav, continue update...
-		*13.0.7.4* Update Plugin JQuery (Liquid Slider), continue update...
-		*13.0.7.3* Fix RightNav edit template, Continue to update...
-		*13.0.7.2* Fix Bugs, Continue to update...
-		*13.0.7.1* Continue to update...
-		*13.0.7* Organize code, Fix Bug's, Update OSS Endpoint Template Manager
-		*13.0.6.8* Fix Bug Package Version Firmware is null.
-		*13.0.6.7* Cleanup bad javascript
-		*13.0.6.6* Fix missing files issues
-		*13.0.6.5* Remove array by reference
-		*13.0.6.4* Fix bug, generate file list export brands through AJAX, delete code not required, organize files.
-		*13.0.6.3* Fix bug, optimize code.
-		*13.0.6.2* Bring back in better check onlines
-		*13.0.6.1* Fix Package Manager Enable/Disable inverter value, some fix bug more.
-		*13.0.6* End Fix OOS Advanced Setting
-		*13.0.5.2* More Fix OOS Advanced Setting
-		*13.0.5.1* More Fix OOS Advanced Setting
-		*13.0.5* Missing updated file
-		*13.0.4* Fixes online check, Updates from Community member Javier Pastor Garcia
-		*13.0.3* Fixes check online
-		*13.0.2* Missing updated file
-		*13.0.1* Updates from Community member Javier Pastor Garcia
+		*17.0.1* Support for PHP 8.2
 	</changelog>
 	<database>
 		<table name="endpointman_brand_list">
@@ -173,13 +123,14 @@
 			<field name="product_id" type="string" length="11"/>
 			<field name="data" type="blob"/>
 		</table>
-</database>
+	</database>
 	<depends>
-		<version>14.0</version>
-		<phpversion>5.3.0</phpversion>
+		<version>17.0.1</version>
+		<phpversion>8.2.0</phpversion>
+		<module>framework ge 17.0.19.4</module>
 	</depends>
 	<supported>
-		<version>14.0</version>
+		<version>17.0</version>
 	</supported>
 	<hooks>
 		<framework namespace="FreePBX\Console\Command" class="Chown">

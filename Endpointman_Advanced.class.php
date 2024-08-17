@@ -402,6 +402,14 @@ class Endpointman_Advanced
 				$sql = "UPDATE endpointman_global_vars SET value='" . $dget['value'] . "' WHERE var_name='asterisk_location'";
 				break;
 
+			case "tar_loc":
+				$sql = "UPDATE endpointman_global_vars SET value='" . $dget['value'] . "' WHERE var_name='tar_location'";
+				break;
+
+			case "netstat_loc":
+				$sql = "UPDATE endpointman_global_vars SET value='" . $dget['value'] . "' WHERE var_name='netstat_location'";
+				break;
+
 			case "package_server":
 				$sql = "UPDATE endpointman_global_vars SET value='" . $dget['value'] . "' WHERE var_name='update_server'";
 				break;
@@ -972,7 +980,8 @@ class Endpointman_Advanced
 									outn(_("Extracting Tarball... "));
 								}
 								//TODO: PENDIENTE VALIDAR SI EL EXEC NO DA ERROR!!!!!
-								exec("tar -xvf ".$uploads_dir_file." -C ".$temp_directory);
+								exec( sprintf("%s -xvf %s -C %s", $this->configmod->get("tar_location"), $uploads_dir_file, $temp_directory) );
+								// exec("tar -xvf ".$uploads_dir_file." -C ".$temp_directory);
 								out(_("Done!"));
 
 								$package = basename($name, ".tgz");
@@ -1030,7 +1039,8 @@ class Endpointman_Advanced
 						if (file_exists($uploads_dir_file)) {
 							outn(_("Extracting Provisioner Package... "));
 							//TODO: Pendiente añadir validacion si exec no da error!!!!
-							exec("tar -xvf ".$uploads_dir_file." -C ".$uploads_dir."/");
+							exec( sprintf("%s -xvf %s -C %s/", $this->configmod->get("tar_location"), $uploads_dir_file, $uploads_dir) );
+							// exec("tar -xvf ".$uploads_dir_file." -C ".$uploads_dir."/");
 							out(_("Done!"));
 
 							if(!file_exists($this->PHONE_MODULES_PATH."endpoint")) {
@@ -1126,7 +1136,8 @@ class Endpointman_Advanced
 				}
 				$time = time();
 				//TODO: Pendiente validar si exec no retorna error!!!!!
-				exec("tar zcf ".$this->PHONE_MODULES_PATH."temp/export/".$row['directory']."-".$time.".tgz --exclude .svn --exclude firmware -C ".$this->PHONE_MODULES_PATH."/endpoint ".$row['directory']);
+				exec( sprintf("%s zcf %stemp/export/%s-%s.tgz --exclude .svn --exclude .git --exclude firmware -C %s/endpoint %s", $this->configmod->get("tar_location"), $this->PHONE_MODULES_PATH, $row['directory'], $time, $this->PHONE_MODULES_PATH, $row['directory']) );
+				// exec("tar zcf ".$this->PHONE_MODULES_PATH."temp/export/".$row['directory']."-".$time.".tgz --exclude .svn --exclude firmware -C ".$this->PHONE_MODULES_PATH."/endpoint ".$row['directory']);
 				out(_("Done!") . "<br />");
 
 

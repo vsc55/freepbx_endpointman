@@ -18,7 +18,6 @@ class Endpointman_Config
 	public $PHONE_MODULES_PATH;
 	public $PROVISIONER_BASE;
 
-	// public function __construct($freepbx = null, $cfgmod = null, $system = null)
 	public function __construct($epm)
 	{
 		$this->epm 		 = $epm;
@@ -657,42 +656,54 @@ class Endpointman_Config
      * This function will alos auto-update the provisioner.net library incase anything has changed
      * @return array An array of all the brands/products/models and information about what's  enabled, installed or otherwise
      */
-    function update_check($echomsg = false, &$error=array()) {
+    function update_check($echomsg = false, &$error=array())
+	{
         //$temp_location = $this->system->sys_get_temp_dir() . "/epm_temp/";
+		$url_master    = $this->UPDATE_PATH . "master.json";
+		$local_master  = $this->PHONE_MODULES_PATH . "endpoint/master.json";
 		$temp_location = $this->PHONE_MODULES_PATH . "temp/provisioner/";
-        if (!$this->configmod->get('use_repo')) {
 
-dbug($this->UPDATE_PATH . "master.json");
-
-        	if ($echomsg == true) {
-        		$master_result = $this->system->download_file_with_progress_bar($this->UPDATE_PATH . "master.json", $this->PHONE_MODULES_PATH . "endpoint/master.json");
-        	} else {
-        		$master_result = $this->system->download_file($this->UPDATE_PATH . "master.json", $this->PHONE_MODULES_PATH . "endpoint/master.json");
+        if (!$this->configmod->get('use_repo'))
+		{
+        	if ($echomsg == true)
+			{
+        		$master_result = $this->system->download_file_with_progress_bar($url_master, $local_master);
+        	}
+			else
+			{
+        		$master_result = $this->system->download_file($url_master, $local_master);
         	}
 
-			echo $master_result;
-			return;
-
-            if (!$master_result || !file_exists($this->PHONE_MODULES_PATH . "endpoint/master.json")) {
+            if (!$master_result || !file_exists($local_master))
+			{
             	$error['brand_update_check_master'] = _("Error: Not able to connect to repository. Using local master file instead.");
-            	if ($echomsg == true ) {
+            	if ($echomsg == true )
+				{
             		out($error['brand_update_check_master']);
             	}
             }
 
-            $temp = $this->file2json($this->PHONE_MODULES_PATH . 'endpoint/master.json');
-		
+            $temp = $this->file2json($local_master);
 
-            $endpoint_package = $temp['data']['package'];
-            $endpoint_last_mod = $temp['data']['last_modified'];
+            $endpoint_package = $temp['data']['package'] ?? null;
+            $endpoint_last_mod = $temp['data']['last_modified'] ?? null;
 			
-            $sql = "SELECT value FROM endpointman_global_vars WHERE var_name LIKE 'endpoint_vers'";
-            $data = sql($sql, 'getOne');
 
-            $contents = file_get_contents($this->UPDATE_PATH . "/update_status");
+            // $sql = "SELECT value FROM endpointman_global_vars WHERE var_name LIKE 'endpoint_vers'";
+            // $data = sql($sql, 'getOne');
+			$sql  = "SELECT value FROM endpointman_global_vars WHERE var_name LIKE :find";
+			$stmt = $this->db->prepare($sql);
+			$stmt->execute([':find' => "endpoint_vers"]);
+			$data = $stmt->rowCount() === 0 ? null : $stmt->fetch(\PDO::FETCH_ASSOC);
+
+			//TODO: Comment download update_status becouse not exist in repostitory GitHub and Set 0 becouse not existe Pakage File in repositopry.
+            // $contents = file_get_contents($this->UPDATE_PATH . "/update_status");
+			$contents = 0;
 			
             if ($contents != '1') {
-                if (($data == "") OR ($data <= $endpoint_last_mod)) {
+                if (($data == "") OR ($data <= $endpoint_last_mod))
+				{
+					//TODO: ERROR Pakage file not exist in repository GitHub.
                     if ((!$master_result) OR (!$this->system->download_file($this->UPDATE_PATH . '/' . $endpoint_package, $temp_location . $endpoint_package)))
                     {
                     	$error['brand_update_check_json'] = _("Not able to connect to repository. Using local Provisioner.net Package");
@@ -700,7 +711,8 @@ dbug($this->UPDATE_PATH . "master.json");
                     		out($error['brand_update_check_json']);
                     	}
                     } else {
-						exec("tar -xvf " . $temp_location . $endpoint_package . " -C " . $temp_location);
+						exec( sprintf("%s -xvf %s%s -C %s", $this->configmod->get("tar_location"), $temp_location, $endpoint_package, $temp_location) );
+						// exec("tar -xvf " . $temp_location . $endpoint_package . " -C " . $temp_location);
                         if (!file_exists($this->PHONE_MODULES_PATH . "endpoint")) {
                             mkdir($this->PHONE_MODULES_PATH . "endpoint");
                         }
@@ -717,75 +729,120 @@ dbug($this->UPDATE_PATH . "master.json");
 
                 $out = $temp['data']['brands'];
                 //Assume that if we can't connect and find the master.xml file then why should we try to find every other file.
-                if ($master_result) {
+                if ($master_result)
+				{
                 	$sql = 'SELECT * FROM  endpointman_brand_list WHERE id > 0';
                     $row = sql($sql, 'getAll', DB_FETCHMODE_ASSOC);
-                    foreach ($out as $data) {
+                    foreach ($out as $data)
+					{
+						// $local = sql("SELECT local FROM endpointman_brand_list WHERE  directory =  '" . $data['directory'] . "'", 'getOne');
+						$sql  = "SELECT local FROM endpointman_brand_list WHERE directory = :directory";
+						$stmt = $this->db->prepare($sql);
+						$stmt->execute([':directory' => $data['directory']]);
+						$local = $stmt->rowCount() === 0 ? null : $stmt->fetch(\PDO::FETCH_ASSOC);
 
-                        $local = sql("SELECT local FROM endpointman_brand_list WHERE  directory =  '" . $data['directory'] . "'", 'getOne');
-                        if (!$local) {
-                        	if ($echomsg == true) {
+						$url_brand_data   = $this->UPDATE_PATH . $data['directory'] . "/brand_data.json";
+						$local_brand_data = $this->PHONE_MODULES_PATH . "endpoint/" . $data['directory'] . "/brand_data.json";
+
+                        if (!$local)
+						{
+                        	if ($echomsg == true)
+							{
                         		out(sprintf(_("Update Brand (%s):"), $data['name']));
-                        		$result = $this->system->download_file_with_progress_bar($this->UPDATE_PATH . $data['directory'] . "/" . $data['directory'] . ".json", $this->PHONE_MODULES_PATH . "endpoint/" . $data['directory'] . "/brand_data.json");
-                        	} else {
-                        		$result = $this->system->download_file($this->UPDATE_PATH . $data['directory'] . "/" . $data['directory'] . ".json", $this->PHONE_MODULES_PATH . "endpoint/" . $data['directory'] . "/brand_data.json");
+                        		$result = $this->system->download_file_with_progress_bar($url_brand_data, $local_brand_data);
                         	}
-                            if (!$result) {
+							else
+							{
+                        		$result = $this->system->download_file($url_brand_data, $local_brand_data);
+                        	}
+                            if (!$result)
+							{
                             	$error['brand_update_check'] = sprintf(_("Not able to connect to repository. Using local brand [%s] file instead."), $data['name']);
-                            	if ($echomsg == true ) {
+                            	if ($echomsg == true )
+								{
                             		out($error['brand_update_check']);
                             	}
                             }
                         }
 
-                        if (file_exists($this->PHONE_MODULES_PATH . "endpoint/" . $data['directory'] . "/brand_data.json")) {
-                            $temp = $this->file2json($this->PHONE_MODULES_PATH . "endpoint/" . $data['directory'] . "/brand_data.json");
+                        if (file_exists($local_brand_data))
+						{
+                            $temp = $this->file2json($local_brand_data);
                             $temp = $temp['data']['brands'];
-							if (array_key_exists('oui_list', $temp)) {
-                            	foreach ($temp['oui_list'] as $oui) {
-									$sql = "REPLACE INTO endpointman_oui_list (`oui`, `brand`, `custom`) VALUES ('" . $oui . "', '" . $temp['brand_id'] . "', '0')";
-                               		sql($sql);
+							if (array_key_exists('oui_list', $temp))
+							{
+                            	foreach ($temp['oui_list'] as $oui)
+								{
+									$sql = "REPLACE INTO endpointman_oui_list (`oui`, `brand`, `custom`) VALUES (:oui, :brand_id, '0')";
+									$sth = $this->db->prepare($sql);
+									$sth->execute([':oui' => $oui, ':brand_id' =>  $temp['brand_id']]);
 								}
 							}
-                            $brand_name = $temp['directory'];
+
+                            $brand_name 		  = $temp['directory'];
                             $version[$brand_name] = $temp['last_modified'];
-                            $last_mod = "";
-                            foreach ($temp['family_list'] as $list) {
+                            $last_mod 			  = "";
+                            foreach ($temp['family_list'] as $list)
+							{
                                 $last_mod = max($last_mod, $list['last_modified']);
                             }
-                            $last_mod = max($last_mod, $version[$brand_name]);
+                            $last_mod 			  = max($last_mod, $version[$brand_name]);
                             $version[$brand_name] = $last_mod;
 
 							if (!($this->system->arraysearchrecursive($brand_name, $row, 'directory')))
 							{
-								$sql = 'SELECT directory FROM endpointman_brand_list where id = "'.$temp['brand_id'].'"';
-								$datoif = sql($sql, 'getOne');
-								if ($datoif != "") {
+								// $sql = 'SELECT directory FROM endpointman_brand_list where id = "'.$temp['brand_id'].'"';
+								// $datoif = sql($sql, 'getOne');
+
+								$sql  = "SELECT directory FROM endpointman_brand_list where id = :brand_id";
+								$stmt = $this->db->prepare($sql);
+								$stmt->execute([':brand_id' => $temp['brand_id']]);
+								$datoif = $stmt->rowCount() === 0 ? null : $stmt->fetch(\PDO::FETCH_ASSOC);
+
+								if ($datoif != "")
+								{
 									$error['brand_update_id_exist_other_brand'] = sprintf(_("You can not add the mark (%s) as the ID (%d) already exists in the database!"), $temp['name'], $temp['brand_id']);
-									if ($echomsg == true ) {
+									if ($echomsg == true )
+									{
 										out($error['brand_update_id_exist_other_brand']);
 									}
 								}
-								else {
-                                	$sql = "INSERT INTO endpointman_brand_list (id, name, directory, cfg_ver) VALUES ('" . $temp['brand_id'] . "', '" . $temp['name'] . "', '" . $temp['directory'] . "', '" . $version[$brand_name] . "')";
-                                	sql($sql);
+								else
+								{
+									$sql = "INSERT INTO endpointman_brand_list (id, name, directory, cfg_ver) VALUES (:brand_id, :name, :directory, :version)";
+									$sth = $this->db->prepare($sql);
+									$sth->execute([
+										':brand_id'  => $temp['brand_id'],
+										':name' 	 => $temp['name'],
+										':directory' => $temp['directory'],
+										':version' 	 => $version[$brand_name],
+									]);
 								}
-                            } else {
+                            }
+							else
+							{
                                 //in database already!
                             }
-                        } else {
+                        }
+						else
+						{
                         	$error['brand_update_check_local_file'] = sprintf(_("Error: No Local File for %s !"), $data['name'])."<br />"._("Learn how to manually upload packages here (it's easy!):")."<a href='http://wiki.provisioner.net/index.php/Endpoint_manager_manual_upload' target='_blank'>"._("Click Here!")."</a>";
-                        	if ($echomsg == true ) {
+                        	if ($echomsg == true )
+							{
                         		out($error['brand_update_check_local_file']);
                         	}
                         }
                     }
 
-                    foreach ($row as $ava_brands) {
+                    foreach ($row as $ava_brands)
+					{
 						$key = $this->system->arraysearchrecursive($ava_brands['directory'], $out, 'directory');
-                        if ($key === FALSE) {
+                        if ($key === FALSE)
+						{
 							$this->remove_brand($ava_brands['id']);
-                        } else {
+                        }
+						else
+						{
                             $key = $key[0];
                             $brand_name = $ava_brands['directory'];
                             //TODO: This seems old
@@ -810,14 +867,16 @@ dbug($this->UPDATE_PATH . "master.json");
             		out($error['remote_server']);
             	}
             }
-        } else {
+        }
+		else
+		{
             $o = getcwd();
             chdir(dirname($this->PHONE_MODULES_PATH));
             $path = $this->has_git();
             exec($path . ' git pull', $output);
             //exec($path . ' git checkout master', $output); //Why am I doing this?
             chdir($o);
-            $temp = $this->file2json($this->PHONE_MODULES_PATH . 'endpoint/master.json');
+            $temp = $this->file2json($local_master);
             $endpoint_package = $temp['data']['package'];
             $endpoint_last_mod = $temp['data']['last_modified'];
 
@@ -1002,63 +1061,98 @@ dbug($this->UPDATE_PATH . "master.json");
      */
     function download_brand($id) {
     	out(_("Install/Update Brand..."));
-        if (!$this->configmod->get('use_repo')) {
-            $temp_directory = $this->system->sys_get_temp_dir() . "/epm_temp/";
+        if (!$this->configmod->get('use_repo'))
+		{
+			$temp_directory = $this->PHONE_MODULES_PATH . "temp/provisioner/";
+            // $temp_directory = $this->system->sys_get_temp_dir() . "/epm_temp/";
 
-			if (!file_exists($temp_directory)) {
-				out(_("Creating EPM temp directory"));
-				if (! mkdir($temp_directory)) {
+			if (!file_exists($temp_directory))
+			{
+				out(_("Creating EPM temp directory..."));
+				if (! mkdir($temp_directory))
+				{
 					out(sprintf(_("Error: Failed to create the directory '%s', please Check Permissions!"), $temp_directory));
 					return false;
 				}
 			}
 
-			outn(_("Downloading Brand JSON..... "));
-            $row = sql('SELECT * FROM  endpointman_brand_list WHERE id =' . $id, 'getAll', DB_FETCHMODE_ASSOC);
-            $result = $this->system->download_file($this->UPDATE_PATH . $row[0]['directory'] . "/" . $row[0]['directory'] . ".json", $this->PHONE_MODULES_PATH . "endpoint/" . $row[0]['directory'] . "/brand_data.json");
-            if ($result) {
-            	out(_("Done!"));
+			outn(_("Downloading Brand JSON....."));
 
-                $temp = $this->file2json($this->PHONE_MODULES_PATH . 'endpoint/' . $row[0]['directory'] . '/brand_data.json');
-                $package = $temp['data']['brands']['package'];
+            // $row = sql('SELECT * FROM  endpointman_brand_list WHERE id =' . $id, 'getAll', DB_FETCHMODE_ASSOC);
+			$sql  = "SELECT * FROM  endpointman_brand_list WHERE id = :id";
+			$stmt = $this->db->prepare($sql);
+			$stmt->execute([':id' => $id]);
 
-				out(_("Downloading Brand Package..."));
-                if ($this->system->download_file_with_progress_bar($this->UPDATE_PATH . $row[0]['directory'] . '/' . $package, $temp_directory . $package))
-                {
-					if (file_exists($temp_directory . $package)) {
-						$md5_xml = $temp['data']['brands']['md5sum'];
-						$md5_pkg = md5_file($temp_directory . $package);
+			if ($stmt->rowCount() === 0)
+			{
+				out(sprintf(_("Error: Brand with id '%s' not found!"), $id));
+			}
+			else
+			{
+				$row = $stmt->fetch(\PDO::FETCH_ASSOC);
+			
+				$url_brand_data   = $this->UPDATE_PATH . $row['directory'] . "/brand_data.json";
+				$local_brand_data = $this->PHONE_MODULES_PATH . "endpoint/" . $row['directory'] . "/brand_data.json";
 
-						outn(_("Checking MD5sum of Package.... "));
-						if ($md5_xml == $md5_pkg) {
-							out(_("Done!"));
+				$result = $this->system->download_file($url_brand_data, $local_brand_data);
+				if ($result)
+				{
+					out(_("Done!"));
 
-							outn(_("Extracting Tarball........ "));
-							//TODO: PENDIENTE VALIDAR SI DA ERROR LA DESCOMPRESION
-							exec("tar -xvf " . $temp_directory . $package . " -C " . $temp_directory);
-							out(_("Done!"));
+					$temp    = $this->file2json($local_brand_data);
+					$package = $temp['data']['brands']['package'];
 
-							//Update File in the temp directory
-							copy($this->PHONE_MODULES_PATH . 'endpoint/' . $row[0]['directory'] . '/brand_data.json', $temp_directory . $row[0]['directory'] . '/brand_data.json');
-							$this->update_brand($row[0]['directory'], TRUE);
-						} else {
-							out(_("MD5 Did not match!"));
-							out(sprintf(_("MD5 XML: %s"), $md5_xml));
-							out(sprintf(_("MD5 PKG: %s"), $md5_pkg));
+					out(_("Downloading Brand Package..."));
+					if ($this->system->download_file_with_progress_bar($this->UPDATE_PATH . $row['directory'] . '/' . $package, $temp_directory . $package))
+					{
+						if (file_exists($temp_directory . $package))
+						{
+							$md5_xml = $temp['data']['brands']['md5sum'];
+							$md5_pkg = md5_file($temp_directory . $package);
+
+							outn(_("Checking MD5sum of Package.... "));
+							if ($md5_xml == $md5_pkg)
+							{
+								out(_("Done!"));
+
+								outn(_("Extracting Tarball........ "));
+								//TODO: PENDIENTE VALIDAR SI DA ERROR LA DESCOMPRESION
+								exec( sprintf("%s -xvf %s%s -C %s", $this->configmod->get("tar_location"), $temp_directory, $package, $temp_directory) );
+								// exec("tar -xvf " . $temp_directory . $package . " -C " . $temp_directory);
+								out(_("Done!"));
+
+								//Update File in the temp directory
+								copy($local_brand_data, $temp_directory . $row['directory'] . '/brand_data.json');
+								$this->update_brand($row['directory'], TRUE);
+							}
+							else
+							{
+								out(_("MD5 Did not match!"));
+								out(sprintf(_("MD5 XML: %s"), $md5_xml));
+								out(sprintf(_("MD5 PKG: %s"), $md5_pkg));
+							}
 						}
-					} else {
-						out(_("Error: Can't Find Downloaded File!"));
+						else
+						{
+							out(_("Error: Can't Find Downloaded File!"));
+						}
 					}
-				} else {
-					out(_("Error download Brand package!"));
+					else
+					{
+						out(_("Error download Brand package!"));
+					}
 				}
-            } else {
-            	out(_("Error!"));
-				out(_("Error Connecting to the Package Repository. Module not installed. Please Try again later."));
-				out(_("You Can Also Manually Update The Repository By Downloading Files here: <a href='http://www.provisioner.net/releases3' target='_blank'> Release Repo </a>"));
-				out(_("Then Use Manual Upload in Advanced Settings."));
-            }
-        } else {
+				else
+				{
+					out(_("Error!"));
+					out(_("Error Connecting to the Package Repository. Module not installed. Please Try again later."));
+					out(_("You Can Also Manually Update The Repository By Downloading Files here: <a href='http://www.provisioner.net/releases3' target='_blank'> Release Repo </a>"));
+					out(_("Then Use Manual Upload in Advanced Settings."));
+				}
+			}
+        }
+		else
+		{
 			out(_("Error: Installing brands is disabled while in repo mode!"));
         }
     }
@@ -1067,74 +1161,113 @@ dbug($this->UPDATE_PATH . "master.json");
      * This will install or updated a brand package (which is the same thing to this)
      * Still needs way to determine when models move...perhaps another function?
      */
-    function update_brand($package, $remote=TRUE) {
+    function update_brand($package, $remote=TRUE)
+	{
     	out(sprintf(_("Update Brand %s ... "), $package));
 
-		$temp_directory = $this->system->sys_get_temp_dir() . "/epm_temp/";
-		//DEBUG
-		out(_("Processing ".$temp_directory.$package."/brand_data.json..."));
+		// $temp_directory = $this->system->sys_get_temp_dir() . "/epm_temp/";
+		$temp_directory = $this->PHONE_MODULES_PATH . "temp/provisioner/";
+		$temp_brand_json = $temp_directory.$package."/brand_data.json";
 
-        if (file_exists($temp_directory . $package . '/brand_data.json')) {
-            $temp = $this->file2json($temp_directory . $package . '/brand_data.json');
-            if (key_exists('directory', $temp['data']['brands'])) {
+		//DEBUG
+		out( sprintf(_("Processing %s..."), $temp_brand_json));
+
+        if (file_exists($temp_brand_json))
+		{
+            $temp = $this->file2json($temp_brand_json);
+            if (key_exists('directory', $temp['data']['brands']))
+			{
 				out(_("Appears to be a valid Provisioner.net JSON file.....Continuing"));
                 //Pull in all variables
-                $directory = $temp['data']['brands']['directory'];
-                $brand_name = $temp['data']['brands']['name'];
-                $brand_id = $temp['data']['brands']['brand_id'];
+                $directory     = $temp['data']['brands']['directory'];
+                $brand_name    = $temp['data']['brands']['name'];
+                $brand_id      = $temp['data']['brands']['brand_id'];
                 $brand_version = $temp['data']['brands']['last_modified'];
 
                 //create directory structure and move files
                 out(sprintf(_("Creating Directory Structure for Brand '%s' and Moving Files..."), $brand_name));
 
-                if (!file_exists($this->PHONE_MODULES_PATH . "endpoint/" . $directory)) {
-                    mkdir($this->PHONE_MODULES_PATH . "endpoint/" . $directory);
+				$local_brand_location = $this->PHONE_MODULES_PATH . "endpoint/" . $directory;
+
+                if (!file_exists($local_brand_location))
+				{
+                    mkdir($local_brand_location);
                 }
 
                 $dir_iterator = new \RecursiveDirectoryIterator($temp_directory . $directory . "/");
-                $iterator = new \RecursiveIteratorIterator($dir_iterator, \RecursiveIteratorIterator::SELF_FIRST);
-                foreach ($iterator as $file) {
-                    if (is_dir($file)) {
+                $iterator 	  = new \RecursiveIteratorIterator($dir_iterator, \RecursiveIteratorIterator::SELF_FIRST);
+                foreach ($iterator as $file)
+				{
+                    if (is_dir($file))
+					{
                         $dir = str_replace($temp_directory . $directory . "/", "", $file);
-                        if (!file_exists($this->PHONE_MODULES_PATH . "endpoint/" . $directory . "/" . $dir)) {
-                            mkdir($this->PHONE_MODULES_PATH . "endpoint/" . $directory . "/" . $dir, 0775, TRUE);
+                        if (!file_exists($local_brand_location . "/" . $dir))
+						{
+                            mkdir($local_brand_location . "/" . $dir, 0775, TRUE);
 //echo ".";
                         }
-                    } else {
-                        if ((basename($file) != "brand_data.json") OR (!$remote)) {
-                            $dir = str_replace($temp_directory . $directory . "/", "", $file);
-                            $stats = rename($file, $this->PHONE_MODULES_PATH . "endpoint/" . $directory . "/" . $dir);
-                            if ($stats === FALSE) {
+                    }
+					else
+					{
+                        if ((basename($file) != "brand_data.json") OR (!$remote))
+						{
+                            $dir   = str_replace($temp_directory . $directory . "/", "", $file);
+                            $stats = rename($file, $local_brand_location . "/" . $dir);
+                            if ($stats === FALSE)
+							{
                             	out(sprintf(_("- Error Moving %s!"), basename($file)));
                             }
-                            chmod($this->PHONE_MODULES_PATH . "endpoint/" . $directory . "/" . $dir, 0775);
+                            chmod($local_brand_location . "/" . $dir, 0775);
 //echo ".";
                         }
                     }
                 }
                 out(_("All Done!"));
 
-                if ($remote) {
-                    $local = 0;
-                } else {
-                    $local = 1;
-                }
+                $local = $remote ? 0 : 1;
 
-                $b_data = sql("SELECT id FROM endpointman_brand_list WHERE id = '" . $brand_id . "'", 'getOne');
-                if ($b_data) {
+                // $b_data = sql("SELECT id FROM endpointman_brand_list WHERE id = '" . $brand_id . "'", 'getOne');
+				$sql  = "SELECT id FROM endpointman_brand_list where id = :brand_id";
+				$stmt = $this->db->prepare($sql);
+				$stmt->execute([':brand_id' => $brand_id]);
+
+                if ($stmt->rowCount() === 0)
+				{
+					outn(sprintf(_("Inserting %s brand data ..."), $brand_name));
+					// $sql = "INSERT INTO endpointman_brand_list (id, name, directory, cfg_ver, local, installed) VALUES ('" . $brand_id . "', '" . $brand_name . "', '" . $directory . "', '" . $brand_version . "', '" . $local . "', '1')";
+                    // sql($sql);
+
+					$sql  = "INSERT INTO endpointman_brand_list (id, name, directory, cfg_ver, local, installed) VALUES (:brand_id, :brand_name, :directory, :brand_version, :local, '1')";
+					$stmt = $this->db->prepare($sql);
+					$stmt->execute([
+						':brand_id' 	 => $brand_id,
+						':brand_name' 	 => $brand_name,
+						':directory'     => $directory,
+						':brand_version' => $brand_version,
+						':local' 		 => $local,
+					]);
+                }
+				else
+				{
                 	outn(sprintf(_("Updating %s brand data ..."), $brand_name));
-                    $sql = "UPDATE endpointman_brand_list SET local = '" . $local . "', name = '" . $brand_name . "', cfg_ver = '" . $brand_version . "', installed = 1, hidden = 0 WHERE id = " . $brand_id;
-                    sql($sql);
-                    out(_("Done!"));
-                } else {
-                	outn(sprintf(_("Inserting %s brand data ..."), $brand_name));
-					$sql = "INSERT INTO endpointman_brand_list (id, name, directory, cfg_ver, local, installed) VALUES ('" . $brand_id . "', '" . $brand_name . "', '" . $directory . "', '" . $brand_version . "', '" . $local . "', '1')";
-                    sql($sql);
-                    out(_("Done!"));
-                }
+                    // $sql = "UPDATE endpointman_brand_list SET local = '" . $local . "', name = '" . $brand_name . "', cfg_ver = '" . $brand_version . "', installed = 1, hidden = 0 WHERE id = " . $brand_id;
+                    // sql($sql);
 
+					$sql  = "UPDATE endpointman_brand_list SET local = :local, name = :brand_name, cfg_ver = :brand_version, installed = 1, hidden = 0 WHERE id = :brand_id";
+					$stmt = $this->db->prepare($sql);
+					$stmt->execute([
+						':brand_id' 	 => $brand_id,
+						':brand_name' 	 => $brand_name,
+						':brand_version' => $brand_version,
+						':local' 		 => $local,
+					]);
+                }
+				out(_("Done!"));
+
+				//TODO: Pending Update Query SQL to parser and execute
                 $last_mod = "";
-                foreach ($temp['data']['brands']['family_list'] as $family_list) {
+                foreach ($temp['data']['brands']['family_list'] as $family_list)
+				{
 					out(_("Updating Family Lines ..."));
 
                     $last_mod = max($last_mod, $family_list['last_modified']);
@@ -1143,7 +1276,8 @@ dbug($this->UPDATE_PATH . "master.json");
                     $family_line_xml['data']['last_modified'] = isset($family_line_xml['data']['last_modified']) ? $family_line_xml['data']['last_modified'] : '';
 
                     $require_firmware = NULL;
-                    if ((key_exists('require_firmware', $family_line_xml['data'])) && ($remote) && ($family_line_xml['data']['require_firmware'] == "TRUE")) {
+                    if ((key_exists('require_firmware', $family_line_xml['data'])) && ($remote) && ($family_line_xml['data']['require_firmware'] == "TRUE"))
+					{
 						out(_("Firmware Requirment Detected!.........."));
 						$this->install_firmware($family_line_xml['data']['id']);
                     }
@@ -1450,7 +1584,8 @@ if ($this->configmod->get('debug')) echo format_txt(_("---Inserting Model %_NAME
 
 				out(_("Installing Firmware..."));
 				//TODO: AÑADIR VALIDACION EXTRACCION CORRECTA
-                exec("tar -xvf " . $temp_directory . $firmware_pkg . " -C " . $temp_directory . $row['directory'] . "/" . $row['cfg_dir']);
+				exec( sprintf("%s -xvf %s%s -C %s%s/%s", $this->configmod->get("tar_location"), $temp_directory, $firmware_pkg, $temp_directory, $row['directory'], $row['cfg_dir']) );
+                // exec("tar -xvf " . $temp_directory . $firmware_pkg . " -C " . $temp_directory . $row['directory'] . "/" . $row['cfg_dir']);
                 $i = 0;
                 foreach (glob($temp_directory . $row['directory'] . "/" . $row['cfg_dir'] . "/firmware/*") as $filename) {
                     $file = basename($filename);

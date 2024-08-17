@@ -63,6 +63,10 @@ class Endpointman implements \BMO {
 	public $PHONE_MODULES_PATH;
 	public $PROVISIONER_BASE;
 
+	private $URL_PROVISIONER = "http://mirror.freepbx.org/provisioner/v3/";
+
+	final public const ASTERISK_SECTION = 'app-queueprio';
+
 
 	public function __construct($freepbx = null) {
 		if ($freepbx == null) {
@@ -95,14 +99,23 @@ class Endpointman implements \BMO {
 		$this->UPDATE_PATH = $this->configmod->get('update_server');
         $this->MODULES_PATH = $this->config->get('AMPWEBROOT') . '/admin/modules/';
 
-define("UPDATE_PATH", $this->UPDATE_PATH);
-define("MODULES_PATH", $this->MODULES_PATH);
+
+if(!defined("UPDATE_PATH")) {
+	define("UPDATE_PATH", $this->UPDATE_PATH);
+}
+if(!defined("MODULES_PATH")) {
+	define("MODULES_PATH", $this->MODULES_PATH);
+}
 
 
         //Determine if local path is correct!
         if (file_exists($this->MODULES_PATH . "endpointman/")) {
             $this->LOCAL_PATH = $this->MODULES_PATH . "endpointman/";
-define("LOCAL_PATH", $this->LOCAL_PATH);
+
+if(!defined("LOCAL_PATH")) {
+	define("LOCAL_PATH", $this->LOCAL_PATH);
+}
+
         } else {
             die("Can't Load Local Endpoint Manager Directory!");
         }
@@ -122,7 +135,11 @@ define("LOCAL_PATH", $this->LOCAL_PATH);
                 die('Endpoint Manager can not create the modules folder!');
             }
         }
-define("PHONE_MODULES_PATH", $this->PHONE_MODULES_PATH);
+
+
+if(!defined("PHONE_MODULES_PATH")) {
+	define("PHONE_MODULES_PATH", $this->PHONE_MODULES_PATH);
+}
 
         //Define error reporting
         if (($this->configmod->get('debug')) AND (!isset($_REQUEST['quietmode']))) {
@@ -429,24 +446,138 @@ define("PHONE_MODULES_PATH", $this->PHONE_MODULES_PATH);
 		}
 	}
 
-	public function install() {
+	public function install()
+	{
+		out("Endpoint Manager Installer");
 
+		if (!file_exists($this->PHONE_MODULES_PATH))
+		{
+			outn(_("Creating Phone Modules Directory..."));
+			mkdir($this->PHONE_MODULES_PATH, 0764);
+			out(_("OK"));
+		}
+
+		if (!file_exists($this->PHONE_MODULES_PATH . "setup.php"))
+		{
+			outn(_("Moving Auto Provisioner Class..."));
+    		copy($this->LOCAL_PATH . "install/setup.php", $this->PHONE_MODULES_PATH . "setup.php");
+			out(_("OK"));
+		}
+
+		if (!file_exists($this->PHONE_MODULES_PATH . "temp/"))
+		{
+			outn(_("Creating temp folder..."));
+    		mkdir($this->PHONE_MODULES_PATH . "temp/", 0764);
+			out(_("OK"));
+		}
+
+		$provisioning = $this->config->get('AMPWEBROOT')."/provisioning";
+		if(!file_exists($provisioning))
+		{
+			outn(_('Creating symlink to web provisioner...'));
+			if (!symlink($this->LOCAL_PATH . "provisioning", $provisioning))
+			{
+				out(_("Error!"));
+				out(sprintf(_("<strong>Your permissions are wrong on %s, web provisioning link not created!</strong>")), $this->config->get('AMPWEBROOT'));
+			}
+			else
+			{
+				out(_("OK"));
+			}
+		}
+
+		$modinfo 	   = module_getinfo('endpointman');
+		$epmxmlversion = $modinfo['endpointman']['version'];
+		$epmdbversion  = !empty($modinfo['endpointman']['dbversion']) ? $modinfo['endpointman']['dbversion'] : null;
+
+	
+		out(_("Locating NMAP + ARP + ASTERISK Executables"));
+
+		$nmap 	  = self::find_exec("nmap");
+		$arp  	  = self::find_exec("arp");
+		$asterisk = self::find_exec("asterisk");
+		$tar 	  = self::find_exec("tar");
+		$netstat  = self::find_exec("netstat");
+		// whoami
+		// groups
+		// nohup
+	
+		outn(_("Inserting data into the global vars Table..."));
+		$dataDefault = [
+			['srvip', ''],
+			['tz', ''],
+			['gmtoff', ''],
+			['gmthr', ''],
+			['config_location', '/tftpboot/'],
+			['update_server', $this->URL_PROVISIONER],
+			['version', $epmxmlversion],
+			['enable_ari', '0'],
+			['debug', '0'],
+			['arp_location', $arp],
+			['nmap_location', $nmap],
+			['asterisk_location', $asterisk],
+			['tar_location', $tar],
+			['netstat_location', $netstat],
+			['language', ''],
+			['check_updates', '0'],
+			['disable_htaccess', ''],
+			['endpoint_vers', '0'],
+			['disable_help', '0'],
+			['show_all_registrations', '0'],
+			['ntp', ''],
+			['server_type', 'file'],
+			['allow_hdfiles', '0'],
+			['tftp_check', '0'],
+			['nmap_search', ''],
+			['backup_check', '0'],
+			['use_repo', '0'],
+			['adminpass', '123456'],
+			['userpass', '111111'],
+			['intsrvip', ''],
+			['disable_endpoint_warning', '0'],
+		];
+
+		$sql = "INSERT IGNORE INTO `endpointman_global_vars` (`var_name`, `value`) VALUES (?, ?)";
+		$sth = $this->db->prepare($sql);
+		foreach ($dataDefault as $row)
+		{
+			$sth->execute($row);
+		}
+
+		if ($epmdbversion < "14.0.0.1")
+		{
+			$sql = "UPDATE endpointman_global_vars SET value = :url WHERE var_name = 'update_server'";
+			$sth = $this->db->prepare($sql);
+			$sth->execute([':url' => $this->URL_PROVISIONER]);
+		}
+
+		out(_("OK"));
+
+
+		outn( sprintf(_("Update Version Number to %s..."), $epmxmlversion));
+		$sql = "UPDATE endpointman_global_vars SET value = :version WHERE var_name = 'version'";
+		$sth = $this->db->prepare($sql);
+		$sth->execute([':version' => $epmxmlversion]);
+		out(_("OK"));
 	}
 
 	public function uninstall() {
-		if(file_exists($this->PHONE_MODULES_PATH)) {
+		if(file_exists($this->PHONE_MODULES_PATH))
+		{
 			out(_("Removing Phone Modules Directory"));
 			$this->system->rmrf($this->PHONE_MODULES_PATH);
 			@exec("rm -R ". $this->PHONE_MODULES_PATH);
 		}
 
 		$provisioning_path = $this->config->get('AMPWEBROOT')."/provisioning";
-		if(file_exists($provisioning_path) && is_link($provisioning_path)) {
+		if(file_exists($provisioning_path) && is_link($provisioning_path))
+		{
 			out(_('Removing symlink to web provisioner'));
 			unlink($provisioning_path);
 		}
 
-		if(!is_link($this->config->get('AMPWEBROOT').'/admin/assets/endpointman')) {
+		if(!is_link($this->config->get('AMPWEBROOT').'/admin/assets/endpointman'))
+		{
 			$this->system->rmrf($this->config->get('AMPWEBROOT').'/admin/assets/endpointman');
 		}
 		return true;
@@ -507,6 +638,48 @@ define("PHONE_MODULES_PATH", $this->PHONE_MODULES_PATH);
 				break;
 		}
 	}
+
+
+	public static function find_exec($exec)
+	{
+		$data_return = trim($exec);
+		if (! empty($data_return))
+		{
+			$paths = [
+				"/usr/local/bin/$exec",
+				"/usr/local/sbin/$exec",
+				"/usr/bin/$exec",
+				"/usr/sbin/$exec",
+				"/sbin/$exec",
+				"/bin/$exec",
+				"/etc/$exec"
+			];
+	
+			foreach ($paths as $path)
+			{
+				if (file_exists($path))
+				{
+					$data_return = $path;
+					break;
+				}
+			}
+		}
+		return $data_return;
+	}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

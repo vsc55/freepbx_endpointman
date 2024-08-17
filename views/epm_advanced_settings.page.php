@@ -368,6 +368,54 @@
 		</div>
 	</div>
 	<!--END Asterisk Executable Path-->
+	<!--Tar Executable Path-->
+	<div class="element-container">
+		<div class="row">
+			<div class="col-md-12">
+				<div class="row">
+					<div class="form-group">
+						<div class="col-md-3">
+							<label class="control-label" for="tar_loc"><?php echo _("Tar Executable Path")?></label>
+							<i class="fa fa-question-circle fpbx-help-icon" data-for="tar_loc"></i>
+						</div>
+						<div class="col-md-9">
+							<input type="text" class="form-control" id="tar_loc" name="tar_loc" value="<?php echo FreePBX::Endpointman()->configmod->get("tar_location"); ?>">
+						</div>
+					</div>
+				</div>
+			</div>
+		</div>
+		<div class="row">
+			<div class="col-md-12">
+				<span class="help-block fpbx-help-block" id="tar_loc-help"><?php echo _("Path location Tar."); ?></span>
+			</div>
+		</div>
+	</div>
+	<!--END Tar Executable Path-->
+	<!--Netstat Executable Path-->
+	<div class="element-container">
+		<div class="row">
+			<div class="col-md-12">
+				<div class="row">
+					<div class="form-group">
+						<div class="col-md-3">
+							<label class="control-label" for="netstat_loc"><?php echo _("Netstat Executable Path")?></label>
+							<i class="fa fa-question-circle fpbx-help-icon" data-for="netstat_loc"></i>
+						</div>
+						<div class="col-md-9">
+							<input type="text" class="form-control" id="netstat_loc" name="netstat_loc" value="<?php echo FreePBX::Endpointman()->configmod->get("netstat_location"); ?>">
+						</div>
+					</div>
+				</div>
+			</div>
+		</div>
+		<div class="row">
+			<div class="col-md-12">
+				<span class="help-block fpbx-help-block" id="netstat_loc-help"><?php echo _("Path location Netstat."); ?></span>
+			</div>
+		</div>
+	</div>
+	<!--END Netstat Executable Path-->
 </div>
 
 <div class="section-title" data-for="setting_web_directories">
