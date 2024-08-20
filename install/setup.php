@@ -30,7 +30,7 @@ class ProvisionerConfig {
         // Try to include the class
         $file = str_replace('_', DIRECTORY_SEPARATOR, $class) . '.php';
 
-		$file = FreePBX::Endpointman()->PHONE_MODULES_PATH . $file;
+		$file = FreePBX::Endpointman()->PHONE_MODULES_PATH . "/" . $file;
 
         if (is_file($file)) {
             require $file;

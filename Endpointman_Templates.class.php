@@ -29,11 +29,11 @@ class Endpointman_Templates
 		{
 			$pagedata['manager'] = array(
 				"name" => _("Current Templates"),
-				"page" => 'views/epm_templates_manager.page.php'
+				"page" => '/views/epm_templates_manager.page.php'
 			);
 			$pagedata['editor'] = array(
 					"name" => _("Template Editor"),
-					"page" => 'views/epm_templates_editor.page.php'
+					"page" => '/views/epm_templates_editor.page.php'
 			);
 		}
 	}
@@ -192,11 +192,11 @@ class Endpointman_Templates
 				//$settings['tz'] = FreePBX::Endpointman()->listTZ(FreePBX::Endpointman()->configmod->get("tz"));
 			} 
 			else {
-				$settings['srvip'] = ""; //$this->configmod->get("srvip");
-				$settings['ntp'] = ""; //$this->configmod->get("ntp");
+				$settings['srvip'] 			 = ""; //$this->configmod->get("srvip");
+				$settings['ntp'] 			 = ""; //$this->configmod->get("ntp");
 				$settings['config_location'] = ""; //$this->configmod->get("config_location");
-				$settings['tz'] = $this->configmod->get("tz");
-				$settings['server_type'] = $this->configmod->get("server_type");
+				$settings['tz'] 		 	 = $this->configmod->get("tz");
+				$settings['server_type'] 	 = $this->configmod->get("server_type");
 			}
     		
 			$retarr = array("status" => true, "settings" => $settings, "message" => _("Global Config Read OK!"));
@@ -252,11 +252,11 @@ class Endpointman_Templates
 			}
 			
 			$settings['config_location'] = $_REQUEST['config_loc'];
-			$settings['server_type'] = (isset($_REQUEST['server_type']) ? $_REQUEST['server_type'] : "");	//REVISAR NO ESTABA ANTES
-			$settings['srvip'] = (isset($_REQUEST['srvip']) ? $_REQUEST['srvip'] : "");
-			$settings['ntp'] = (isset($_REQUEST['ntp_server']) ? $_REQUEST['ntp_server'] : "");
-			$settings['tz'] = (isset($_REQUEST['tz']) ? $_REQUEST['tz'] : "");
-			$settings_ser = serialize($settings);
+			$settings['server_type'] 	 = $_REQUEST['server_type'] ?? "";	//REVISAR NO ESTABA ANTES
+			$settings['srvip'] 			 = $_REQUEST['srvip'] ?? "";
+			$settings['ntp'] 			 = $_REQUEST['ntp_server'] ?? "";
+			$settings['tz'] 			 = $_REQUEST['tz'] ?? "";
+			$settings_ser 				 = serialize($settings);
 			unset($settings);
 			
 			if($dget['custom'] == 0) {
@@ -398,7 +398,7 @@ class Endpointman_Templates
 			$i=0;
 			$out = array();
 			$sql = "SELECT endpointman_model_list.id, endpointman_model_list.model as model FROM endpointman_model_list, endpointman_product_list WHERE endpointman_product_list.id = endpointman_model_list.product_id AND endpointman_model_list.enabled = 1 AND endpointman_model_list.hidden = 0 AND product_id = '". $dget['id']."'";
-			$result = sql($sql,'getAll', DB_FETCHMODE_ASSOC);
+			$result = sql($sql,'getAll', \PDO::FETCH_ASSOC);
 			foreach($result as $row) {
 				$out[$i]['optionValue'] = $row['id'];
 				$out[$i]['optionDisplay'] = $row['model'];
@@ -415,7 +415,7 @@ class Endpointman_Templates
 	{
 	
 		$sql = 'SELECT endpointman_template_list.*, endpointman_product_list.short_name as model_class, endpointman_model_list.model as model_clone, endpointman_model_list.enabled FROM endpointman_template_list, endpointman_model_list, endpointman_product_list WHERE endpointman_model_list.hidden = 0 AND endpointman_template_list.model_id = endpointman_model_list.id AND endpointman_template_list.product_id = endpointman_product_list.id';
-		$template_list = sql($sql, 'getAll', DB_FETCHMODE_ASSOC);
+		$template_list = sql($sql, 'getAll', \PDO::FETCH_ASSOC);
 		$i = 0;
 		$row_out = array();
 		foreach($template_list as $row) {
@@ -428,10 +428,10 @@ class Endpointman_Templates
 		}
 		
 		$sql = 'SELECT endpointman_mac_list.mac, endpointman_mac_list.id, endpointman_mac_list.model, endpointman_model_list.model as model_clone, endpointman_product_list.short_name as model_class FROM endpointman_mac_list, endpointman_model_list, endpointman_product_list WHERE  endpointman_product_list.id = endpointman_model_list.product_id AND endpointman_mac_list.global_custom_cfg_data IS NOT NULL AND endpointman_model_list.id = endpointman_mac_list.model AND endpointman_mac_list.template_id = 0';
-		$template_list = sql($sql, 'getAll', DB_FETCHMODE_ASSOC);
+		$template_list = sql($sql, 'getAll', \PDO::FETCH_ASSOC);
 		foreach($template_list as $row) {
 			$sql = 'SELECT  description , line FROM  endpointman_line_list WHERE  mac_id ='. $row['id'].' ORDER BY line ASC';
-			$line_list = sql($sql, 'getAll', DB_FETCHMODE_ASSOC);
+			$line_list = sql($sql, 'getAll', \PDO::FETCH_ASSOC);
 			$description = "";
 			$c = 0;
 			foreach($line_list as $line_row) {
@@ -451,7 +451,7 @@ class Endpointman_Templates
 	/*
 		//$sql = 'SELECT endpointman_oui_list.id, endpointman_oui_list.oui , endpointman_brand_list.name, endpointman_oui_list.custom FROM endpointman_oui_list , endpointman_brand_list WHERE endpointman_oui_list.brand = endpointman_brand_list.id ORDER BY endpointman_oui_list.oui ASC';
 		$sql = 'SELECT T1.id, T1.oui, T2.name, T1.custom FROM endpointman_oui_list as T1 , endpointman_brand_list as T2 WHERE T1.brand = T2.id ORDER BY T1.oui ASC';
-		$data = sql($sql, 'getAll', DB_FETCHMODE_ASSOC);
+		$data = sql($sql, 'getAll', \PDO::FETCH_ASSOC);
 		$ret = array();
 		foreach ($data as $item) {
 			$ret[] = array('id' => $item['id'], 'oui' => $item['oui'], 'brand' => $item['name'], 'custom' => $item['custom']);
@@ -486,7 +486,7 @@ class Endpointman_Templates
 		} else {
 			$sql = "SELECT endpointman_model_list.max_lines, endpointman_model_list.model as model_name, endpointman_mac_list.global_custom_cfg_data, endpointman_product_list.config_files, endpointman_mac_list.*, endpointman_line_list.*, endpointman_model_list.id as model_id, endpointman_model_list.template_data, endpointman_product_list.id as product_id, endpointman_product_list.short_name, endpointman_product_list.cfg_dir, endpointman_brand_list.directory FROM endpointman_brand_list, endpointman_mac_list, endpointman_model_list, endpointman_product_list, endpointman_line_list WHERE endpointman_mac_list.id=" . $id . " AND endpointman_mac_list.id = endpointman_line_list.mac_id AND endpointman_mac_list.model = endpointman_model_list.id AND endpointman_model_list.brand = endpointman_brand_list.id AND endpointman_model_list.product_id = endpointman_product_list.id";
 		}
-		$row = sql($sql, 'getRow', DB_FETCHMODE_ASSOC);
+		$row = sql($sql, 'getRow', \PDO::FETCH_ASSOC);
 		
 		
 		if ($row['config_files_override'] == "") {
@@ -512,7 +512,7 @@ class Endpointman_Templates
 			$only_configs[$b]['select'] = "ON";
 			
 			$sql = "SELECT * FROM  endpointman_custom_configs WHERE product_id = '" . $row['product_id'] . "' AND original_name = '" . $files . "'";
-			$alt_configs_list = sql($sql, 'getAll', DB_FETCHMODE_ASSOC );
+			$alt_configs_list = sql($sql, 'getAll', \PDO::FETCH_ASSOC );
 			
 			if ( count(array($alt_configs_list)) > 0) 
 			{
@@ -561,7 +561,7 @@ class Endpointman_Templates
 		} else {
 			$sql = "SELECT endpointman_model_list.max_lines, endpointman_model_list.model as model_name, endpointman_mac_list.global_custom_cfg_data, endpointman_product_list.config_files, endpointman_mac_list.*, endpointman_line_list.*, endpointman_model_list.id as model_id, endpointman_model_list.template_data, endpointman_product_list.id as product_id, endpointman_product_list.short_name, endpointman_product_list.cfg_dir, endpointman_brand_list.directory FROM endpointman_brand_list, endpointman_mac_list, endpointman_model_list, endpointman_product_list, endpointman_line_list WHERE endpointman_mac_list.id=" . $id . " AND endpointman_mac_list.id = endpointman_line_list.mac_id AND endpointman_mac_list.model = endpointman_model_list.id AND endpointman_model_list.brand = endpointman_brand_list.id AND endpointman_model_list.product_id = endpointman_product_list.id";
 		}
-		$row = sql($sql, 'getRow', DB_FETCHMODE_ASSOC);
+		$row = sql($sql, 'getRow', \PDO::FETCH_ASSOC);
 		$config_files_list = explode(",", $row['config_files']);
 		asort($config_files_list);
 		
@@ -618,7 +618,7 @@ class Endpointman_Templates
 		} else {
 			$sql = "SELECT endpointman_model_list.max_lines, endpointman_model_list.model as model_name, endpointman_mac_list.global_custom_cfg_data, endpointman_product_list.config_files, endpointman_mac_list.*, endpointman_line_list.*, endpointman_model_list.id as model_id, endpointman_model_list.template_data, endpointman_product_list.id as product_id, endpointman_product_list.short_name, endpointman_product_list.cfg_dir, endpointman_brand_list.directory FROM endpointman_brand_list, endpointman_mac_list, endpointman_model_list, endpointman_product_list, endpointman_line_list WHERE endpointman_mac_list.id=" . $id . " AND endpointman_mac_list.id = endpointman_line_list.mac_id AND endpointman_mac_list.model = endpointman_model_list.id AND endpointman_model_list.brand = endpointman_brand_list.id AND endpointman_model_list.product_id = endpointman_product_list.id";
 		}
-		$row = sql($sql, 'getRow', DB_FETCHMODE_ASSOC);
+		$row = sql($sql, 'getRow', \PDO::FETCH_ASSOC);
 		
 		
 		$dReturn['template_editor_display'] = 1;
@@ -662,9 +662,9 @@ class Endpointman_Templates
 		$only_configs = array();
 		foreach ($config_files_list as $files) {
 			$sql = "SELECT * FROM  endpointman_custom_configs WHERE product_id = '" . $row['product_id'] . "' AND original_name = '" . $files . "'";
-			$alt_configs_list_count = sql($sql, 'getAll', DB_FETCHMODE_ASSOC );
+			$alt_configs_list_count = sql($sql, 'getAll', \PDO::FETCH_ASSOC );
 			if (! empty($alt_configs_list_count)) {
-				$alt_configs_list = sql($sql, 'getAll', DB_FETCHMODE_ASSOC);
+				$alt_configs_list = sql($sql, 'getAll', \PDO::FETCH_ASSOC);
 				$alt_configs[$i]['name'] = $files;
 				$alt_configs[$i]['id_p'] = $row['product_id'];
 				$files = str_replace(".", "_", $files);

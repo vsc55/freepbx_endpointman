@@ -26,8 +26,8 @@ class Endpointman_Devices
 		if(empty($pagedata))
 		{
 			$pagedata['main'] = array(
-					"name" => _("Devices"),
-					"page" => 'views/epm_devices_main.page.php'
+				"name" => _("Devices"),
+				"page" => '/views/epm_devices_main.page.php'
 			);
 		}
 	}

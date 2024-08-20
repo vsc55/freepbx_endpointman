@@ -80,7 +80,7 @@ if(($_REQUEST['atype'] == "lines") && (!isset($_REQUEST['mac'])) && (!isset($_RE
 } elseif(isset($_REQUEST['mac'])) {
     $result = $endpoint->linesAvailable(NULL,$_REQUEST['mac']);
 } else {
-    $result = $endpoint->eda->sql($sql,'getAll', DB_FETCHMODE_ASSOC);
+    $result = $endpoint->eda->sql($sql,'getAll', \PDO::FETCH_ASSOC);
 }
 
 foreach($result as $row) {

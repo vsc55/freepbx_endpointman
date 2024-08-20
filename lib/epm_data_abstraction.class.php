@@ -11,31 +11,64 @@ namespace FreePBX\modules;
 class epm_data_abstraction
 {
     public $emp       = null;
+    public $db        = null;
     public $config    = null;
     public $configmod = null;
 
-    // function __construct($config, $configmod)
     function __construct($epm)
     {
         $this->epm       = $epm;
     	$this->config    = $epm->config;
     	$this->configmod = $epm->configmod;
+
+        //The only time dbh_asterisk is set is when we are inside the ARI Recording interface
+        if(isset($_SESSION['dbh_asterisk']))
+        {
+            $this->db = $_SESSION['dbh_asterisk'];
+            //We don't want to reference the recordings directory when in the recording interface.
+            $_SERVER["SCRIPT_FILENAME"] = str_replace("recordings/", "admin/", $_SERVER["SCRIPT_FILENAME"]);
+        }
+        else
+        {
+            $this->db = $epm->db;
+        }
     }
 	
+    function sql($sql, $type="query", $fetchmode=null)
+    {
+        $results = $this->db->sql($sql, $type, $fetchmode);
+        if (\DB::IsError($results))
+        {
+            throw new \Exception($results->getMessage());
+            // $this->sql_error($results, $sql);
+        }
+        return $results;
+    }
+
+    function sql_error($results, $sql)
+    {
+        echo "<h1>FATAL SQL ERROR! ::::: ";
+        echo $results->getDebugInfo() . "SQL - <br /> $sql";
+        echo "</h1>";
+        echo "<pre>";
+        var_dump(debug_backtrace());
+        die();
+    }
+
+
     function all_products() {
-        $temp = sql("SELECT * FROM endpointman_product_list WHERE id > 0",'getAll',DB_FETCHMODE_ASSOC);
+        $temp = $this->sql("SELECT * FROM endpointman_product_list WHERE id > 0",'getAll',\PDO::FETCH_ASSOC);
         return($temp);
     }
 
     function all_devices() {
         $sql = 'SELECT endpointman_mac_list.id , endpointman_mac_list.mac , endpointman_model_list.model, endpointman_model_list.enabled , endpointman_brand_list.name, endpointman_mac_list.global_custom_cfg_data, endpointman_mac_list.template_id FROM endpointman_mac_list , endpointman_model_list , endpointman_brand_list WHERE ( endpointman_model_list.id = endpointman_mac_list.model ) AND ( endpointman_model_list.brand = endpointman_brand_list.id )';
-        $temp = sql($sql,'getAll',DB_FETCHMODE_ASSOC);
+        $temp = $this->sql($sql,'getAll',\PDO::FETCH_ASSOC);
         return($temp);
     }
 
     function escapeSimple($query) {
-        global $db;
-        return $db->escapeSimple($query);
+        return $this->db->escapeSimple($query);
     }
 
     /**
@@ -68,7 +101,7 @@ class epm_data_abstraction
      */
     function all_models() {
         $sql="SELECT endpointman_model_list.* FROM endpointman_model_list, endpointman_product_list WHERE endpointman_model_list.product_id = endpointman_product_list.id AND endpointman_model_list.enabled = 1 AND endpointman_product_list.hidden = 0";
-        $result1 = sql($sql, 'getAll',DB_FETCHMODE_ASSOC);
+        $result1 = $this->sql($sql, 'getAll',\PDO::FETCH_ASSOC);
         return($result1);
     }
 
@@ -88,25 +121,25 @@ class epm_data_abstraction
      */
     function all_active_brands() {
         $sql="SELECT DISTINCT endpointman_brand_list.name, endpointman_brand_list.id FROM  endpointman_brand_list,endpointman_model_list WHERE endpointman_model_list.brand = endpointman_brand_list.id AND endpointman_model_list.enabled = 1 AND endpointman_model_list.hidden = 0 AND endpointman_brand_list.installed = 1 AND endpointman_brand_list.hidden = 0";
-        $data = sql($sql,'getAll', DB_FETCHMODE_ASSOC);
+        $data = $this->sql($sql,'getAll', \PDO::FETCH_ASSOC);
         return($data);
     }
 
     function all_models_by_product($product_id) {
         $sql="SELECT * FROM endpointman_model_list WHERE product_id = ".$product_id;
-        $result1 = sql($sql, 'getAll',DB_FETCHMODE_ASSOC);
+        $result1 = $this->sql($sql, 'getAll',\PDO::FETCH_ASSOC);
         return($result1);
     }
 
     function all_models_by_brand($brand_id) {
         $sql="SELECT endpointman_model_list.* FROM endpointman_model_list, endpointman_product_list WHERE endpointman_model_list.product_id = endpointman_product_list.id AND endpointman_model_list.enabled = 1 AND endpointman_product_list.hidden = 0 AND endpointman_model_list.brand = " . $brand_id;
-        $result1 = sql($sql, 'getAll',DB_FETCHMODE_ASSOC);
+        $result1 = $this->sql($sql, 'getAll',\PDO::FETCH_ASSOC);
         return($result1);
     }
 
     function all_unknown_devices() {
         $sql = 'SELECT * FROM  endpointman_mac_list WHERE model = 0';
-        $unknown_list = sql($sql,'getAll',DB_FETCHMODE_ASSOC);
+        $unknown_list = $this->sql($sql,'getAll',\PDO::FETCH_ASSOC);
         return($unknown_list);
     }
 
@@ -116,25 +149,25 @@ class epm_data_abstraction
         } else {
             $not_added="SELECT devices.id, devices.description FROM devices WHERE tech in('sip','pjsip') AND devices.id not in (SELECT devices.id FROM devices, endpointman_line_list WHERE tech in ('sip','pjsip') AND devices.id = endpointman_line_list.ext ) ORDER BY devices.id";
         }
-        $result = sql($not_added,'getAll', DB_FETCHMODE_ASSOC);
+        $result = $this->sql($not_added,'getAll', \PDO::FETCH_ASSOC);
         return($result);
     }
 
     function all_used_registrations() {
         $not_added="SELECT devices.id, devices.description FROM devices WHERE tech in ('sip','pjsip') AND devices.id in (SELECT devices.id FROM devices, endpointman_line_list WHERE tech in ('sip','pjsip') AND devices.id = endpointman_line_list.ext ) ORDER BY devices.id";
-        $result = sql($not_added,'getAll', DB_FETCHMODE_ASSOC);
+        $result = $this->sql($not_added,'getAll', \PDO::FETCH_ASSOC);
         return($result);
     }
 
     function get_lines_from_device($device_id) {
         $sql = 'SELECT * FROM endpointman_line_list WHERE mac_id = '.$device_id. ' ORDER BY  endpointman_line_list.line ASC';
-        $line_list = sql($sql,'getAll',DB_FETCHMODE_ASSOC);
+        $line_list = $this->sql($sql,'getAll',\PDO::FETCH_ASSOC);
         return($line_list);
     }
 
     function get_line_information($line_id) {
         $sql = 'SELECT * FROM endpointman_line_list WHERE luid = '.$line_id;
-        $line_list = sql($sql,'getRow',DB_FETCHMODE_ASSOC);
+        $line_list = $this->sql($sql,'getRow',\PDO::FETCH_ASSOC);
         return($line_list);
     }
 }

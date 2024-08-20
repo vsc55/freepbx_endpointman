@@ -13,9 +13,6 @@ namespace FreePBX\modules;
 class Endpointman_Config
 {
 	public $UPDATE_PATH;
-    public $MODULES_PATH;
-	public $LOCAL_PATH;
-	public $PHONE_MODULES_PATH;
 	public $PROVISIONER_BASE;
 
 	public function __construct($epm)
@@ -28,35 +25,15 @@ class Endpointman_Config
 		$this->system 	 = $epm->system;
 
 		$this->UPDATE_PATH 	= $this->configmod->get('update_server');
-        $this->MODULES_PATH = $this->config->get('AMPWEBROOT') . '/admin/modules/';
-        if (file_exists($this->MODULES_PATH . "endpointman/"))
-		{
-            $this->LOCAL_PATH = $this->MODULES_PATH . "endpointman/";
-        }
-		else
+
+		if (! file_exists($this->epm->LOCAL_PATH))
 		{
             die(_("Can't Load Local Endpoint Manager Directory!"));
         }
-        if (file_exists($this->MODULES_PATH . "_ep_phone_modules/"))
+		if (! file_exists($this->epm->PHONE_MODULES_PATH))
 		{
-            $this->PHONE_MODULES_PATH = $this->MODULES_PATH . "_ep_phone_modules/";
-        }
-		else
-		{
-            $this->PHONE_MODULES_PATH = $this->MODULES_PATH . "_ep_phone_modules/";
-            if (!file_exists($this->PHONE_MODULES_PATH))
-			{
-                mkdir($this->PHONE_MODULES_PATH, 0775);
-            }
-            if (file_exists($this->PHONE_MODULES_PATH . "setup.php"))
-			{
-                unlink($this->PHONE_MODULES_PATH . "setup.php");
-            }
-            if (!file_exists($this->MODULES_PATH . "_ep_phone_modules/"))
-			{
-                die(_('Endpoint Manager can not create the modules folder!'));
-            }
-        }
+            die(_('Endpoint Manager can not create the modules folder!'));
+        }        
 	}
 
 	public function myShowPage(&$pagedata) {
@@ -133,8 +110,10 @@ class Endpointman_Config
 		return $retarr;
 	}
 
-	public function doConfigPageInit($module_tab = "", $command = "") {
-		switch ($command) {
+	public function doConfigPageInit($module_tab = "", $command = "")
+	{
+		switch ($command)
+		{
 			case "check_for_updates":
 				$this->epm_config_manager_check_for_updates();
 				echo "<br /><hr><br />";
@@ -181,7 +160,7 @@ class Endpointman_Config
 		if(! is_numeric($id_product)) { throw new \Exception( _("ID Producto not is number")." (".$id_product.")"); }
 		if($show_all == true) 	{ $sql = 'SELECT * FROM endpointman_model_list WHERE product_id = '.$id_product.' ORDER BY '.$byorder.' ASC'; }
 		else 					{ $sql = 'SELECT * FROM endpointman_model_list WHERE hidden = 0 AND product_id = '.$id_product.' ORDER BY '.$byorder.' ASC'; }
-		$result = sql($sql, 'getAll', DB_FETCHMODE_ASSOC);
+		$result = sql($sql, 'getAll', \PDO::FETCH_ASSOC);
 		return $result;
 	}
 
@@ -196,7 +175,7 @@ class Endpointman_Config
 		if(! is_numeric($id_brand)) { throw new \Exception(_("ID Brand not is numbre")." (".$id_brand.")"); }
 		if ($show_all == true) 	{ $sql = 'SELECT * FROM endpointman_product_list WHERE brand = '.$id_brand.' ORDER BY '.$byorder.' ASC'; }
 		else 					{ $sql = 'SELECT * FROM endpointman_product_list WHERE hidden = 0 AND brand = '.$id_brand.' ORDER BY '.$byorder.' ASC'; }
-		$result = sql($sql, 'getAll', DB_FETCHMODE_ASSOC);
+		$result = sql($sql, 'getAll', \PDO::FETCH_ASSOC);
 		return $result;
 	}
 
@@ -208,7 +187,7 @@ class Endpointman_Config
 	public function epm_config_hardware_get_list_brand($show_all = true, $byorder = "id") {
 		if ($show_all == true) 	{ $sql = "SELECT * from endpointman_brand_list WHERE id > 0 ORDER BY " . $byorder . " ASC "; }
 		else 					{ $sql = "SELECT * from endpointman_brand_list WHERE id > 0 AND hidden = 0 ORDER BY " . $byorder . " ASC "; }
-		$result = sql($sql, 'getAll', DB_FETCHMODE_ASSOC);
+		$result = sql($sql, 'getAll', \PDO::FETCH_ASSOC);
 		return $result;
 	}
 
@@ -561,7 +540,7 @@ class Endpointman_Config
 		if ($brand_name_find == NULL) { return $this->brand_update_check_all(); }
 
 		$sql = "SELECT * FROM  endpointman_brand_list WHERE directory = '" . $brand_name_find . "'";
-		$row = sql($sql, 'getRow', DB_FETCHMODE_ASSOC);
+		$row = sql($sql, 'getRow', \PDO::FETCH_ASSOC);
 
 		$out = array();
 		if  (! isset($row['directory']))
@@ -570,9 +549,9 @@ class Endpointman_Config
 		}
 		else
 		{
-			if (file_exists($this->PHONE_MODULES_PATH . "endpoint/" . $row['directory'] . "/brand_data.json"))
+			if (file_exists($this->epm->PHONE_MODULES_PATH . "/endpoint/" . $row['directory'] . "/brand_data.json"))
 			{
-				$temp = $this->file2json($this->PHONE_MODULES_PATH . "endpoint/" . $row['directory'] . "/brand_data.json");
+				$temp = $this->file2json($this->epm->PHONE_MODULES_PATH . "/endpoint/" . $row['directory'] . "/brand_data.json");
 				$temp = $temp['data']['brands'];
 
 				$version = $temp['last_modified'];
@@ -602,15 +581,15 @@ class Endpointman_Config
 
 	function brand_update_check_all()
 	{
-		$temp = $this->file2json($this->PHONE_MODULES_PATH . 'endpoint/master.json');
+		$temp = $this->file2json($this->epm->PHONE_MODULES_PATH . '/endpoint/master.json');
 		$endpoint_package = $temp['data']['package'];
 		$endpoint_last_mod = $temp['data']['last_modified'];
 
 		$version = array();
 		$out = $temp['data']['brands'];
 		foreach ($out as $data) {
-			if (file_exists($this->PHONE_MODULES_PATH . "endpoint/" . $data['directory'] . "/brand_data.json")) {
-				$temp = $this->file2json($this->PHONE_MODULES_PATH . "endpoint/" . $data['directory'] . "/brand_data.json");
+			if (file_exists($this->epm->PHONE_MODULES_PATH . "/endpoint/" . $data['directory'] . "/brand_data.json")) {
+				$temp = $this->file2json($this->epm->PHONE_MODULES_PATH . "/endpoint/" . $data['directory'] . "/brand_data.json");
 				$temp = $temp['data']['brands'];
 
 				$brand_name = $temp['directory'];
@@ -625,7 +604,7 @@ class Endpointman_Config
 		}
 
 		$sql = 'SELECT * FROM  endpointman_brand_list WHERE id > 0';
-		$row = sql($sql, 'getAll', DB_FETCHMODE_ASSOC);
+		$row = sql($sql, 'getAll', \PDO::FETCH_ASSOC);
 		foreach ($row as $ava_brands) {
 			$key = $this->system->arraysearchrecursive($ava_brands['directory'], $out, 'directory');
 
@@ -660,8 +639,8 @@ class Endpointman_Config
 	{
         //$temp_location = $this->system->sys_get_temp_dir() . "/epm_temp/";
 		$url_master    = $this->UPDATE_PATH . "master.json";
-		$local_master  = $this->PHONE_MODULES_PATH . "endpoint/master.json";
-		$temp_location = $this->PHONE_MODULES_PATH . "temp/provisioner/";
+		$local_master  = $this->epm->PHONE_MODULES_PATH . "/endpoint/master.json";
+		$temp_location = $this->epm->PHONE_MODULES_PATH . "/temp/provisioner/";
 
         if (!$this->configmod->get('use_repo'))
 		{
@@ -697,8 +676,8 @@ class Endpointman_Config
 			$data = $stmt->rowCount() === 0 ? null : $stmt->fetch(\PDO::FETCH_ASSOC);
 
 			//TODO: Comment download update_status becouse not exist in repostitory GitHub and Set 0 becouse not existe Pakage File in repositopry.
-            // $contents = file_get_contents($this->UPDATE_PATH . "/update_status");
-			$contents = 0;
+            $contents = file_get_contents($this->UPDATE_PATH . "/update_status");
+			// $contents = 0;
 			
             if ($contents != '1') {
                 if (($data == "") OR ($data <= $endpoint_last_mod))
@@ -713,15 +692,15 @@ class Endpointman_Config
                     } else {
 						exec( sprintf("%s -xvf %s%s -C %s", $this->configmod->get("tar_location"), $temp_location, $endpoint_package, $temp_location) );
 						// exec("tar -xvf " . $temp_location . $endpoint_package . " -C " . $temp_location);
-                        if (!file_exists($this->PHONE_MODULES_PATH . "endpoint")) {
-                            mkdir($this->PHONE_MODULES_PATH . "endpoint");
+                        if (!file_exists($this->epm->PHONE_MODULES_PATH . "/endpoint")) {
+                            mkdir($this->epm->PHONE_MODULES_PATH . "/endpoint");
                         }
 
                         //TODO: Automate this somehow...
-                        rename($temp_location . "setup.php", $this->PHONE_MODULES_PATH . "setup.php");
-						rename($temp_location . "autoload.php", $this->PHONE_MODULES_PATH . "autoload.php");
-                        rename($temp_location . "endpoint/base.php", $this->PHONE_MODULES_PATH . "endpoint/base.php");
-                        rename($temp_location . "endpoint/global_template_data.json", $this->PHONE_MODULES_PATH . "endpoint/global_template_data.json");
+                        rename($temp_location . "setup.php", $this->epm->PHONE_MODULES_PATH . "/setup.php");
+						rename($temp_location . "autoload.php", $this->epm->PHONE_MODULES_PATH . "/autoload.php");
+                        rename($temp_location . "endpoint/base.php", $this->epm->PHONE_MODULES_PATH . "/endpoint/base.php");
+                        rename($temp_location . "endpoint/global_template_data.json", $this->epm->PHONE_MODULES_PATH . "/endpoint/global_template_data.json");
                         $sql = "UPDATE endpointman_global_vars SET value = '" . $endpoint_last_mod . "' WHERE var_name = 'endpoint_vers'";
                         sql($sql);
                     }
@@ -732,7 +711,7 @@ class Endpointman_Config
                 if ($master_result)
 				{
                 	$sql = 'SELECT * FROM  endpointman_brand_list WHERE id > 0';
-                    $row = sql($sql, 'getAll', DB_FETCHMODE_ASSOC);
+                    $row = sql($sql, 'getAll', \PDO::FETCH_ASSOC);
                     foreach ($out as $data)
 					{
 						// $local = sql("SELECT local FROM endpointman_brand_list WHERE  directory =  '" . $data['directory'] . "'", 'getOne');
@@ -741,8 +720,8 @@ class Endpointman_Config
 						$stmt->execute([':directory' => $data['directory']]);
 						$local = $stmt->rowCount() === 0 ? null : $stmt->fetch(\PDO::FETCH_ASSOC);
 
-						$url_brand_data   = $this->UPDATE_PATH . $data['directory'] . "/brand_data.json";
-						$local_brand_data = $this->PHONE_MODULES_PATH . "endpoint/" . $data['directory'] . "/brand_data.json";
+						$url_brand_data   = $this->UPDATE_PATH . $data['directory'] . "/".$data['directory'].".json";
+						$local_brand_data = $this->epm->PHONE_MODULES_PATH . "/endpoint/" . $data['directory'] . "/brand_data.json";
 
                         if (!$local)
 						{
@@ -857,7 +836,7 @@ class Endpointman_Config
                 } else {
                 	$error['brand_update_check_master_file'] = _("Error: Aborting Brand Downloads. Can't Get Master File, Assuming Timeout Issues!")."<br />"._("Learn how to manually upload packages here (it's easy!):")."<a href='http://wiki.provisioner.net/index.php/Endpoint_manager_manual_upload' target='_blank'>"._("Click Here!")."</a>";
                 	if ($echomsg == true ) {
-                		out($error['brand_update_check_local_file']);
+                		out($error['brand_update_check_master_file']);
                 	}
                 }
                 return $out;
@@ -871,7 +850,7 @@ class Endpointman_Config
 		else
 		{
             $o = getcwd();
-            chdir(dirname($this->PHONE_MODULES_PATH));
+            chdir(dirname($this->epm->PHONE_MODULES_PATH));
             $path = $this->has_git();
             exec($path . ' git pull', $output);
             //exec($path . ' git checkout master', $output); //Why am I doing this?
@@ -884,10 +863,10 @@ class Endpointman_Config
             sql($sql);
 
             $out = $temp['data']['brands'];
-            $row = sql('SELECT * FROM  endpointman_brand_list WHERE id > 0', 'getAll', DB_FETCHMODE_ASSOC);
+            $row = sql('SELECT * FROM  endpointman_brand_list WHERE id > 0', 'getAll', \PDO::FETCH_ASSOC);
 
             foreach ($out as $data) {
-                $temp = $this->file2json($this->PHONE_MODULES_PATH . 'endpoint/' . $data['directory'] . '/brand_data.json');
+                $temp = $this->file2json($this->epm->PHONE_MODULES_PATH . '/endpoint/' . $data['directory'] . '/brand_data.json');
                 if (key_exists('directory', $temp['data']['brands'])) {
 
                     //Pull in all variables
@@ -909,7 +888,7 @@ class Endpointman_Config
                     foreach ($temp['data']['brands']['family_list'] as $family_list) {
                         $last_mod = max($last_mod, $family_list['last_modified']);
 
-                        $family_line_xml = $this->file2json($this->PHONE_MODULES_PATH . '/endpoint/' . $directory . '/' . $family_list['directory'] . '/family_data.json');
+                        $family_line_xml = $this->file2json($this->epm->PHONE_MODULES_PATH . '/endpoint/' . $directory . '/' . $family_list['directory'] . '/family_data.json');
                         $family_line_xml['data']['last_modified'] = isset($family_line_xml['data']['last_modified']) ? $family_line_xml['data']['last_modified'] : '';
 
                         /* DONT DO THIS YET
@@ -955,7 +934,7 @@ class Endpointman_Config
                         //Phone Models Move Here
                         $family_id = $brand_id . $family_line_xml['data']['id'];
                         $sql = "SELECT * FROM endpointman_model_list WHERE product_id = " . $family_id;
-                        $products = sql($sql, 'getall', DB_FETCHMODE_ASSOC);
+                        $products = sql($sql, 'getall', \PDO::FETCH_ASSOC);
                         foreach ($products as $data) {
 							if (!$this->system->arraysearchrecursive($data['model'], $family_line_xml['data']['model_list'], 'model')) {
 								if ($echomsg == true ) {
@@ -994,16 +973,16 @@ class Endpointman_Config
     function sync_model($model, &$error = array()) {
         if ((!empty($model)) OR ($model > 0)) {
             $sql = "SELECT * FROM  endpointman_model_list WHERE id='" . $model . "'";
-            $model_row = sql($sql, 'getrow', DB_FETCHMODE_ASSOC);
+            $model_row = sql($sql, 'getrow', \PDO::FETCH_ASSOC);
 
             $sql = "SELECT * FROM  endpointman_product_list WHERE id='" . $model_row['product_id'] . "'";
-            $product_row = sql($sql, 'getRow', DB_FETCHMODE_ASSOC);
+            $product_row = sql($sql, 'getRow', \PDO::FETCH_ASSOC);
 
             $sql = "SELECT * FROM  endpointman_brand_list WHERE id=" . $model_row['brand'];
-            $brand_row = sql($sql, 'getRow', DB_FETCHMODE_ASSOC);
+            $brand_row = sql($sql, 'getRow', \PDO::FETCH_ASSOC);
 
 
-            $path_brand_dir = $this->PHONE_MODULES_PATH . '/endpoint/' . $brand_row['directory'];
+            $path_brand_dir = $this->epm->PHONE_MODULES_PATH . '/endpoint/' . $brand_row['directory'];
             $path_brand_dir_cfg = $path_brand_dir . '/' . $product_row['cfg_dir'];
             $path_brand_dir_cfg_json = $path_brand_dir_cfg . '/family_data.json';
 
@@ -1045,7 +1024,7 @@ class Endpointman_Config
             sql($sql);
 
             $template_data_array = array();
-            $template_data_array = $this->merge_data($this->PHONE_MODULES_PATH . '/endpoint/' . $brand_row['directory'] . '/' . $product_row['cfg_dir'] . '/', $template_list_array);
+            $template_data_array = $this->merge_data($this->epm->PHONE_MODULES_PATH . '/endpoint/' . $brand_row['directory'] . '/' . $product_row['cfg_dir'] . '/', $template_list_array);
 
             $sql = "UPDATE endpointman_model_list SET template_data = '" . serialize($template_data_array) . "' WHERE id = '" . $model . "'";
             sql($sql);
@@ -1063,7 +1042,7 @@ class Endpointman_Config
     	out(_("Install/Update Brand..."));
         if (!$this->configmod->get('use_repo'))
 		{
-			$temp_directory = $this->PHONE_MODULES_PATH . "temp/provisioner/";
+			$temp_directory = $this->epm->PHONE_MODULES_PATH . "/temp/provisioner/";
             // $temp_directory = $this->system->sys_get_temp_dir() . "/epm_temp/";
 
 			if (!file_exists($temp_directory))
@@ -1078,7 +1057,7 @@ class Endpointman_Config
 
 			outn(_("Downloading Brand JSON....."));
 
-            // $row = sql('SELECT * FROM  endpointman_brand_list WHERE id =' . $id, 'getAll', DB_FETCHMODE_ASSOC);
+            // $row = sql('SELECT * FROM  endpointman_brand_list WHERE id =' . $id, 'getAll', \PDO::FETCH_ASSOC);
 			$sql  = "SELECT * FROM  endpointman_brand_list WHERE id = :id";
 			$stmt = $this->db->prepare($sql);
 			$stmt->execute([':id' => $id]);
@@ -1091,8 +1070,8 @@ class Endpointman_Config
 			{
 				$row = $stmt->fetch(\PDO::FETCH_ASSOC);
 			
-				$url_brand_data   = $this->UPDATE_PATH . $row['directory'] . "/brand_data.json";
-				$local_brand_data = $this->PHONE_MODULES_PATH . "endpoint/" . $row['directory'] . "/brand_data.json";
+				$url_brand_data   = $this->UPDATE_PATH . $row['directory'] . "/".$row['directory'].".json";
+				$local_brand_data = $this->epm->PHONE_MODULES_PATH . "/endpoint/" . $row['directory'] . "/brand_data.json";
 
 				$result = $this->system->download_file($url_brand_data, $local_brand_data);
 				if ($result)
@@ -1166,7 +1145,7 @@ class Endpointman_Config
     	out(sprintf(_("Update Brand %s ... "), $package));
 
 		// $temp_directory = $this->system->sys_get_temp_dir() . "/epm_temp/";
-		$temp_directory = $this->PHONE_MODULES_PATH . "temp/provisioner/";
+		$temp_directory = $this->epm->PHONE_MODULES_PATH . "/temp/provisioner/";
 		$temp_brand_json = $temp_directory.$package."/brand_data.json";
 
 		//DEBUG
@@ -1187,7 +1166,7 @@ class Endpointman_Config
                 //create directory structure and move files
                 out(sprintf(_("Creating Directory Structure for Brand '%s' and Moving Files..."), $brand_name));
 
-				$local_brand_location = $this->PHONE_MODULES_PATH . "endpoint/" . $directory;
+				$local_brand_location = $this->epm->PHONE_MODULES_PATH . "/endpoint/" . $directory;
 
                 if (!file_exists($local_brand_location))
 				{
@@ -1272,7 +1251,7 @@ class Endpointman_Config
 
                     $last_mod = max($last_mod, $family_list['last_modified']);
 
-                    $family_line_xml = $this->file2json($this->PHONE_MODULES_PATH . '/endpoint/' . $directory . '/' . $family_list['directory'] . '/family_data.json');
+                    $family_line_xml = $this->file2json($this->epm->PHONE_MODULES_PATH . '/endpoint/' . $directory . '/' . $family_list['directory'] . '/family_data.json');
                     $family_line_xml['data']['last_modified'] = isset($family_line_xml['data']['last_modified']) ? $family_line_xml['data']['last_modified'] : '';
 
                     $require_firmware = NULL;
@@ -1285,6 +1264,7 @@ class Endpointman_Config
                     $data = sql("SELECT id FROM endpointman_product_list WHERE id='" . $brand_id . $family_line_xml['data']['id'] . "'", 'getOne');
                     $short_name = preg_replace("/\[(.*?)\]/si", "", $family_line_xml['data']['name']);
 
+					dbug($family_line_xml);
 					if ($data) {
 						if ($this->configmod->get('debug')) echo "-Updating Family ".$short_name."<br/>";
                         $sql = "UPDATE endpointman_product_list SET short_name = '" . str_replace("'", "''", $short_name) . "', long_name = '" . str_replace("'", "''", $family_line_xml['data']['name']) . "', cfg_ver = '" . $family_line_xml['data']['version'] . "', config_files='" . $family_line_xml['data']['configuration_files'] . "' WHERE id = '" . $brand_id . $family_line_xml['data']['id'] . "'";
@@ -1293,6 +1273,7 @@ class Endpointman_Config
 						if ($this->configmod->get('debug')) echo "-Inserting Family ".$short_name."<br/>";
                         $sql = "INSERT INTO endpointman_product_list (`id`, `brand`, `short_name`, `long_name`, `cfg_dir`, `cfg_ver`, `config_files`, `hidden`) VALUES ('" . $brand_id . $family_line_xml['data']['id'] . "', '" . $brand_id . "', '" . str_replace("'", "''", $short_name) . "', '" . str_replace("'", "''", $family_line_xml['data']['name']) . "', '" . $family_line_xml['data']['directory'] . "', '" . $family_line_xml['data']['last_modified'] . "','" . $family_line_xml['data']['configuration_files'] . "', '0')";
                     }
+					dbug($sql);
 					sql($sql);
 
 
@@ -1304,7 +1285,7 @@ class Endpointman_Config
 	                        $model_final_id = $brand_id . $family_line_xml['data']['id'] . $model_list['id'];
 	                        $sql = 'SELECT id, global_custom_cfg_data, global_user_cfg_data FROM endpointman_mac_list WHERE model = ' . $model_final_id;
 	                        $old_data = NULL;
-	                        $old_data = sql($sql, 'getAll', DB_FETCHMODE_ASSOC);
+	                        $old_data = sql($sql, 'getAll', \PDO::FETCH_ASSOC);
 	                        foreach ($old_data as $data) {
 	                            $global_custom_cfg_data = unserialize($data['global_custom_cfg_data']);
 	                            if ((is_array($global_custom_cfg_data)) AND (!array_key_exists('data', $global_custom_cfg_data))) {
@@ -1369,7 +1350,7 @@ outn(_("Old Data Detected! Migrating ... "));
 	                        }
 	                        $old_data = NULL;
 	                        $sql = 'SELECT id, global_custom_cfg_data FROM endpointman_template_list WHERE model_id = ' . $model_final_id;
-	                        $old_data = sql($sql, 'getAll', DB_FETCHMODE_ASSOC);
+	                        $old_data = sql($sql, 'getAll', \PDO::FETCH_ASSOC);
 	                        foreach ($old_data as $data) {
 	                            $global_custom_cfg_data = unserialize($data['global_custom_cfg_data']);
 	                            if ((is_array($global_custom_cfg_data)) AND (!array_key_exists('data', $global_custom_cfg_data))) {
@@ -1421,7 +1402,7 @@ if ($this->configmod->get('debug')) echo format_txt(_("---Inserting Model %_NAME
                     //Phone Models Move Here
                     $family_id = $brand_id . $family_line_xml['data']['id'];
                     $sql = "SELECT * FROM endpointman_model_list WHERE product_id = " . $family_id;
-                    $products = sql($sql, 'getall', DB_FETCHMODE_ASSOC);
+                    $products = sql($sql, 'getall', \PDO::FETCH_ASSOC);
                     foreach ($products as $data) {
                         if (!$this->system->arraysearchrecursive($data['model'], $family_line_xml['data']['model_list'], 'model')) {
 							outn(sprintf(_("Moving/Removing Model '%s' not present in JSON file ... "), $data['model']));
@@ -1473,7 +1454,7 @@ if ($this->configmod->get('debug')) echo format_txt(_("---Inserting Model %_NAME
 
         if (!$this->configmod->get('use_repo')) {
             $sql = "SELECT id, firmware_vers FROM endpointman_product_list WHERE brand = '" . $id . "'";
-            $products = sql($sql, 'getall', DB_FETCHMODE_ASSOC);
+            $products = sql($sql, 'getall', \PDO::FETCH_ASSOC);
 
             foreach ($products as $data) {
                 if ($data['firmware_vers'] != "") {
@@ -1483,7 +1464,7 @@ if ($this->configmod->get('debug')) echo format_txt(_("---Inserting Model %_NAME
 
 			$sql = "SELECT directory FROM endpointman_brand_list WHERE id = '" . $id . "'";
             $brand_dir = sql($sql, 'getOne');
-            $this->system->rmrf($this->PHONE_MODULES_PATH . "endpoint/" . $brand_dir);
+            $this->system->rmrf($this->epm->PHONE_MODULES_PATH . "/endpoint/" . $brand_dir);
 
             $sql = "DELETE FROM endpointman_model_list WHERE brand = '" . $id . "'";
             sql($sql);
@@ -1494,7 +1475,7 @@ if ($this->configmod->get('debug')) echo format_txt(_("---Inserting Model %_NAME
             $sql = "DELETE FROM endpointman_oui_list WHERE brand = '" . $id . "'";
             sql($sql);
 
-            $this->system->rmrf($this->PHONE_MODULES_PATH . $brand_dir);
+            $this->system->rmrf($this->epm->PHONE_MODULES_PATH . "/" . $brand_dir);
             $sql = "DELETE FROM endpointman_brand_list WHERE id = '" . $id . "'";
             sql($sql);
 
@@ -1532,8 +1513,8 @@ if ($this->configmod->get('debug')) echo format_txt(_("---Inserting Model %_NAME
 
         $temp_directory = $this->system->sys_get_temp_dir() . "/epm_temp/";
         $sql = 'SELECT endpointman_product_list.*, endpointman_brand_list.directory FROM endpointman_product_list, endpointman_brand_list WHERE endpointman_product_list.brand = endpointman_brand_list.id AND endpointman_product_list.id = ' . $product_id;
-        $row = sql($sql, 'getRow', DB_FETCHMODE_ASSOC);
-        $json_data = $this->file2json($this->PHONE_MODULES_PATH . "endpoint/" . $row['directory'] . "/" . $row['cfg_dir'] . "/family_data.json");
+        $row = sql($sql, 'getRow', \PDO::FETCH_ASSOC);
+        $json_data = $this->file2json($this->epm->PHONE_MODULES_PATH . "/endpoint/" . $row['directory'] . "/" . $row['cfg_dir'] . "/family_data.json");
 
         if ((! isset($json_data['data']['firmware_ver'])) OR (empty($json_data['data']['firmware_ver']))) {
         	out (_("Error: The version of the firmware package is blank!"));
@@ -1656,7 +1637,7 @@ if ($this->configmod->get('debug')) echo format_txt(_("---Inserting Model %_NAME
      */
     function firmware_update_check($id=NULL) {
         $sql = "SELECT * FROM  endpointman_product_list WHERE  id ='" . $id . "'";
-        $row = sql($sql, 'getRow', DB_FETCHMODE_ASSOC);
+        $row = sql($sql, 'getRow', \PDO::FETCH_ASSOC);
 
         $sql = "SELECT directory FROM  endpointman_brand_list WHERE id ='" . $row['brand'] . "'";
         $brand_directory = sql($sql, 'getOne');
@@ -1665,8 +1646,8 @@ if ($this->configmod->get('debug')) echo format_txt(_("---Inserting Model %_NAME
         if ($row['cfg_dir'] == "") {
             return FALSE;
         } else {
-            $temp = $this->file2json($this->PHONE_MODULES_PATH . "endpoint/" . $brand_directory . "/" . $row['cfg_dir'] . "/family_data.json");
-            if ((array_key_exists('data', $temp)) AND (!is_array($temp['data']['firmware_ver']))) {
+            $temp = $this->file2json($this->epm->PHONE_MODULES_PATH . "/endpoint/" . $brand_directory . "/" . $row['cfg_dir'] . "/family_data.json");
+			if (is_array($temp) && ((array_key_exists('data', $temp)) AND (!is_array($temp['data']['firmware_ver'])))) {
                 if ($row['firmware_vers'] < $temp['data']['firmware_ver']) {
                     return $temp;
                 } else {
@@ -1685,10 +1666,10 @@ if ($this->configmod->get('debug')) echo format_txt(_("---Inserting Model %_NAME
      */
     function firmware_local_check($id=NULL) {
         $sql = "SELECT * FROM  endpointman_product_list WHERE hidden = 0 AND id ='" . $id . "'";
-        $res = sql($sql, 'getAll', DB_FETCHMODE_ASSOC);
+        $res = sql($sql, 'getAll', \PDO::FETCH_ASSOC);
 
         if (count(array($res)) > 0) {
-            $row = sql($sql, 'getRow', DB_FETCHMODE_ASSOC);
+            $row = sql($sql, 'getRow', \PDO::FETCH_ASSOC);
 
             $sql = "SELECT directory FROM  endpointman_brand_list WHERE hidden = 0 AND id ='" . $row['brand'] . "'";
             $brand_directory = sql($sql, 'getOne');
@@ -1697,7 +1678,7 @@ if ($this->configmod->get('debug')) echo format_txt(_("---Inserting Model %_NAME
             if ($row['cfg_dir'] == "") {
 				return("nothing");
             } else {
-                $temp = $this->file2json($this->PHONE_MODULES_PATH . "endpoint/" . $brand_directory . "/" . $row['cfg_dir'] . "/family_data.json");
+                $temp = $this->file2json($this->epm->PHONE_MODULES_PATH . "/endpoint/" . $brand_directory . "/" . $row['cfg_dir'] . "/family_data.json");
                 if ( (isset($temp['data']['firmware_ver'])) AND (! empty ($temp['data']['firmware_ver'])) ) {
                     if ($row['firmware_vers'] == "") {
                         return("install");

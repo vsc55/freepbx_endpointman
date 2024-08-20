@@ -34,64 +34,82 @@ function endpointman_get_config($engine) {
     }
 }
 
-function endpointman_configpageinit($pagename) {
+function endpointman_configpageinit($pagename)
+{
     global $currentcomponent, $amp_conf, $db;
 
-    $display = isset($_REQUEST['display']) ? $_REQUEST['display'] : null;
-	$type = '';
-	$tech = '';
+    $epm = \FreePBX::Endpointman();
+
+    $display    = $_REQUEST['display'] ?? null;
+	$type       = '';
+	$tech       = '';
 	$extdisplay = '';
 
-    if ($display == "extensions") {
-        if (isset($_REQUEST['extension'])) {
-            $extdisplay = isset($_REQUEST['extension']) ? $_REQUEST['extension'] : null;
-        } else {
-            $extdisplay = isset($_REQUEST['extdisplay']) ? $_REQUEST['extdisplay'] : null;
-        }
-    } elseif ($display == "devices") {
-		if (isset($_REQUEST['deviceid'])) {
-			$extdisplay = isset($_REQUEST['deviceid']) ? $_REQUEST['deviceid'] : null;
-		} else {
-			$extdisplay = isset($_REQUEST['extdisplay']) ? $_REQUEST['extdisplay'] : null;
-		}
-	} else {
-		// we only care about extensions or devices, otherwise return
-		return true;
-	}
+    switch($display)
+    {
+        case "extensions":
+            $extdisplay = $_REQUEST['extension'] ?? $_REQUEST['extdisplay'] ?? null;
+            break;
 
-    if (isset($extdisplay) && !empty($extdisplay)) {
-        $sql = "SELECT tech FROM devices WHERE id = " . $extdisplay;
-        $tech = $db->getOne($sql);
-		if(!$tech) {
-			$tech = "sip";
-			$type = 'new';
-		} elseif($tech == 'sip' OR $tech == 'pjsip') {
-			$type = 'edit';
-		}
-    } elseif(isset($_REQUEST['tech_hardware']) OR isset($_REQUEST['tech'])) {
-		$tech = isset($_REQUEST['tech_hardware']) ? $_REQUEST['tech_hardware'] : $_REQUEST['tech'];
-		if(($tech == 'sip_generic') OR ($tech == 'sip') OR ($tech == 'pjsip')) {
-        	$tech = "sip";
-			$type = 'new';
-		}
+        case "devices":
+            $extdisplay = $_REQUEST['deviceid'] ?? $_REQUEST['extdisplay'] ?? null;
+            break;
+
+        default:
+            // we only care about extensions or devices, otherwise return
+		    return true;
     }
 
-    if ((($tech == 'sip') OR ($tech == 'pjsip')) AND (!empty($type))) {
+    if (isset($extdisplay) && !empty($extdisplay))
+    {
+        // $sql = "SELECT tech FROM devices WHERE id = " . $extdisplay;
+        // $tech = $db->getOne($sql);
+
+        $sql = "SELECT tech FROM devices WHERE id = :id";
+		$stmt = $epm->db->prepare($sql);
+		$stmt->execute([':id' => $extdisplay]);
+		if ($stmt->rowCount() === 0)
+        {
+			$tech = "sip";
+			$type = 'new';
+		}
+        else
+        {
+            $tech = $stmt->fetch(PDO::FETCH_ASSOC);
+            if(in_array($tech, ['sip', 'pjsip']))
+            {
+                $type = 'edit';
+            }
+        }
+    }
+    elseif(isset($_REQUEST['tech_hardware']) OR isset($_REQUEST['tech']))
+    {
+		$tech = $_REQUEST['tech_hardware'] ?? $_REQUEST['tech'];
+        if (in_array($tech, ['sip_generic', 'sip', 'pjsip']))
+        {
+            $tech = "sip";
+            $type = 'new';
+        }
+    }
+
+    if ((($tech == 'sip') OR ($tech == 'pjsip')) AND (!empty($type)))
+    {
         global $endpoint;
 
-	    $action = isset($_REQUEST['action']) ? $_REQUEST['action'] : null;
-	    $delete = isset($_REQUEST['epm_delete']) ? $_REQUEST['epm_delete'] : null;
+	    $action = $_REQUEST['action'] ?? null;
+	    $delete = $_REQUEST['epm_delete'] ?? null;
 
         $doc_root = $amp_conf['AMPWEBROOT'] . "/admin/modules/endpointman/";
-        if (file_exists($doc_root . "includes/functions.inc")) {
-            require($doc_root . "includes/functions.inc");
+        if (file_exists($doc_root . "includes/functions.inc"))
+        {
+            require_once($doc_root . "includes/functions.inc");
 
             $endpoint = new endpointmanager();
             ini_set('display_errors', 0);
 
             if ($action == "del") {
                 $sql = "SELECT mac_id,luid FROM endpointman_line_list WHERE ext = " . $extdisplay;
-                $macid = $endpoint->eda->sql($sql, 'getRow', DB_FETCHMODE_ASSOC);
+                $macid = $endpoint->eda->sql($sql, 'getRow', \PDO::FETCH_ASSOC);
                 if ($macid) {
                     $endpoint->delete_line($macid['luid'], TRUE);
                 }
@@ -100,7 +118,7 @@ function endpointman_configpageinit($pagename) {
             if (($action == "edit") OR ($action == "add")) {
                 if (isset($delete)) {
                     $sql = "SELECT mac_id,luid FROM endpointman_line_list WHERE ext = " . $extdisplay;
-                    $macid = $endpoint->eda->sql($sql, 'getRow', DB_FETCHMODE_ASSOC);
+                    $macid = $endpoint->eda->sql($sql, 'getRow', \PDO::FETCH_ASSOC);
                     if ($macid) {
                         $endpoint->delete_line($macid['luid'], TRUE);
                     }
@@ -139,7 +157,7 @@ function endpointman_configpageinit($pagename) {
                             //In Database already
 
                             $sql = 'SELECT * FROM endpointman_line_list WHERE ext = ' . $extdisplay . ' AND mac_id = ' . $macid;
-                            $lines_list = & $endpoint->eda->sql($sql, 'getRow', DB_FETCHMODE_ASSOC);
+                            $lines_list = & $endpoint->eda->sql($sql, 'getRow', \PDO::FETCH_ASSOC);
 
                             if (($lines_list) AND (isset($model)) AND (isset($line)) AND (!isset($delete)) AND (isset($temp))) {
                                 //Modifying line already in the database
@@ -200,14 +218,18 @@ function endpointman_applyhooks() {
 // This is called before the page is actually displayed, so we can use addguielem().
 function endpointman_configpageload() {
     global $currentcomponent, $endpoint, $db, $astman;
-    $display = isset($_REQUEST['display']) ? $_REQUEST['display'] : null;
-    $action = isset($_REQUEST['action']) ? $_REQUEST['action'] : null;
-    $extdisplay = isset($_REQUEST['extdisplay']) ? $_REQUEST['extdisplay'] : null;
-    if (isset($extdisplay) && !empty($extdisplay)) {
+    $display    = $_REQUEST['display'] ?? null;
+    $action     = $_REQUEST['action'] ?? null;
+    $extdisplay = $_REQUEST['extdisplay'] ?? null;
+
+    if (isset($extdisplay) && !empty($extdisplay))
+    {
         $sql = "SELECT tech FROM devices WHERE id = " . $extdisplay;
         $tech = $endpoint->eda->sql($sql, 'getOne');
-    } else {
-        $tech = isset($_REQUEST['tech_hardware']) ? $_REQUEST['tech_hardware'] : null;
+    }
+    else
+    {
+        $tech = $_REQUEST['tech_hardware'] ?? null;
     }
 
     $extension_address = $astman->database_get("SIP","Registry"."/$extdisplay");
@@ -239,7 +261,7 @@ function endpointman_configpageload() {
             $section = _('End Point Manager');
 
             $sql = "SELECT mac_id,luid,line FROM endpointman_line_list WHERE ext = '" . $extdisplay . "' ";
-            $line_info = $endpoint->eda->sql($sql, 'getRow', DB_FETCHMODE_ASSOC);
+            $line_info = $endpoint->eda->sql($sql, 'getRow', \PDO::FETCH_ASSOC);
             if ($line_info)
             {
                 $js = "

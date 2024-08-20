@@ -210,7 +210,7 @@ function epm_templates_add_NewProductSelect_Change (obj)
 	if ($(obj).val() != "") {
 		$.ajax({
 			type: 'POST',
-			url: "ajax.php",
+			url: window.FreePBX.ajaxurl,
 			data: {
 				module: "endpointman",
 				module_sec: "epm_templates",
@@ -261,7 +261,7 @@ function epm_templates_grid_del (iddel)
 		$.ajax({
 	        cache: false,
 			type: 'POST',
-			url: "ajax.php",
+			url: window.FreePBX.ajaxurl,
 			data: {
 				module: "endpointman",
 				module_sec: "epm_templates",
@@ -297,7 +297,7 @@ function epm_templates_grid_add()
 	else {
 		$.ajax({
 			type: 'POST',
-			url: "ajax.php",
+			url: window.FreePBX.ajaxurl,
 			data: {
 				module: "endpointman",
 				module_sec: "epm_templates",
@@ -335,7 +335,7 @@ function epm_template_custom_config_get_global(elmnt)
 {
 	$.ajax({
 		type: 'POST',
-		url: "ajax.php",
+		url: window.FreePBX.ajaxurl,
 		data: {
 			module: "endpointman",
 			module_sec: "epm_templates",
@@ -372,7 +372,7 @@ function epm_template_custom_config_update_global(elmnt)
 {
 	$.ajax({
 		type: 'POST',
-		url: "ajax.php",
+		url: window.FreePBX.ajaxurl,
 		data: {
 			module: "endpointman",
 			module_sec: "epm_templates",
@@ -406,7 +406,7 @@ function epm_template_custom_config_reset_global(elmnt)
 {
 	$.ajax({
 		type: 'POST',
-		url: "ajax.php",
+		url: window.FreePBX.ajaxurl,
 		data: {
 			module: "endpointman",
 			module_sec: "epm_templates",

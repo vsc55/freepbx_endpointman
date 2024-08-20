@@ -1,7 +1,7 @@
 <?php
 	/*
 	$product_list = "SELECT * FROM endpointman_product_list WHERE id > 0";
-	$product_list =& sql($product_list,'getAll', DB_FETCHMODE_ASSOC);
+	$product_list =& sql($product_list,'getAll', \PDO::FETCH_ASSOC);
 	*/
 	
     //Because we are working with global variables we probably updated them, so lets refresh those variables

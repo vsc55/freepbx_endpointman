@@ -21,7 +21,7 @@ class Config {
 	{
 		if ($clear) { $this->module_conf = array(); }
 		$sql = "SELECT var_name, value FROM endpointman_global_vars";
-		foreach (sql($sql, 'getAll', DB_FETCHMODE_ASSOC) as $row) {
+		foreach (sql($sql, 'getAll', \PDO::FETCH_ASSOC) as $row) {
 			$this->module_conf[$row['var_name']] = $row['value'];
 		}
 	}

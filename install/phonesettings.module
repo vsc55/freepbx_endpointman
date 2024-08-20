@@ -43,7 +43,7 @@ class phonesettings {
         $exten = $_SESSION['ari_user']['extension'];
 
         $sql = "SELECT * FROM endpointman_global_vars WHERE var_name = 'enable_ari'";
-        $results = $_SESSION['dbh_asterisk']->getAll($sql, DB_FETCHMODE_ASSOC);
+        $results = $_SESSION['dbh_asterisk']->getAll($sql, \PDO::FETCH_ASSOC);
 
         // and we are not logged in as admin
         if (($exten!=$ARI_ADMIN_USERNAME) AND ($results[0]['value'])) {
@@ -70,7 +70,7 @@ class phonesettings {
         $endpoint = new endpointmanager();
 
         $sql = "SELECT mac_id, line FROM endpointman_line_list WHERE ext = '".$_SESSION['ari_user']['extension']."' ";
-        $mac_row = $endpoint->db->getRow($sql, array(), DB_FETCHMODE_ASSOC);
+        $mac_row = $endpoint->db->getRow($sql, array(), \PDO::FETCH_ASSOC);
 
         $mac_id = $mac_row['mac_id'];
         $line = $mac_row['line'];
@@ -159,7 +159,7 @@ class phonesettings {
         $res = $endpoint->db->query($sql);
         if(count(array($res))) {
 
-            $mac_row = $endpoint->db->getRow($sql, array(), DB_FETCHMODE_ASSOC);
+            $mac_row = $endpoint->db->getRow($sql, array(), \PDO::FETCH_ASSOC);
 
             $mac_id = $mac_row['mac_id'];
             $line = $mac_row['line'];

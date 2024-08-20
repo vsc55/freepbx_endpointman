@@ -53,25 +53,42 @@ function epm_config_document_ready () {
 				type_send = "producto";
 				break;
 				
-			case "m":
+			case "m":2
 				type_send = "modelo";
 				break;
 				
 			default:
 				type_send = "";
 		}
-		var url = "ajax.php?module=endpointman&module_sec=epm_config&command=saveconfig&typesavecfg=hidden&idtype=" + type_send + "&value=0&idbt=" + id;
-		$.getJSON(url, function(data)
-		{
-			if (data.status == true) {
-				epm_config_select_tab_ajax();
-				fpbxToast(data.txt.save_changes_ok, '', 'success');
-			} 
-			else {
-				fpbxToast("Error to Save Change!", "Error!", 'error');
+		var dataToSend = {
+			module: 'endpointman',
+			module_sec: 'epm_config',
+			command: 'saveconfig',
+			typesavecfg: 'hidden',
+			idtype: type_send,
+			value: 0,
+			idbt: id
+		};
+		$.ajax({
+			type: 'POST',
+			url: window.FreePBX.ajaxurl,
+			data: dataToSend,
+			dataType: 'json',
+			timeout: 60000,
+			error: function(xhr, ajaxOptions, thrownError) {
+				fpbxToast('ERROR AJAX 1:' + thrownError,'ERROR (' + xhr.status + ')!','error');
+				return;
+			},
+			success: function(data) {
+				if (data.status == true) {
+					epm_config_select_tab_ajax();
+					fpbxToast(data.txt.save_changes_ok, '', 'success');
+				} else {
+					fpbxToast(_("Error to Save Change!"), "Error!", 'error');
+				}
 			}
 		});
-		
+
 		$('#epm_config_manager_select_hidens').selectpicker('toggle');
 		epm_config_list_brand_model_hide_ajax_load($(this));
 	});
@@ -110,7 +127,7 @@ function epm_config_manager_ajax_hide (e)
 {
 	var id = e.getAttribute('data-id');
 	var idtype  = e.getAttribute('data-label');
-	var url = "ajax.php?module=endpointman&module_sec=epm_config&command=saveconfig&typesavecfg=hidden&idtype=" + idtype + "&value=1&idbt=" + id;
+	var url = window.FreePBX.ajaxurl + "?module=endpointman&module_sec=epm_config&command=saveconfig&typesavecfg=hidden&idtype=" + idtype + "&value=1&idbt=" + id;
 	$.getJSON(url, function(data)
 	{
 		if (data.status == true) {
@@ -216,7 +233,7 @@ function epm_config_LoadContenidoAjax()
 	clearTimeout(v_sTimerUpdateAjax);
 	$.ajax({
 		type: 'POST',
-		url: "ajax.php",
+		url: window.FreePBX.ajaxurl,
 		data: {
 			module: "endpointman",
 			module_sec: "epm_config",
@@ -334,7 +351,7 @@ function epm_config_tab_manager_ajax_get_add_data(data)
 			$(boxappendL0).append(
 				$('<div/>', { 'class' : 'panel panel-warning', 'id' : 'manager_alert_list_emtry' })
 				.append(
-					$('<div/>', { 'class' : 'panel-heading' }).append( $('<h3/>', { 'class' : 'panel-title' }).text('LIST EMTRY!!!') ),
+					$('<div/>', { 'class' : 'panel-heading' }).append( $('<h3/>', { 'class' : 'panel-title' }).text('List Empty!') ),
 					$('<div/>', { 'class' : 'panel-body' }).text('Click the "CHECK FOR UPDATES" button to search for data on the server.')
 				)
 			);
@@ -946,7 +963,7 @@ function epm_config_tab_manager_bt_enable_disable_change(obt, idtype, idbt, iL2)
 	
 	$.ajax({
 		type: 'POST',
-		url: "ajax.php",
+		url: window.FreePBX.ajaxurl,
 		data: {
 			module: "endpointman",
 			module_sec: "epm_config",

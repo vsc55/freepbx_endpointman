@@ -128,7 +128,7 @@ function epm_advanced_tab_manual_upload_list_files_brand_expor()
 	else {
 		$.ajax({
 			type: 'POST',
-			url: "ajax.php",
+			url: window.FreePBX.ajaxurl,
 			data: {
 				module: "endpointman",
 				module_sec: "epm_advanced",
@@ -276,7 +276,7 @@ waitingDialog.show();
 	epm_advanced_tab_poce_clear_select();
 	$.ajax({
 		type: 'POST',
-		url: "ajax.php",
+		url: window.FreePBX.ajaxurl,
 		data: {
 			module: "endpointman",
 			module_sec: "epm_advanced",
@@ -366,7 +366,7 @@ function epm_advanced_tab_poce_select_product(idsel = null, bclear = true)
 waitingDialog.show();
 	$.ajax({
 		type: 'POST',
-		url: "ajax.php",
+		url: window.FreePBX.ajaxurl,
 		data: {
 			module: "endpointman",
 			module_sec: "epm_advanced",
@@ -445,7 +445,7 @@ function epm_advanced_tab_poce_select_file_edit (idpro_select, txtnamefile, idna
 waitingDialog.show();
 	$.ajax({
 		type: 'POST',
-		url: "ajax.php",
+		url: window.FreePBX.ajaxurl,
 		data: {
 			module: "endpointman",
 			module_sec: "epm_advanced",
@@ -633,7 +633,7 @@ function epm_advanced_tab_poce_bt_acction (command)
 	
 	$.ajax({
 		type: 'POST',
-		url: "ajax.php",
+		url: window.FreePBX.ajaxurl,
 		data: cfg_data,
 		dataType: 'json',
 		timeout: 60000,
@@ -776,7 +776,7 @@ function epm_advanced_tab_oui_manager_ajax (data_ajax = "")
 		$.ajax({
 	        async: false,
 			type: 'POST',
-			url: "ajax.php",
+			url: window.FreePBX.ajaxurl,
 			data:  data_ajax,
 			dataType: 'json',
 			timeout: 60000,
@@ -823,7 +823,7 @@ function epm_advanced_tab_setting_input_change(obt)
 	
 	$.ajax({
 		type: 'POST',
-		url: "ajax.php",
+		url: window.FreePBX.ajaxurl,
 		data: {
 			module: "endpointman",
 			module_sec: "epm_advanced",

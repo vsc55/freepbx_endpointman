@@ -1,14 +1,4 @@
 <?php
-global $active_modules;
-
-if (!empty($active_modules['endpoint']['rawname'])) {
-	if (FreePBX::Endpointman()->configmod->get("disable_endpoint_warning") !== "1") {
-		include('page.epm_warning.php');  
-	}
-}
-?>
-
-<?php 
 /*
 Endpoint Manager V2
 Copyright (C) 2009-2010  Ed Macri, John Mullinix and Andrew Nagy 
@@ -26,34 +16,55 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 http://www.gnu.org/licenses/old-licenses/gpl-2.0.html
 */
 
+$epm = \FreePBX::create()->Endpointman;
+
+global $active_modules;
+
+if (!empty($active_modules['endpoint']['rawname'])) {
+	if ($epm->configmod->get("disable_endpoint_warning") !== "1") {
+		include('page.epm_warning.php');  
+	}
+}
+
 if(file_exists('/tftpboot')) {
 	if(!is_writeable('/tftpboot')) {
 		die(_('/tftpboot is not writable'));
 	}
-} else {
+}
+else
+{
 	die(_("Please create /tftpboot, even if you won't use it"));
 }
+
+if(!is_writeable($epm->LOCAL_PATH))
+{
+	chmod($epm->LOCAL_PATH, 0764);
+}
+if(!is_writeable($epm->PHONE_MODULES_PATH))
+{
+	chmod($epm->PHONE_MODULES_PATH, 0764);
+}
+
+if($amp_conf['AMPENGINE'] != 'asterisk')
+{
+	die(_("Sorry, Only Asterisk is supported currently"));
+}
+
+
+
 include 'includes/functions.inc';
 global $endpoint, $debug;
 $debug = NULL;
 $endpoint = new endpointmanager();
 global $global_cfg, $debug;
-if(!is_writeable(LOCAL_PATH)) {
-	chmod(LOCAL_PATH, 0764);
-}
-if(!is_writeable(PHONE_MODULES_PATH)) {
-	chmod(PHONE_MODULES_PATH, 0764);
-}
-if($amp_conf['AMPENGINE'] != 'asterisk') {
-	die(_("Sorry, Only Asterisk is supported currently"));
-}
-if (isset($_REQUEST['page'])) {
-	$page = $_REQUEST['page'];
-} else {
-	$page = "";
-}
-if(isset($global_cfg['debug']) && $global_cfg['debug']) {
+
+
+
+
+$page = $_REQUEST['page'] ?? '';
+
+if(isset($global_cfg['debug']) && $global_cfg['debug'])
+{
 	$debug .= "Request Variables: \n".print_r($_REQUEST, TRUE);
 }
-include LOCAL_PATH.'includes/devices_manager.inc';
-?>
+include LOCAL_PATH.'/includes/devices_manager.inc';

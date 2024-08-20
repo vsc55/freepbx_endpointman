@@ -75,7 +75,7 @@ switch ($sub_type) {
 
                 $sql = 'SELECT * FROM endpointman_line_list WHERE mac_id = '. $_REQUEST['edit_id'];
 
-                $lines_list = $endpoint->eda->sql($sql,'getAll',DB_FETCHMODE_ASSOC);
+                $lines_list = $endpoint->eda->sql($sql,'getAll',\PDO::FETCH_ASSOC);
 
                 foreach($lines_list as $row) {
                     $sql = "SELECT description FROM devices WHERE id = ".$_REQUEST['ext_list_'.$row['luid']];
@@ -147,7 +147,7 @@ switch ($sub_type) {
         if(isset($_REQUEST['selected'])) {
             $sql = "SELECT mac_id, ext FROM endpointman_line_list";
 					$endpoint->eda->sql($sql);
-					$lines = $endpoint->eda->sql($sql,'getAll',DB_FETCHMODE_ASSOC);		
+					$lines = $endpoint->eda->sql($sql,'getAll',\PDO::FETCH_ASSOC);		
 			
 			foreach($_REQUEST['selected'] as $key => $data) {
 			
@@ -155,7 +155,7 @@ switch ($sub_type) {
 						if ($data == $line[ext]){
 						$sql = "SELECT mac_id FROM endpointman_line_list WHERE ext = " . $data;
 						$endpoint->eda->sql($sql);
-						$macid = $endpoint->eda->sql($sql,'getrow',DB_FETCHMODE_ASSOC);
+						$macid = $endpoint->eda->sql($sql,'getrow',\PDO::FETCH_ASSOC);
 						$_REQUEST['selected'][$key] = $macid[mac_id];
 						
 						}
@@ -178,7 +178,7 @@ switch ($sub_type) {
         break;
     case "rebuild_configs_for_all_phones" :
         $sql = "SELECT endpointman_mac_list.id FROM endpointman_mac_list, endpointman_brand_list, endpointman_product_list, endpointman_model_list WHERE endpointman_brand_list.id = endpointman_product_list.brand AND endpointman_product_list.id = endpointman_model_list.product_id AND endpointman_mac_list.model = endpointman_model_list.id ORDER BY endpointman_product_list.cfg_dir ASC";
-        $mac_list = $endpoint->eda->sql($sql,'getAll',DB_FETCHMODE_ASSOC);
+        $mac_list = $endpoint->eda->sql($sql,'getAll',\PDO::FETCH_ASSOC);
         foreach($mac_list as $data) {
             $phone_info = $endpoint->get_phone_info($data['id']);
             foreach($phone_info['line'] as $line) {
@@ -198,7 +198,7 @@ switch ($sub_type) {
     case "reboot_brand" :
         if($_REQUEST['rb_brand'] != "") {
             $sql = 'SELECT endpointman_mac_list.id FROM endpointman_mac_list , endpointman_model_list , endpointman_brand_list , endpointman_product_list WHERE endpointman_brand_list.id = endpointman_model_list.brand AND endpointman_model_list.id = endpointman_mac_list.model AND endpointman_model_list.product_id = endpointman_product_list.id AND endpointman_brand_list.id = '.$_REQUEST['rb_brand'].' ORDER BY endpointman_product_list.cfg_dir ASC';
-            $data = $endpoint->eda->sql($sql,'getAll',DB_FETCHMODE_ASSOC);
+            $data = $endpoint->eda->sql($sql,'getAll',\PDO::FETCH_ASSOC);
             if(!empty($data)) {
                 foreach($data as $row) {
                     if(!class_exists('ProvisionerConfig')) {
@@ -262,7 +262,7 @@ switch ($sub_type) {
                 $final[$key] = $data;
                 $final[$key]['id'] = $key;
                 $sqln = "SELECT * FROM endpointman_model_list WHERE enabled = 1 AND brand =".$data['brand_id'];
-                $model_list = $endpoint->eda->sql($sqln,'getAll',DB_FETCHMODE_ASSOC);
+                $model_list = $endpoint->eda->sql($sqln,'getAll',\PDO::FETCH_ASSOC);
                 $j = 0;
                 foreach($model_list as $row) {
                     $final[$key]['list'][$j] = $row;
@@ -297,7 +297,7 @@ switch ($sub_type) {
             if(($_REQUEST['brand_list_selected'] > 0) AND ($_REQUEST['model_list_selected'] > 0)) {
                             $sql = "SELECT mac_id, ext FROM endpointman_line_list";
 					$endpoint->eda->sql($sql);
-					$lines = $endpoint->eda->sql($sql,'getAll',DB_FETCHMODE_ASSOC);		
+					$lines = $endpoint->eda->sql($sql,'getAll',\PDO::FETCH_ASSOC);		
 			
 			foreach($_REQUEST['selected'] as $key => $data) {
 			
@@ -305,7 +305,7 @@ switch ($sub_type) {
 						if ($data == $line[ext]){
 						$sql = "SELECT mac_id FROM endpointman_line_list WHERE ext = " . $data;
 						$endpoint->eda->sql($sql);
-						$macid = $endpoint->eda->sql($sql,'getrow',DB_FETCHMODE_ASSOC);
+						$macid = $endpoint->eda->sql($sql,'getrow',\PDO::FETCH_ASSOC);
 						$_REQUEST['selected'][$key] = $macid[mac_id];
 						
 						}
@@ -339,7 +339,7 @@ switch ($sub_type) {
             $message = _("Please select a template");
         } else {
             $sql = "SELECT endpointman_mac_list.id FROM endpointman_mac_list, endpointman_brand_list, endpointman_product_list, endpointman_model_list WHERE endpointman_brand_list.id = endpointman_product_list.brand AND endpointman_product_list.id = endpointman_model_list.product_id AND endpointman_mac_list.model = endpointman_model_list.id AND endpointman_product_list.id = '".$_REQUEST['product_select']."'";
-            $data = $endpoint->eda->sql($sql,'getAll',DB_FETCHMODE_ASSOC);
+            $data = $endpoint->eda->sql($sql,'getAll',\PDO::FETCH_ASSOC);
             foreach($data as $row) {
                 $sql = "UPDATE endpointman_mac_list SET template_id = '".$_REQUEST['template_selector']."' WHERE id =  ". $row['id'];
                 $endpoint->eda->sql($sql);
@@ -366,7 +366,7 @@ switch ($sub_type) {
             $message = _("Please select a template");
         } else {
             $sql = "SELECT endpointman_mac_list.id FROM endpointman_mac_list, endpointman_brand_list, endpointman_product_list, endpointman_model_list WHERE endpointman_brand_list.id = endpointman_product_list.brand AND endpointman_product_list.id = endpointman_model_list.product_id AND endpointman_mac_list.model = endpointman_model_list.id AND endpointman_model_list.id = '".$_REQUEST['model_select']."'";
-            $data = $endpoint->eda->sql($sql,'getAll',DB_FETCHMODE_ASSOC);
+            $data = $endpoint->eda->sql($sql,'getAll',\PDO::FETCH_ASSOC);
             foreach($data as $row) {
                 $sql = "UPDATE endpointman_mac_list SET template_id = '".$_REQUEST['model_template_selector']."' WHERE id =  ". $row['id'];
                 $endpoint->eda->sql($sql);
@@ -480,7 +480,7 @@ $amp_send['AMPDBNAME'] = $amp_conf['AMPDBNAME'];
 
 $sql = "SELECT DISTINCT endpointman_product_list.* FROM endpointman_product_list, endpointman_model_list WHERE endpointman_product_list.id = endpointman_model_list.product_id AND endpointman_model_list.hidden = 0 AND endpointman_model_list.enabled = 1 AND endpointman_product_list.hidden != 1 AND endpointman_product_list.cfg_dir !=  ''";
 
-$template_list = $endpoint->eda->sql($sql, 'getAll', DB_FETCHMODE_ASSOC);
+$template_list = $endpoint->eda->sql($sql, 'getAll', \PDO::FETCH_ASSOC);
 $i = 1;
 $product_list = array();
 $product_list[0]['value'] = 0;
@@ -492,7 +492,7 @@ foreach($template_list as $row) {
 }
 
 $sql = "SELECT DISTINCT endpointman_model_list.* FROM endpointman_product_list, endpointman_model_list WHERE endpointman_product_list.id = endpointman_model_list.product_id AND endpointman_model_list.hidden = 0 AND endpointman_model_list.enabled = 1 AND endpointman_product_list.hidden != 1 AND endpointman_product_list.cfg_dir !=  ''";
-$template_list = $endpoint->eda->sql($sql, 'getAll', DB_FETCHMODE_ASSOC);
+$template_list = $endpoint->eda->sql($sql, 'getAll', \PDO::FETCH_ASSOC);
 $i = 1;
 $model_list = array();
 $model_list[0]['value'] = 0;

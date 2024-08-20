@@ -13,11 +13,6 @@ use FreePBX;
 #[\AllowDynamicProperties]
 class Endpointman_Advanced
 {
-    public $MODULES_PATH;
-	public $LOCAL_PATH;
-	public $PHONE_MODULES_PATH;
-
-	// public function __construct($freepbx = null, $cfgmod = null, $epm_config)
 	public function __construct($epm)
 	{
 		$this->epm 		  = $epm;
@@ -27,66 +22,61 @@ class Endpointman_Advanced
 		$this->configmod  = $epm->configmod;
 		$this->epm_config = $epm->epm_config;
 
-        $this->MODULES_PATH = $this->config->get('AMPWEBROOT') . '/admin/modules/';
-        if (file_exists($this->MODULES_PATH . "endpointman/"))
-		{
-            $this->LOCAL_PATH = $this->MODULES_PATH . "endpointman/";
-        }
-		else
+        if (! file_exists($this->epm->LOCAL_PATH))
 		{
             die(_("Can't Load Local Endpoint Manager Directory!"));
         }
-		if (file_exists($this->MODULES_PATH . "_ep_phone_modules/"))
+		if (! file_exists($this->epm->PHONE_MODULES_PATH))
 		{
-            $this->PHONE_MODULES_PATH = $this->MODULES_PATH . "_ep_phone_modules/";
-        }
-		else
-		{
-            $this->PHONE_MODULES_PATH = $this->MODULES_PATH . "_ep_phone_modules/";
-            if (!file_exists($this->PHONE_MODULES_PATH))
-			{
-                mkdir($this->PHONE_MODULES_PATH, 0775);
-            }
-            if (file_exists($this->PHONE_MODULES_PATH . "setup.php"))
-			{
-                unlink($this->PHONE_MODULES_PATH . "setup.php");
-            }
-            if (!file_exists($this->MODULES_PATH . "_ep_phone_modules/"))
-			{
-                die(_('Endpoint Manager can not create the modules folder!'));
-            }
+            die(_('Endpoint Manager can not create the modules folder!'));
         }
 	}
 
-	public function myShowPage(&$pagedata) {
+	public function myShowPage(&$pagedata)
+	{
 		if(empty($pagedata))
 		{
 			$pagedata['settings'] = array(
 				"name" => _("Settings"),
-				"page" => 'views/epm_advanced_settings.page.php'
+				"page" => '/views/epm_advanced_settings.page.php'
 			);
 			$pagedata['oui_manager'] = array(
 				"name" => _("OUI Manager"),
-				"page" => 'views/epm_advanced_oui_manager.page.php'
+				"page" => '/views/epm_advanced_oui_manager.page.php'
 			);
 			$pagedata['poce'] = array(
 				"name" => _("Product Configuration Editor"),
-				"page" => 'views/epm_advanced_poce.page.php'
+				"page" => '/views/epm_advanced_poce.page.php'
 			);
 			$pagedata['iedl'] = array(
 				"name" => _("Import/Export My Devices List"),
-				"page" => 'views/epm_advanced_iedl.page.php'
+				"page" => '/views/epm_advanced_iedl.page.php'
 			);
 			$pagedata['manual_upload'] = array(
 				"name" => _("Package Import/Export"),
-				"page" => 'views/epm_advanced_manual_upload.page.php'
+				"page" => '/views/epm_advanced_manual_upload.page.php'
 			);
 		}
 	}
 
-	public function ajaxRequest($req, &$setting) {
-		$arrVal = array("oui", "oui_add", "oui_del", "poce_list_brands","poce_select", "poce_select_file", "poce_save_file", "poce_save_as_file", "poce_sendid", "poce_delete_config_custom", "list_files_brands_export", "saveconfig");
-		if (in_array($req, $arrVal)) {
+	public function ajaxRequest($req, &$setting)
+	{
+		$allowRequest = array(
+			"oui",
+			"oui_add",
+			"oui_del",
+			"poce_list_brands",
+			"poce_select",
+			"poce_select_file",
+			"poce_save_file",
+			"poce_save_as_file",
+			"poce_sendid",
+			"poce_delete_config_custom",
+			"list_files_brands_export",
+			"saveconfig"
+		);
+		if (in_array(strtolower($req), $allowRequest))
+		{
 			$setting['authenticate'] = true;
 			$setting['allowremote'] = false;
 			return true;
@@ -96,113 +86,131 @@ class Endpointman_Advanced
 
     public function ajaxHandler($module_tab = "", $command = "")
 	{
-		$txt = array();
-		$txt['settings'] = array(
-			'error' 		  => _("Error!"),
-			'save_changes' 	  => _("Saving Changes..."),
-			'save_changes_ok' => _("Saving Changes... Ok!"),
-			'opt_invalid' 	  => _("Invalid Option!")
+		$command_allow = true;
+		$txt = array(
+			'settings' => array(
+				'error' 		  => _("Error!"),
+				'save_changes' 	  => _("Saving Changes..."),
+				'save_changes_ok' => _("Saving Changes... Ok!"),
+				'opt_invalid' 	  => _("Invalid Option!")
+			)
 		);
-
-		if ($module_tab == "settings")
+		
+		switch($module_tab)
 		{
-			switch ($command)
-			{
-				case "saveconfig":
-					$retarr = $this->epm_advanced_settings_saveconfig();
-					break;
+			case 'settings':
+				switch ($command)
+				{
+					case "saveconfig":
+						$retarr = $this->epm_advanced_settings_saveconfig();
+						break;
+	
+					default:
+						$command_allow = false;
+				}
+				break;
 
-				default:
-					$retarr = array("status" => false, "message" => _("Command not found!") . " [" .$command. "]");
-					break;
-			}
-			$retarr['txt'] = $txt['settings'];
+			case 'oui_manager':
+				switch ($command)
+				{
+					case "oui":
+						//$sql = 'SELECT endpointman_oui_list.id, endpointman_oui_list.oui , endpointman_brand_list.name, endpointman_oui_list.custom FROM endpointman_oui_list , endpointman_brand_list WHERE endpointman_oui_list.brand = endpointman_brand_list.id ORDER BY endpointman_oui_list.oui ASC';
+						$sql = 'SELECT T1.id, T1.oui, T2.name, T1.custom FROM endpointman_oui_list as T1 , endpointman_brand_list as T2 WHERE T1.brand = T2.id ORDER BY T1.oui ASC';
+						$data = sql($sql, 'getAll', \PDO::FETCH_ASSOC);
+						$ret = array();
+						foreach ($data as $item) {
+							$ret[] = array('id' => $item['id'], 'oui' => $item['oui'], 'brand' => $item['name'], 'custom' => $item['custom']);
+						}
+						return $ret;
+						break;
+	
+					case "oui_add":
+						$retarr = $this->epm_advanced_oui_add();
+						break;
+	
+					case "oui_del":
+						$retarr = $this->epm_advanced_oui_remove();
+						break;
+	
+					default:
+						$command_allow = false;
+				}
+				break;
+
+
+			case 'iedl':
+				switch ($command)
+				{
+					default:
+						$command_allow = false;
+				}
+				
+				break;
+			
+			case 'poce':
+				switch ($command)
+				{
+					case "poce_list_brands":
+						$retarr = $this->epm_advanced_poce_list_brands();
+						break;
+
+					case "poce_select":
+						$retarr = $this->epm_advanced_poce_select();
+						break;
+
+					case "poce_select_file":
+						$retarr = $this->epm_advanced_poce_select_file();
+						break;
+
+					case "poce_save_file":
+					case "poce_save_as_file":
+						$retarr = $this->epm_advanced_poce_save_file();
+						break;
+
+					case "poce_sendid":
+						$retarr = $this->epm_advanced_poce_sendid();
+						break;
+
+					case "poce_delete_config_custom":
+						$retarr = $this->epm_advanced_poce_delete_config_custom();
+						break;
+
+					default:
+						$command_allow = false;
+				}
+				break;
+			
+			case 'manual_upload':
+				switch ($command)
+				{
+					case "list_files_brands_export":
+						$retarr = $this->epm_advanced_manual_upload_list_files_brans_export();
+						break;
+
+					default:
+						$command_allow = false;
+				}
+				break;
+
+			default:
+				$retarr = array(
+					"status" => false,
+					"message" => sprintf(_("Tab '%s' not valid!"), $module_tab)
+				);
 		}
-		elseif ($module_tab == "oui_manager") {
-			switch ($command)
-			{
-				case "oui":
-					//$sql = 'SELECT endpointman_oui_list.id, endpointman_oui_list.oui , endpointman_brand_list.name, endpointman_oui_list.custom FROM endpointman_oui_list , endpointman_brand_list WHERE endpointman_oui_list.brand = endpointman_brand_list.id ORDER BY endpointman_oui_list.oui ASC';
-					$sql = 'SELECT T1.id, T1.oui, T2.name, T1.custom FROM endpointman_oui_list as T1 , endpointman_brand_list as T2 WHERE T1.brand = T2.id ORDER BY T1.oui ASC';
-					$data = sql($sql, 'getAll', DB_FETCHMODE_ASSOC);
-					$ret = array();
-					foreach ($data as $item) {
-						$ret[] = array('id' => $item['id'], 'oui' => $item['oui'], 'brand' => $item['name'], 'custom' => $item['custom']);
-					}
-					return $ret;
-					break;
-
-				case "oui_add":
-					$retarr = $this->epm_advanced_oui_add();
-					break;
-
-				case "oui_del":
-					$retarr = $this->epm_advanced_oui_remove();
-					break;
-
-				default:
-					$retarr = array("status" => false, "message" => _("Command not found!") . " [" .$command. "]");
-					break;
-			}
-			//$retarr['txt'] = $txt['settings'];
+		if ($command_allow)
+		{
+			$retarr = array(
+				"status" => false,
+				"message" => sprintf(_("Command '%s' not found!"), $command)
+			);
 		}
-		elseif ($module_tab == "iedl") {
-			switch ($command)
+		else
+		{
+			if (! empty($txt[strtolower($module_tab)]))
 			{
-				default:
-					$retarr = array("status" => false, "message" => _("Command not found!") . " [" .$command. "]");
-					break;
+				$retarr['txt'] = $txt[strtolower($module_tab)];
 			}
-			//$retarr['txt'] = $txt['settings'];
-		}
-		elseif ($module_tab == "poce") {
-			switch ($command)
-			{
-				case "poce_list_brands":
-					$retarr = $this->epm_advanced_poce_list_brands();
-					break;
-
-				case "poce_select":
-					$retarr = $this->epm_advanced_poce_select();
-					break;
-
-				case "poce_select_file":
-					$retarr = $this->epm_advanced_poce_select_file();
-					break;
-
-				case "poce_save_file":
-				case "poce_save_as_file":
-					$retarr = $this->epm_advanced_poce_save_file();
-					break;
-
-				case "poce_sendid":
-					$retarr = $this->epm_advanced_poce_sendid();
-					break;
-
-				case "poce_delete_config_custom":
-					$retarr = $this->epm_advanced_poce_delete_config_custom();
-					break;
-
-				default:
-					$retarr = array("status" => false, "message" => _("Command not found!") . " [" .$command. "]");
-					break;
-			}
-			//$retarr['txt'] = $txt['settings'];
-		}
-		elseif ($module_tab == "manual_upload") {
-			switch ($command)
-			{
-				case "list_files_brands_export":
-					$retarr = $this->epm_advanced_manual_upload_list_files_brans_export();
-					break;
-
-				default:
-					$retarr = array("status" => false, "message" => _("Command not found!") . " [" .$command. "]");
-					break;
-			}
-		}
-		else {
-			$retarr = array("status" => false, "message" => _("Tab is not valid!") . " [" .$module_tab. "]");
 		}
 		return $retarr;
 	}
@@ -268,11 +276,14 @@ class Endpointman_Advanced
 	/**** FUNCIONES SEC MODULO "epm_advanced\settings" ****/
 	public function epm_advanced_config_loc_is_writable()
 	{
-		$config_loc = $this->configmod->get("config_loc");
+		$config_loc    = $this->configmod->get("config_loc");
 		$tftp_writable = FALSE;
-		if ((isset($config_loc)) AND ($config_loc != "")) {
-			if ((file_exists($config_loc)) AND (is_dir($config_loc))) {
-				if (is_writable($config_loc)) {
+		if ((isset($config_loc)) AND ($config_loc != ""))
+		{
+			if ((file_exists($config_loc)) AND (is_dir($config_loc)))
+			{
+				if (is_writable($config_loc))
+				{
 					$tftp_writable = TRUE;
 				}
 			}
@@ -283,8 +294,10 @@ class Endpointman_Advanced
 	private function epm_advanced_settings_saveconfig ()
 	{
 		$arrVal['VAR_REQUEST'] = array("name", "value");
-		foreach ($arrVal['VAR_REQUEST'] as $valor) {
-			if (! array_key_exists($valor, $_REQUEST)) {
+		foreach ($arrVal['VAR_REQUEST'] as $valor)
+		{
+			if (! array_key_exists($valor, $_REQUEST))
+			{
 				return array("status" => false, "message" => _("No send value!")." [".$valor."]");
 			}
 		}
@@ -346,7 +359,8 @@ class Endpointman_Advanced
 			case "config_loc":
 				$dget['value'] = trim($dget['value']);
 				//No trailing slash. Help the user out and add one :-)
-				if ($dget['value'][strlen($dget['value']) - 1] != "/") {
+				if ($dget['value'][strlen($dget['value']) - 1] != "/")
+				{
 					$dget['value'] = $dget['value'] . "/";
 				}
 				if ($dget['value'] != "") {
@@ -415,12 +429,18 @@ class Endpointman_Advanced
 				break;
 
 			case "cfg_type":
-				if ($dget['value'] == 'http' or $dget['value'] == 'https' ) {
-					$symlink = $this->config->get('AMPWEBROOT') . "/provisioning";
-					$reallink = $this->LOCAL_PATH . "provisioning";
-					if ((!is_link($symlink)) OR (!readlink($symlink) == $reallink)) {
-						if (!symlink($reallink, $symlink)) {
-							$retarr = array("status" => false, "message" => _("Your permissions are wrong on " . $this->config->get('AMPWEBROOT') . ", web provisioning link not created!"));
+				if ($dget['value'] == 'http' or $dget['value'] == 'https' )
+				{
+					$symlink  = $this->config->get('AMPWEBROOT') . "/provisioning";
+					$reallink = $this->epm->LOCAL_PATH . "/provisioning";
+					if ((!is_link($symlink)) OR (!readlink($symlink) == $reallink))
+					{
+						if (!symlink($reallink, $symlink))
+						{
+							$retarr = array(
+								"status"  => false,
+								"message" => sprintf(_("Your permissions are wrong on %s, web provisioning link not created!"), $this->config->get('AMPWEBROOT') )
+							);
 							//$dget['value'] = 'file';
 							break;
 						} //else {
@@ -456,7 +476,7 @@ class Endpointman_Advanced
 		//$sql = 'SELECT * FROM endpointman_product_list WHERE hidden = 0 AND id > 0 ORDER BY long_name ASC';
 		//$sql = 'SELECT * FROM endpointman_product_list WHERE hidden = 0 AND id > 0 AND brand IN (SELECT id FROM asterisk.endpointman_brand_list where hidden = 0) ORDER BY long_name ASC';
 		$sql = 'SELECT * FROM endpointman_product_list WHERE hidden = 0 AND id IN (SELECT DISTINCT product_id FROM asterisk.endpointman_model_list where enabled = 1) AND brand IN (SELECT id FROM asterisk.endpointman_brand_list where hidden = 0) ORDER BY long_name ASC';
-		$product_list = sql($sql, 'getAll', DB_FETCHMODE_ASSOC);
+		$product_list = sql($sql, 'getAll', \PDO::FETCH_ASSOC);
 		$i = 0;
 		$temp = array();
 		foreach ($product_list as $srow)
@@ -485,10 +505,10 @@ class Endpointman_Advanced
 			$dget['product_select'] = $_REQUEST['product_select'];
 
 			$sql = 'SELECT * FROM `endpointman_product_list` WHERE `hidden` = 0 AND `id` = '.$dget['product_select'];
-			$product_select_info = sql($sql, 'getRow', DB_FETCHMODE_ASSOC);
+			$product_select_info = sql($sql, 'getRow', \PDO::FETCH_ASSOC);
 
 			$sql = "SELECT cfg_dir,directory,config_files FROM endpointman_product_list,endpointman_brand_list WHERE endpointman_product_list.brand = endpointman_brand_list.id AND endpointman_product_list.id ='" . $dget['product_select'] . "'";
-			$row =  sql($sql, 'getRow', DB_FETCHMODE_ASSOC);
+			$row =  sql($sql, 'getRow', \PDO::FETCH_ASSOC);
 			$config_files = explode(",", $row['config_files']);
 			$i = 0;
 			if (count($config_files)) {
@@ -501,10 +521,10 @@ class Endpointman_Advanced
 			} else { $file_list = NULL; }
 
 			$sql = "SELECT * FROM endpointman_custom_configs WHERE product_id = '" . $dget['product_select'] . "'";
-			$data = sql($sql,'getAll', DB_FETCHMODE_ASSOC);
+			$data = sql($sql,'getAll', \PDO::FETCH_ASSOC);
 			$i = 0;
 			if (count($data)) {
-				//$data = sql($sql, 'getAll', DB_FETCHMODE_ASSOC);
+				//$data = sql($sql, 'getAll', \PDO::FETCH_ASSOC);
 				foreach ($data as $row2) {
 					$sql_file_list[$i]['value'] = $row2['id'];
 					$sql_file_list[$i]['text'] = $row2['name'];
@@ -514,7 +534,7 @@ class Endpointman_Advanced
 			} else { $sql_file_list = NULL; }
 
 
-			require_once($this->PHONE_MODULES_PATH . 'setup.php');
+			require_once($this->epm->PHONE_MODULES_PATH . '/setup.php');
 			$class = "endpoint_" . $row['directory'] . "_" . $row['cfg_dir'] . '_phone';
 			$base_class = "endpoint_" . $row['directory'] . '_base';
 			$master_class = "endpoint_base";
@@ -540,7 +560,7 @@ class Endpointman_Advanced
 			$template_file_list[0]['text']  = "template_data_custom.xml";
 
 			$sql = "SELECT id, model FROM endpointman_model_list WHERE product_id = '" . $dget['product_select'] . "' AND enabled = 1 AND hidden = 0";
-			$data = sql($sql, 'getAll', DB_FETCHMODE_ASSOC);
+			$data = sql($sql, 'getAll', \PDO::FETCH_ASSOC);
 			$i = 1;
 			foreach ($data as $list) {
 				//$template_file_list[$i]['value'] = "template_data_" . $list['model'] . "_custom.xml";
@@ -582,7 +602,7 @@ class Endpointman_Advanced
 
 		if ($dget['type_file'] == "sql") {
 			$sql = 'SELECT * FROM endpointman_custom_configs WHERE id =' . $dget['file_id'];
-			$row = sql($sql, 'getrow', DB_FETCHMODE_ASSOC);
+			$row = sql($sql, 'getrow', \PDO::FETCH_ASSOC);
 
 			$type 				= $dget['type_file'];
 			$sendidt 			= $row['id'];
@@ -596,13 +616,13 @@ class Endpointman_Advanced
 		}
 		elseif ($dget['type_file'] == "file") {
 			$sql = "SELECT cfg_dir,directory,config_files FROM endpointman_product_list,endpointman_brand_list WHERE endpointman_product_list.brand = endpointman_brand_list.id AND endpointman_product_list.id = '" . $dget['product_select'] . "'";
-			$row = sql($sql, 'getRow', DB_FETCHMODE_ASSOC);
+			$row = sql($sql, 'getRow', \PDO::FETCH_ASSOC);
 
 			$config_files = explode(",", $row['config_files']);
 			//TODO: Añadir validacion para ver si $dget['file_name'] esta en el array $config_files
 
 			$filename = $dget['file_name'];
-			$pathfile = $this->PHONE_MODULES_PATH . 'endpoint/' . $row['directory'] . "/" . $row['cfg_dir'] . "/" . $filename;
+			$pathfile = $this->epm->PHONE_MODULES_PATH . '/endpoint/' . $row['directory'] . "/" . $row['cfg_dir'] . "/" . $filename;
 
 
 			if (is_readable($pathfile)) {
@@ -640,7 +660,7 @@ class Endpointman_Advanced
 			else {
 
 				$sql = "SELECT * FROM endpointman_model_list WHERE id = '" . $dget['file_id'] . "'";
-				$data = sql($sql, 'getRow', DB_FETCHMODE_ASSOC);
+				$data = sql($sql, 'getRow', \PDO::FETCH_ASSOC);
 
 				$sendidt = $data['id'];
 				$original_name = $dget['file_name'];
@@ -702,13 +722,13 @@ class Endpointman_Advanced
 			return;
 			if ($dget['type_file'] == "sql") {
 				$sql = "SELECT cfg_dir,directory,config_files FROM endpointman_product_list,endpointman_brand_list WHERE endpointman_product_list.brand = endpointman_brand_list.id AND endpointman_product_list.id = '" . $dget['product_select'] . "'";
-				$row = sql($sql, 'getrow', DB_FETCHMODE_ASSOC);
+				$row = sql($sql, 'getrow', \PDO::FETCH_ASSOC);
 				$this->submit_config($row['directory'], $row['cfg_dir'], $dget['original_name'], $dget['config_text']);
 				$retarr = array("status" => true, "message" => "Sent! Thanks :-)");
 			}
 			elseif ($dget['type_file'] == "file") {
 				$sql = "SELECT cfg_dir,directory,config_files FROM endpointman_product_list,endpointman_brand_list WHERE endpointman_product_list.brand = endpointman_brand_list.id AND endpointman_product_list.id = '" . $dget['product_select'] . "'";
-				$row = sql($sql, 'getRow', DB_FETCHMODE_ASSOC);
+				$row = sql($sql, 'getRow', \PDO::FETCH_ASSOC);
 				$error = $this->submit_config($row['directory'], $row['cfg_dir'], $dget['original_name'], $dget['config_text']);
 				$retarr = array("status" => true, "message" => "Sent! Thanks :-)");
 			}
@@ -748,12 +768,12 @@ class Endpointman_Advanced
 			if ($dget['command'] == "poce_save_file")
 			{
 				$sql = "SELECT cfg_dir,directory,config_files FROM endpointman_product_list,endpointman_brand_list WHERE endpointman_product_list.brand = endpointman_brand_list.id AND endpointman_product_list.id = '" . $dget['product_select'] . "'";
-				$row = sql($sql, 'getRow', DB_FETCHMODE_ASSOC);
+				$row = sql($sql, 'getRow', \PDO::FETCH_ASSOC);
 				$config_files = explode(",", $row['config_files']);
 
 				if ((is_array($config_files)) AND (in_array($dget['file_name'], $config_files)))
 				{
-					$pathdir = $this->PHONE_MODULES_PATH . 'endpoint/' . $row['directory'] . "/" . $row['cfg_dir'] . "/";
+					$pathdir = $this->epm->PHONE_MODULES_PATH . '/endpoint/' . $row['directory'] . "/" . $row['cfg_dir'] . "/";
 					$pathfile = $pathdir . $dget['file_name'];
 					if ((! file_exists($pathfile)) AND (! is_writable($pathdir))) {
 						$retarr = array("status" => false, "message" => "Directory is not Writable (".$pathdir.")!");
@@ -869,7 +889,7 @@ class Endpointman_Advanced
 	/**** FUNCIONES SEC MODULO "epm_advanced\manual_upload" ****/
 	public function epm_advanced_manual_upload_list_files_brans_export()
 	{
-		$path_tmp_dir = $this->PHONE_MODULES_PATH."temp/export/";
+		$path_tmp_dir = $this->epm->PHONE_MODULES_PATH."/temp/export/";
 		$array_list_files = array();
 		$array_count_brand = array();
 
@@ -952,7 +972,7 @@ class Endpointman_Advanced
 					out(sprintf(_("Error: %s"), $this->file_upload_error_message($error)));
 				}
 				else {
-					$uploads_dir = $this->PHONE_MODULES_PATH . "temp";
+					$uploads_dir = $this->epm->PHONE_MODULES_PATH . "/temp";
 					$name = $_FILES["files"]["name"][$key];
 					$extension = pathinfo($name, PATHINFO_EXTENSION);
 					if ($extension == "tgz") {
@@ -1002,7 +1022,7 @@ class Endpointman_Advanced
 						}
 						else {
 							out(_("Error: No File Provided!"));
-							//echo "File ".$this->PHONE_MODULES_PATH."temp/".$_REQUEST['package']." not found. <br />";
+							//echo "File ".$this->epm->PHONE_MODULES_PATH."/temp/".$_REQUEST['package']." not found. <br />";
 						}
 					}
 					else {
@@ -1027,7 +1047,7 @@ class Endpointman_Advanced
 					out(sprintf(_("Error: %s"), $this->file_upload_error_message($error)));
 				}
 				else {
-					$uploads_dir = $this->PHONE_MODULES_PATH . "temp/export";
+					$uploads_dir = $this->epm->PHONE_MODULES_PATH . "/temp/export";
 					$name = $_FILES["files"]["name"][$key];
 					$extension = pathinfo($name, PATHINFO_EXTENSION);
 					if ($extension == "tgz")
@@ -1043,9 +1063,9 @@ class Endpointman_Advanced
 							// exec("tar -xvf ".$uploads_dir_file." -C ".$uploads_dir."/");
 							out(_("Done!"));
 
-							if(!file_exists($this->PHONE_MODULES_PATH."endpoint")) {
+							if(!file_exists($this->epm->PHONE_MODULES_PATH."/endpoint")) {
 								outn(_("Creating Provisioner Directory... "));
-								if (mkdir($this->PHONE_MODULES_PATH."endpoint") == true) {
+								if (mkdir($this->epm->PHONE_MODULES_PATH."/endpoint") == true) {
 									out(_("Done!"));
 								}
 								else {
@@ -1053,10 +1073,10 @@ class Endpointman_Advanced
 								}
 							}
 
-							if(file_exists($this->PHONE_MODULES_PATH."endpoint"))
+							if(file_exists($this->epm->PHONE_MODULES_PATH."/endpoint"))
 							{
-								$endpoint_last_mod = filemtime($this->PHONE_MODULES_PATH."temp/endpoint/base.php");
-								rename($this->PHONE_MODULES_PATH."temp/endpoint/base.php", $this->PHONE_MODULES_PATH."endpoint/base.php");
+								$endpoint_last_mod = filemtime($this->epm->PHONE_MODULES_PATH."/temp/endpoint/base.php");
+								rename($this->epm->PHONE_MODULES_PATH."/temp/endpoint/base.php", $this->epm->PHONE_MODULES_PATH."/endpoint/base.php");
 
 								outn(_("Updating Last Modified... "));
 								$sql = "UPDATE endpointman_global_vars SET value = '".$endpoint_last_mod."' WHERE var_name = 'endpoint_vers'";
@@ -1085,7 +1105,7 @@ class Endpointman_Advanced
 		}
 		else {
 			$dget['file_package'] = $_REQUEST['file_package'];
-			$path_tmp_file = $this->PHONE_MODULES_PATH."/temp/export/".$_REQUEST['file_package'];
+			$path_tmp_file = $this->epm->PHONE_MODULES_PATH."/temp/export/".$_REQUEST['file_package'];
 
 			if (! file_exists($path_tmp_file)) {
 				header('HTTP/1.0 404 Not Found', true, 404);
@@ -1122,7 +1142,7 @@ class Endpointman_Advanced
 			$dget['package'] = $_REQUEST['package'];
 
 			$sql = 'SELECT `name`, `directory` FROM `endpointman_brand_list` WHERE `id` = '.$dget['package'].'';
-			$row = sql($sql, 'getRow', DB_FETCHMODE_ASSOC);
+			$row = sql($sql, 'getRow', \PDO::FETCH_ASSOC);
 
 			if ($row == "") {
 				out(_("Error: ID Package send not valid, brand not exist!"));
@@ -1131,13 +1151,13 @@ class Endpointman_Advanced
 				outn(sprintf(_("Exporting %s ... "), $row['name']));
 
 				//TODO:Añadir validacion de si se ha creado el dire correctamente!!!!
-				if(!file_exists($this->PHONE_MODULES_PATH."/temp/export/")) {
-					mkdir($this->PHONE_MODULES_PATH."/temp/export/");
+				if(!file_exists($this->epm->PHONE_MODULES_PATH."/temp/export/")) {
+					mkdir($this->epm->PHONE_MODULES_PATH."/temp/export/");
 				}
 				$time = time();
 				//TODO: Pendiente validar si exec no retorna error!!!!!
-				exec( sprintf("%s zcf %stemp/export/%s-%s.tgz --exclude .svn --exclude .git --exclude firmware -C %s/endpoint %s", $this->configmod->get("tar_location"), $this->PHONE_MODULES_PATH, $row['directory'], $time, $this->PHONE_MODULES_PATH, $row['directory']) );
-				// exec("tar zcf ".$this->PHONE_MODULES_PATH."temp/export/".$row['directory']."-".$time.".tgz --exclude .svn --exclude firmware -C ".$this->PHONE_MODULES_PATH."/endpoint ".$row['directory']);
+				exec( sprintf("%s zcf %s/temp/export/%s-%s.tgz --exclude .svn --exclude .git --exclude firmware -C %s/endpoint %s", $this->configmod->get("tar_location"), $this->epm->PHONE_MODULES_PATH, $row['directory'], $time, $this->epm->PHONE_MODULES_PATH, $row['directory']) );
+				// exec("tar zcf ".$this->epm->PHONE_MODULES_PATH."/temp/export/".$row['directory']."-".$time.".tgz --exclude .svn --exclude firmware -C ".$this->epm->PHONE_MODULES_PATH."/endpoint ".$row['directory']);
 				out(_("Done!") . "<br />");
 
 
@@ -1157,7 +1177,7 @@ class Endpointman_Advanced
 		header('Content-Disposition: attachment; filename="'.$sFileName.'"');
 		$outstream = fopen("php://output",'w');
 		$sql = 'SELECT endpointman_mac_list.mac, endpointman_line_list.ipei, endpointman_brand_list.name, endpointman_model_list.model, endpointman_line_list.ext,endpointman_line_list.line FROM endpointman_mac_list, endpointman_model_list, endpointman_brand_list, endpointman_line_list WHERE endpointman_line_list.mac_id = endpointman_mac_list.id AND endpointman_model_list.id = endpointman_mac_list.model AND endpointman_model_list.brand = endpointman_brand_list.id';
-		$result = sql($sql,'getAll',DB_FETCHMODE_ASSOC);
+		$result = sql($sql,'getAll',\PDO::FETCH_ASSOC);
 		foreach($result as $row) {
 			fputcsv($outstream, $row);
 		}
@@ -1191,7 +1211,7 @@ class Endpointman_Advanced
 						out(sprintf(_("Error: File %s size is 0!"), $_FILES["files"]["name"][$key]));
 					}
 					else {
-						$uploadfile = $this->LOCAL_PATH . basename($_FILES["files"]["name"][$key]);
+						$uploadfile = $this->epm->LOCAL_PATH . "/" . basename($_FILES["files"]["name"][$key]);
 						$uploadtemp = $_FILES["files"]["tmp_name"][$key];
 
 						if (move_uploaded_file($uploadtemp, $uploadfile)) {
@@ -1203,7 +1223,7 @@ class Endpointman_Advanced
 									if ($mac = $this->mac_check_clean($device[0])) {
 										$sql = "SELECT id FROM endpointman_brand_list WHERE name LIKE '%" . $device[1] . "%' LIMIT 1";
 										//$res = sql($sql);
-										$res = sql($sql, 'getAll', DB_FETCHMODE_ASSOC);
+										$res = sql($sql, 'getAll', \PDO::FETCH_ASSOC);
 
 										if (count(array($res)) > 0) {
 											$brand_id = sql($sql, 'getOne');
@@ -1216,12 +1236,12 @@ class Endpointman_Advanced
 
 											$res_model = sql($sql_model);
 											if (count(array($res_model))) {
-												$model_id = sql($sql_model, 'getRow', DB_FETCHMODE_ASSOC);
+												$model_id = sql($sql_model, 'getRow', \PDO::FETCH_ASSOC);
 												$model_id = $model_id['id'];
 
 												$res_ext = sql($sql_ext);
 												if (count(array($res_ext))) {
-													$ext = sql($sql_ext, 'getRow', DB_FETCHMODE_ASSOC);
+													$ext = sql($sql_ext, 'getRow', \PDO::FETCH_ASSOC);
 													$description = $ext['name'];
 													$ext = $ext['extension'];
 //TODO: PENDIENTE ASIGNAR OBJ
