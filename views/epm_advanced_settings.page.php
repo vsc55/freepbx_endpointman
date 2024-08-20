@@ -18,7 +18,7 @@
 						<div class="col-md-9">
 							<div class="input-group">
       							<input type="text" class="form-control" placeholder="<? _('Server PBX...') ?>" id="srvip" name="srvip" value="<?= $config['srvip'] ?>">
-      							<span class="input-group-btn">
+      							<span class="input-group-append">
         							<button class="btn btn-default" type="button" id='autodetect' onclick="epm_advanced_tab_setting_input_value_change_bt('#srvip', sValue = '<?= $_SERVER["SERVER_ADDR"] ?>', bSaveChange = true);"><i class='fa fa-search'></i> <?= _("Use me!")?></button>
       							</span>
     						</div>
@@ -47,7 +47,7 @@
 						<div class="col-md-9">
 							<div class="input-group">
       							<input type="text" class="form-control" placeholder="<?= _('Server PBX...') ?>" id="intsrvip" name="intsrvip" value="<?= $config['intsrvip'] ?>">
-      							<span class="input-group-btn">
+      							<span class="input-group-append">
         							<button class="btn btn-default" type="button" id='autodetect' onclick="epm_advanced_tab_setting_input_value_change_bt('#intsrvip', sValue = '<?= $_SERVER["SERVER_ADDR"] ?>', bSaveChange = true);"><i class='fa fa-search'></i> <?= _("Use me!")?></button>
       							</span>
     						</div>
@@ -194,7 +194,7 @@
 										<option data-icon="fa fa-clock-o" value="<?= $row['value'] ?>" <?= ($row['selected'] == 1) ? 'selected="selected"' : '' ?> ><?= $row['text']?> </option>
 									<?php endforeach; ?>
 								</select>
-								<span class="input-group-btn">
+								<span class="input-group-append">
 									<button class="btn btn-default" type="button" id='tzphp' onclick="epm_advanced_tab_setting_input_value_change_bt('#tz', sValue = '<?= $config['PHPTIMEZONE'] ?>', bSaveChange = true);"><i class="fa fa-clock-o"></i> <?= _("TimeZone PBX")?></button>
 								</span>
 							</div>
@@ -223,7 +223,7 @@
 						<div class="col-md-9">
 							<div class="input-group">
       							<input type="text" class="form-control" placeholder="<?= _('Server NTP...') ?>" id="ntp_server" name="ntp_server" value="<?= $config['ntp'] ?>">
-      							<span class="input-group-btn">
+      							<span class="input-group-append">
         							<button class="btn btn-default" type="button" id='autodetectntp' onclick="epm_advanced_tab_setting_input_value_change_bt('#ntp_server', sValue = '<?= $_SERVER["SERVER_ADDR"] ?>', bSaveChange = true);"><i class='fa fa-search'></i> <?= _("Use me!")?></button>
       							</span>
     						</div>
@@ -385,7 +385,7 @@
 						<div class="col-md-9">
 							<div class="input-group">
       							<input type="text" class="form-control" placeholder=" <?= _('Server Packages...') ?>" id="package_server" name="package_server" value="<?= $config['update_server'] ?>">
-      							<span class="input-group-btn">
+      							<span class="input-group-append">
         							<button class="btn btn-default" type="button" id='default_package_server' onclick="epm_advanced_tab_setting_input_value_change_bt('#package_server', sValue = '<?= $config['default_mirror'] ?>', bSaveChange = true);"><i class='fa fa-undo'></i> <?= _("Default Mirror FreePBX")?></button>
       							</span>
     						</div>

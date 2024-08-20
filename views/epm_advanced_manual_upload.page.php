@@ -102,7 +102,7 @@
 												<option value="<?= $row['value'] ?>"><?= $row['text'] ?></option>
 											<?php endforeach; ?>
 									</select>
-	      							<span class="input-group-btn">
+	      							<span class="input-group-append">
 	        							<button class="btn btn-default" type="button" name='brand_export_pack' id='brand_export_pack' onclick="epm_advanced_tab_manual_upload_bt_explor_brand()"><i class="fa fa-download"></i> <?= _("Export")?></button>
 	      							</span>
     							</div>

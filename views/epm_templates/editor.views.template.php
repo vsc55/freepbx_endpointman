@@ -112,7 +112,7 @@
                                             name="config_files[<?php echo $row['id']; ?>]" 
                                             id="config_files[<?php echo $row['id']; ?>]">
                                         </select>
-                                        <span class="input-group-btn">
+                                        <span class="input-group-append">
                                             <button class="btn btn-default" type="button" name="bt_boxselect_<?php echo $row['idrefbox']; ?>" id="bt_boxselect_<?php echo $row['idrefbox']; ?>"><i class='fa fa-files-o'>&nbsp;</i></button>
                                         </span>
                                     </div>

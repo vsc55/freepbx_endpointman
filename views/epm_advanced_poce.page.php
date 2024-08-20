@@ -92,7 +92,7 @@
                                     <div class="col-xs-5 text-right">
                                         <div class="input-group">
                                             <input type="text" class="form-control" name="save_as_name" id="save_as_name" value="" placeholder="<?= _('Name File...') ?>" disabled>
-                                            <span class="input-group-btn">
+                                            <span class="input-group-append">
                                                 <button type="button" class='btn btn-default' name="button_save_as" onclick="epm_advanced_tab_poce_bt_acction(this);" disabled><i class='fa fa-floppy-o'></i> <?= _('Save As...') ?></button>
                                             </span>
                                         </div>

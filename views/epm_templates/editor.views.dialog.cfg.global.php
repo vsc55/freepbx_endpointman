@@ -40,7 +40,7 @@
 						<div class="col-md-9">
 							<div class="input-group">
       							<input type="text" class="form-control" placeholder="<?php echo _("Server PBX..."); ?>" id="srvip" name="srvip" value="">
-      							<span class="input-group-btn">
+      							<span class="input-group-append">
         							<button class="btn btn-default" type="button" id='autodetect' onclick="epm_global_input_value_change_bt('#srvip', sValue = '<?php echo $_SERVER["SERVER_ADDR"]; ?>');"><i class='fa fa-search'></i> <?php echo _("Use me!")?></button>
       							</span>
     						</div>
@@ -139,7 +139,7 @@
 									}
 								?>
 								</select>
-      							<span class="input-group-btn">
+      							<span class="input-group-append">
         							<button class="btn btn-default" type="button" id='tzphp' onclick="epm_global_input_value_change_bt('#tz', sValue = '<?php echo FreePBX::Endpointman()->config->get('PHPTIMEZONE'); ?>');"><i class="fa fa-clock-o"></i> <?php echo _("TimeZone PBX")?></button>
       							</span>
     						</div>
@@ -168,7 +168,7 @@
 						<div class="col-md-9">
 							<div class="input-group">
       							<input type="text" class="form-control" placeholder="<?php echo _("Server NTP..."); ?>" id="ntp_server" name="ntp_server" value="">
-      							<span class="input-group-btn">
+      							<span class="input-group-append">
         							<button class="btn btn-default" type="button" id='autodetectntp' onclick="epm_global_input_value_change_bt('#ntp_server', sValue = '<?php echo $_SERVER["SERVER_ADDR"]; ?>');"><i class='fa fa-search'></i> <?php echo _("Use me!")?></button>
       							</span>
     						</div>
