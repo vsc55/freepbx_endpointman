@@ -538,11 +538,32 @@ class Endpointman_Config
 
 
 
-	function brand_update_check($brand_name_find = NULL)
-	{
-		if ($brand_name_find == NULL) { return $this->brand_update_check_all(); }
 
-		$sql = "SELECT * FROM  endpointman_brand_list WHERE directory = '" . $brand_name_find . "'";
+
+
+
+
+
+
+
+	/**
+	 * Checks if a brand needs to be updated.
+	 *
+	 * @param string|null $brand_name_find The brand name to check for updates. If null, checks all brands.
+	 * @return array An array containing the update status and version number.
+	 *              - If the brand does not exist, the 'update' key will be set to -2.
+	 *              - If the brand data file is missing or cannot be parsed, the 'update' key will be set to -3.
+	 *              - If the brand is up to date, the 'update' key will be set to null.
+	 *              - If the brand needs to be updated, the 'update' key will be set to 1 and the 'update_vers' key will contain the version number.
+	 */
+	public function brand_update_check($brand_name_find = NULL)
+	{
+		if ($brand_name_find == NULL)
+		{
+			return $this->brand_update_check_all();
+		}
+
+		$sql = sprintf("SELECT * FROM %s WHERE directory = '%s'", "endpointman_brand_list", $brand_name_find);
 		$row = sql($sql, 'getRow', \PDO::FETCH_ASSOC);
 
 		$out = array();
@@ -552,28 +573,46 @@ class Endpointman_Config
 		}
 		else
 		{
-			if (file_exists($this->epm->PHONE_MODULES_PATH . "/endpoint/" . $row['directory'] . "/brand_data.json"))
+			$file_brand_data = $this->epm->buildPath($this->epm->PHONE_MODULES_PATH, 'endpoint', $row['directory'], 'brand_data.json');
+			if (file_exists($file_brand_data))
 			{
-				$temp = $this->file2json($this->epm->PHONE_MODULES_PATH . "/endpoint/" . $row['directory'] . "/brand_data.json");
-				$temp = $temp['data']['brands'];
-
-				$version = $temp['last_modified'];
-				$last_mod = "";
-				foreach ($temp['family_list'] as $list) {
-					$last_mod = max($last_mod, $list['last_modified']);
+				$temp = null;
+				try
+				{
+					$temp = $this->epm->file2json($file_brand_data);
 				}
-				$last_mod = max($last_mod, $version);
-				$version = $last_mod;
-
-				if ($row['cfg_ver'] < $version) {
-					$out['update'] = 1;
-					$out['update_vers'] = $version;
-				} else {
-					$out['update'] = NULL;
-					$out['update_vers'] = $version;
+				catch (\Exception $e)
+				{
+					$this->error['file2json'] = $e->getMessage();
 				}
+
+				if (is_null($temp))
+				{
+					$out['update'] = -3;
+				}
+				else 
+				{
+					$temp = $temp['data']['brands'];
+
+					$version = $temp['last_modified'];
+					$last_mod = "";
+					foreach ($temp['family_list'] as $list) {
+						$last_mod = max($last_mod, $list['last_modified']);
+					}
+					$last_mod = max($last_mod, $version);
+					$version = $last_mod;
+	
+					if ($row['cfg_ver'] < $version) {
+						$out['update'] = 1;
+						$out['update_vers'] = $version;
+					} else {
+						$out['update'] = NULL;
+						$out['update_vers'] = $version;
+					}
+				}				
 			}
-			else {
+			else
+			{
 				$out['update'] = -1;
 			}
 		}
@@ -581,50 +620,110 @@ class Endpointman_Config
 	}
 
 
-
-	function brand_update_check_all()
+	/**
+	 * Updates the check for all brands.
+	 *
+	 * This function retrieves the brand information from the master.json file and checks for updates in each brand's brand_data.json file.
+	 * It compares the last modified dates of the brand_data.json files with the cfg_ver value of each brand in the endpointman_brand_list table.
+	 * If a brand's cfg_ver is lower than the last modified date of its brand_data.json file, it marks the brand for update.
+	 * The function returns an array containing the updated brand information.
+	 *
+	 * @return array The updated brand information.
+	 */
+	public function brand_update_check_all()
 	{
-		$temp = $this->file2json($this->epm->PHONE_MODULES_PATH . '/endpoint/master.json');
-		$endpoint_package = $temp['data']['package'];
-		$endpoint_last_mod = $temp['data']['last_modified'];
+		$temp = null;
+		$out  = array();
 
-		$version = array();
-		$out = $temp['data']['brands'];
-		foreach ($out as $data) {
-			if (file_exists($this->epm->PHONE_MODULES_PATH . "/endpoint/" . $data['directory'] . "/brand_data.json")) {
-				$temp = $this->file2json($this->epm->PHONE_MODULES_PATH . "/endpoint/" . $data['directory'] . "/brand_data.json");
-				$temp = $temp['data']['brands'];
+		$file_master = $this->epm->buildPath($this->epm->PHONE_MODULES_PATH, 'endpoint', 'master.json');
 
-				$brand_name = $temp['directory'];
-				$version[$brand_name] = $temp['last_modified'];
+		try
+		{
+			$temp = $this->epm->file2json($file_master);
+		}
+		catch (\Exception $e)
+		{
+			$this->error['file2json'] = $e->getMessage();
+		}
+
+		if (!empty($temp))
+		{
+			// TODO: Code Obsolete???
+			// $endpoint_package = $temp['data']['package'];
+			// $endpoint_last_mod = $temp['data']['last_modified'];
+
+			$version = array();
+			$out 	 = $temp['data']['brands'];
+
+			foreach ($out as $data)
+			{
+				$file_brand_data = $this->epm->buildPath($this->epm->PHONE_MODULES_PATH, 'endpoint', $data['directory'], 'brand_data.json');
+				
+				try
+				{
+					$temp = $this->epm->file2json($file_brand_data);
+				}
+				catch (\Exception $e)
+				{
+					$this->error['file2json'] = $e->getMessage();
+					continue;
+				}
+
+				/**
+				 * Check if the 'brands' key exists in the 'data' array and assign its value to the $temp variable.
+				 * If the 'directory' key exists in the $temp array, assign its value to the $brand_name variable.
+				 * If $temp or $brand_name is empty, continue to the next iteration.
+				 */
+				$temp 		= $temp['data']['brands'] ?? array();
+				$brand_name = $temp['directory'] ?? '';
+				if (empty($temp) || empty($brand_name))
+				{
+					continue;
+				}
+
+				$version[$brand_name] = $temp['last_modified'] ?? "-1";
 				$last_mod = "";
-				foreach ($temp['family_list'] as $list) {
-					$last_mod = max($last_mod, $list['last_modified']);
+				foreach ($temp['family_list'] ?? array() as $list)
+				{
+					$last_mod = max($last_mod, $list['last_modified'] ?? '0' );
 				}
 				$last_mod = max($last_mod, $version[$brand_name]);
 				$version[$brand_name] = $last_mod;
 			}
-		}
 
-		$sql = 'SELECT * FROM  endpointman_brand_list WHERE id > 0';
-		$row = sql($sql, 'getAll', \PDO::FETCH_ASSOC);
-		foreach ($row as $ava_brands) {
-			$key = $this->system->arraysearchrecursive($ava_brands['directory'], $out, 'directory');
+			$sql = sprintf('SELECT * FROM %s WHERE id > 0', "endpointman_brand_list");
+			$stmt = $this->db->prepare($sql);
+			$stmt->execute();
+			$row = $stmt->fetchAll(\PDO::FETCH_ASSOC);
 
-			if ($key === FALSE) {
-				$tmp = $ava_brands;
-				$tmp['update'] = -1;
-				$out[] = $tmp;
-			}
-			else {
-				$key = $key[0];
-				$brand_name = $ava_brands['directory'];
-				if (! isset($version[$brand_name])) { $version[$brand_name] = 0; }
-				if ($ava_brands['cfg_ver'] < $version[$brand_name]) {
-					$out[$key]['update'] = 1;
-					$out[$key]['update_vers'] = $version[$brand_name];
-				} else {
-					$out[$key]['update'] = NULL;
+			foreach ($row as $ava_brands)
+			{
+				$key = $this->system->arraysearchrecursive($ava_brands['directory'], $out, 'directory');
+
+				if ($key === FALSE)
+				{
+					$tmp 		   = $ava_brands;
+					$tmp['update'] = -1;
+					$out[] = $tmp;
+				}
+				else
+				{
+					$key 		= $key[0];
+					$brand_name = $ava_brands['directory'];
+					if (! isset($version[$brand_name]))
+					{
+						$version[$brand_name] = 0;
+					}
+
+					if ($ava_brands['cfg_ver'] < $version[$brand_name])
+					{
+						$out[$key]['update'] 	  = 1;
+						$out[$key]['update_vers'] = $version[$brand_name];
+					}
+					else
+					{
+						$out[$key]['update'] = NULL;
+					}
 				}
 			}
 		}
@@ -634,16 +733,30 @@ class Endpointman_Config
 
 
 	/**
-     * Check for new packges for brands. These packages will include phone models and such which the user can remove if they want
+	 * Check for new packges for brands. These packages will include phone models and such which the user can remove if they want
      * This function will alos auto-update the provisioner.net library incase anything has changed
-     * @return array An array of all the brands/products/models and information about what's  enabled, installed or otherwise
-     */
-    function update_check($echomsg = false, &$error=array())
+	 *
+	 * @param bool $echomsg (optional) Whether to echo error messages.
+	 * @param array $error (optional) Reference to an array to store error messages.
+	 * @return array An array of all the brands/products/models and information about what's  enabled, installed or otherwise
+	 */
+    public function update_check($echomsg = false, &$error=array())
 	{
-        //$temp_location = $this->system->sys_get_temp_dir() . "/epm_temp/";
-		$url_master    = $this->UPDATE_PATH . "master.json";
-		$local_master  = $this->epm->PHONE_MODULES_PATH . "/endpoint/master.json";
-		$temp_location = $this->epm->PHONE_MODULES_PATH . "/temp/provisioner/";
+		$url_master     = $this->epm->buildUrl($this->UPDATE_PATH, "master.json");
+		$url_status	    = $this->epm->buildUrl($this->UPDATE_PATH, "update_status");
+		$local_endpoint = $this->epm->buildPath($this->epm->PHONE_MODULES_PATH, "endpoint");
+		$temp_location  = $this->epm->buildPath($this->epm->PHONE_MODULES_PATH, "temp/provisioner");
+		$local_master   = $this->epm->buildPath($local_endpoint, "master.json");
+		
+		if (!file_exists($local_endpoint))
+		{
+			mkdir($local_endpoint, 0775, true);
+		}
+		if (!file_exists($temp_location))
+		{
+			mkdir($temp_location, 0775, true);
+		}
+
 
         if (!$this->configmod->get('use_repo'))
 		{
@@ -665,291 +778,495 @@ class Endpointman_Config
             	}
             }
 
-            $temp = $this->file2json($local_master);
-
-            $endpoint_package = $temp['data']['package'] ?? null;
-            $endpoint_last_mod = $temp['data']['last_modified'] ?? null;
-			
-
-            // $sql = "SELECT value FROM endpointman_global_vars WHERE var_name LIKE 'endpoint_vers'";
-            // $data = sql($sql, 'getOne');
-			$sql  = "SELECT value FROM endpointman_global_vars WHERE var_name LIKE :find";
-			$stmt = $this->db->prepare($sql);
-			$stmt->execute([':find' => "endpoint_vers"]);
-			$data = $stmt->rowCount() === 0 ? null : $stmt->fetch(\PDO::FETCH_ASSOC);
-
-			//TODO: Comment download update_status becouse not exist in repostitory GitHub and Set 0 becouse not existe Pakage File in repositopry.
-            
-			
+			$temp 			  = null;
+			$endpoint_package = null;
 			try
 			{
-				$contents = file_get_contents($this->UPDATE_PATH . "/update_status");
-				if ($contents === FALSE)
-				{
-					throw new \Exception(_("The stream could not be opened: the requested url was not found or there was a problem with the request."));
-				}
-			} catch (\Exception $e)
-			{
-				// dbug("Error: " . $e->getMessage());
-				$contents = -1;
+				$temp 			   = $this->epm->file2json($local_master);
+				$endpoint_package  = $temp['data']['package'] ?? null;
+				$endpoint_last_mod = $temp['data']['last_modified'] ?? null;
 			}
-			
-            if ($contents == '0')
+			catch (\Exception $e)
 			{
-                if (($data == "") OR ($data <= $endpoint_last_mod))
+				$error['file2json_master'] = $e->getMessage();
+				if ($echomsg == true )
 				{
-					//TODO: ERROR Pakage file not exist in repository GitHub.
-                    if ((!$master_result) OR (!$this->system->download_file($this->UPDATE_PATH . '/' . $endpoint_package, $temp_location . $endpoint_package)))
-                    {
-                    	$error['brand_update_check_json'] = _("Not able to connect to repository. Using local Provisioner.net Package");
-                    	if ($echomsg == true ) {
-                    		out($error['brand_update_check_json']);
-                    	}
-                    }
-					else
-					{
-						exec( sprintf("%s -xvf %s%s -C %s", $this->configmod->get("tar_location"), $temp_location, $endpoint_package, $temp_location) );
-						// exec("tar -xvf " . $temp_location . $endpoint_package . " -C " . $temp_location);
-                        if (!file_exists($this->epm->PHONE_MODULES_PATH . "/endpoint")) {
-                            mkdir($this->epm->PHONE_MODULES_PATH . "/endpoint", 0775, true);
-                        }
+            		out($error['file2json_master']);
+            	}
+			}
+			if (empty($temp))
+			{
 
-                        //TODO: Automate this somehow...
-                        rename($temp_location . "setup.php", $this->epm->PHONE_MODULES_PATH . "/setup.php");
-						rename($temp_location . "autoload.php", $this->epm->PHONE_MODULES_PATH . "/autoload.php");
-                        rename($temp_location . "endpoint/base.php", $this->epm->PHONE_MODULES_PATH . "/endpoint/base.php");
-                        rename($temp_location . "endpoint/global_template_data.json", $this->epm->PHONE_MODULES_PATH . "/endpoint/global_template_data.json");
-                        $sql = "UPDATE endpointman_global_vars SET value = '" . $endpoint_last_mod . "' WHERE var_name = 'endpoint_vers'";
-                        sql($sql);
-                    }
-                }
+			}
+			elseif (empty($endpoint_package))
+			{
 
-                $out = $temp['data']['brands'];
-                //Assume that if we can't connect and find the master.xml file then why should we try to find every other file.
-                if ($master_result)
+			}
+			else
+			{
+				$sql  = sprintf("SELECT value FROM %s WHERE var_name LIKE :find", "endpointman_global_vars");
+				$stmt = $this->db->prepare($sql);
+				$stmt->execute([
+					':find' => "endpoint_vers"
+				]);
+				$data = $stmt->rowCount() === 0 ? null : $stmt->fetch(\PDO::FETCH_ASSOC);
+
+				//TODO: Comment download update_status becouse not exist in repostitory GitHub and Set 0 becouse not existe Pakage File in repositopry.
+				try
 				{
-                	$sql = 'SELECT * FROM  endpointman_brand_list WHERE id > 0';
-                    $row = sql($sql, 'getAll', \PDO::FETCH_ASSOC);
-                    foreach ($out as $data)
+					$contents = file_get_contents($url_status);
+					if ($contents === FALSE)
 					{
-						// $local = sql("SELECT local FROM endpointman_brand_list WHERE  directory =  '" . $data['directory'] . "'", 'getOne');
-						$sql  = "SELECT local FROM endpointman_brand_list WHERE directory = :directory";
+						throw new \Exception(_("The stream could not be opened: the requested url was not found or there was a problem with the request."));
+					}
+				} catch (\Exception $e)
+				{
+					$error['check_status_server'] = $e->getMessage();
+					if ($echomsg == true )
+					{
+						out($error['check_status_server']);
+					}
+					$contents = -1;
+				}
+				
+				if ($contents == '0')
+				{
+					if (($data == "") OR ($data <= $endpoint_last_mod))
+					{
+						$url_package  = $this->epm->buildUrl($this->UPDATE_PATH, $endpoint_package);
+						$path_package = $this->epm->buildPath($temp_location, $endpoint_package);
+
+						//TODO: ERROR Pakage file not exist in repository GitHub.
+						if ((!$master_result) OR (!$this->system->download_file($url_package, $path_package)))
+						{
+							$error['brand_update_check_json'] = _("Not able to connect to repository. Using local Provisioner.net Package");
+							if ($echomsg == true )
+							{
+								out($error['brand_update_check_json']);
+							}
+						}
+						else
+						{
+							exec(sprintf("%s -xvf %s -C %s", $this->configmod->get("tar_location"), $path_package, $temp_location));
+							// exec("tar -xvf " . $temp_location . $endpoint_package . " -C " . $temp_location);
+
+							//TODO: Automate this somehow...
+							$files = [
+								"setup.php",
+								"autoload.php",
+								"endpoint/base.php",
+								"endpoint/global_template_data.json"
+							];
+							foreach ($files as $file)
+							{
+								$file_path_src  = $this->epm->buildPath($temp_location, $file);
+								$file_path_dest = $this->epm->buildPath($this->epm->PHONE_MODULES_PATH, $file);
+
+								if (file_exists($file_path_dest))
+								{
+									unlink($file_path_dest);
+								}
+								if (file_exists($file_path_src))
+								{
+									rename($file_path_src, $file_path_dest);
+								}
+								else
+								{
+									$error['brand_update_check_file'] = sprintf(_("Skip: File %s not found in package."), $file);
+									if ($echomsg == true )
+									{
+										out($error['brand_update_check_file']);
+									}
+								}
+							}
+							$sql  = sprintf("UPDATE %s SET value = :endpoint_last_mod WHERE var_name = :find", "endpointman_global_vars");
+							$stmt = $this->db->prepare($sql);
+							$stmt->execute([
+								':endpoint_last_mod'=> $endpoint_last_mod,
+								':find' 			=> "endpoint_vers"
+							]);
+						}
+					}
+
+					$out = $temp['data']['brands'];
+					//Assume that if we can't connect and find the master.json file then why should we try to find every other file.
+					if ($master_result)
+					{
+						$sql  = sprintf('SELECT * FROM %s WHERE id > 0', "endpointman_brand_list");
 						$stmt = $this->db->prepare($sql);
-						$stmt->execute([':directory' => $data['directory']]);
-						$local = $stmt->rowCount() === 0 ? null : $stmt->fetch(\PDO::FETCH_ASSOC);
+						$stmt->execute();
+						$row = $stmt->fetchAll(\PDO::FETCH_ASSOC);
 
-						$url_brand_data   = $this->UPDATE_PATH . $data['directory'] . "/".$data['directory'].".json";
-						$local_brand_data = $this->epm->PHONE_MODULES_PATH . "/endpoint/" . $data['directory'] . "/brand_data.json";
-
-                        if (!$local)
+						foreach ($out as $data)
 						{
-                        	if ($echomsg == true)
-							{
-                        		out(sprintf(_("Update Brand (%s):"), $data['name']));
-                        		$result = $this->system->download_file_with_progress_bar($url_brand_data, $local_brand_data);
-                        	}
-							else
-							{
-                        		$result = $this->system->download_file($url_brand_data, $local_brand_data);
-                        	}
-                            if (!$result)
-							{
-                            	$error['brand_update_check'] = sprintf(_("Not able to connect to repository. Using local brand [%s] file instead."), $data['name']);
-                            	if ($echomsg == true )
-								{
-                            		out($error['brand_update_check']);
-                            	}
-                            }
-                        }
+							$sql  = sprintf("SELECT local FROM %s WHERE directory = :directory", "endpointman_brand_list");
+							$stmt = $this->db->prepare($sql);
+							$stmt->execute([
+								':directory' => $data['directory']
+							]);
+							$local = $stmt->rowCount() === 0 ? false : $stmt->fetch(\PDO::FETCH_ASSOC);
 
-                        if (file_exists($local_brand_data))
-						{
-                            $temp = $this->file2json($local_brand_data);
-                            $temp = $temp['data']['brands'];
-							if (array_key_exists('oui_list', $temp))
+							$url_brand_data  = $this->epm->buildUrl($this->UPDATE_PATH, $data['directory'])."/".$data['directory'].".json";
+							$local_brand_data = sprintf("%s/%s/brand_data.json", $local_endpoint, $data['directory']);
+							if (!$local)
 							{
-                            	foreach ($temp['oui_list'] as $oui)
+								if ($echomsg == true)
 								{
-									$sql = "REPLACE INTO endpointman_oui_list (`oui`, `brand`, `custom`) VALUES (:oui, :brand_id, '0')";
-									$sth = $this->db->prepare($sql);
-									$sth->execute([':oui' => $oui, ':brand_id' =>  $temp['brand_id']]);
+									out(sprintf(_("Update Brand (%s):"), $data['name']));
+									$result = $this->system->download_file_with_progress_bar($url_brand_data, $local_brand_data);
+								}
+								else
+								{
+									$result = $this->system->download_file($url_brand_data, $local_brand_data);
+								}
+								if (!$result)
+								{
+									$error['brand_update_check'] = sprintf(_("Not able to connect to repository. Using local brand [%s] file instead."), $data['name']);
+									if ($echomsg == true )
+									{
+										out($error['brand_update_check']);
+									}
+									continue;
 								}
 							}
 
-                            $brand_name 		  = $temp['directory'];
-                            $version[$brand_name] = $temp['last_modified'];
-                            $last_mod 			  = "";
-                            foreach ($temp['family_list'] as $list)
+							if (! file_exists($local_brand_data))
 							{
-                                $last_mod = max($last_mod, $list['last_modified']);
-                            }
-                            $last_mod 			  = max($last_mod, $version[$brand_name]);
-                            $version[$brand_name] = $last_mod;
+								$error['brand_update_check_local_file'] = sprintf(_("Error: No Local File for %s!<br>Learn how to manually upload packages here (it's easy!): <a href='%s' target='_blank'> Click Here! </a>"), $data['name'], "http://wiki.provisioner.net/index.php/Endpoint_manager_manual_upload");
+								if ($echomsg == true )
+								{
+									out($error['brand_update_check_local_file']);
+								}
+								continue;
+							}
+
+							try
+							{
+								$temp = $this->epm->file2json($local_brand_data);
+							}
+							catch (\Exception $e)
+							{
+								$this->error['file2json_brand_data'] = $e->getMessage();
+								if ($echomsg == true )
+								{
+									out($error['file2json_brand_data']);
+								}
+								continue;
+							}
+							$temp = $temp['data']['brands'] ?? array();
+							if (empty($temp))
+							{
+								continue;
+							}
+							if (array_key_exists('oui_list', $temp) && !empty($temp['brand_id']))
+							{
+								foreach ($temp['oui_list'] as $oui)
+								{
+									$sql = sprintf("REPLACE INTO %s (`oui`, `brand`, `custom`) VALUES (:oui, :brand_id, '0')", "endpointman_oui_list");
+									$sth = $this->db->prepare($sql);
+									$sth->execute([
+										':oui' 		=> $oui,
+										':brand_id' => $temp['brand_id']
+									]);
+								}
+							}
+
+							$brand_name 		  = $temp['directory'] ?? '';
+							$version[$brand_name] = $temp['last_modified'] ?? "-1";
+							$last_mod 			  = "";
+							foreach ($temp['family_list'] ?? array() as $list)
+							{
+								$last_mod = max($last_mod, $list['last_modified'] ?? '0');
+							}
+							$last_mod 			  = max($last_mod, $version[$brand_name]);
+							$version[$brand_name] = $last_mod;
 
 							if (!($this->system->arraysearchrecursive($brand_name, $row, 'directory')))
 							{
-								// $sql = 'SELECT directory FROM endpointman_brand_list where id = "'.$temp['brand_id'].'"';
-								// $datoif = sql($sql, 'getOne');
-
-								$sql  = "SELECT directory FROM endpointman_brand_list where id = :brand_id";
+								$sql  = sprintf("SELECT directory FROM %s where id = :brand_id", "endpointman_brand_list");
 								$stmt = $this->db->prepare($sql);
-								$stmt->execute([':brand_id' => $temp['brand_id']]);
-								$datoif = $stmt->rowCount() === 0 ? null : $stmt->fetch(\PDO::FETCH_ASSOC);
+								$stmt->execute([
+									':brand_id' => $temp['brand_id']
+								]);
 
-								if ($datoif != "")
+								if ( $stmt->rowCount() !== 0)
 								{
 									$error['brand_update_id_exist_other_brand'] = sprintf(_("You can not add the mark (%s) as the ID (%d) already exists in the database!"), $temp['name'], $temp['brand_id']);
 									if ($echomsg == true )
 									{
 										out($error['brand_update_id_exist_other_brand']);
 									}
+									continue;
+								}
+								
+								$sql = sprintf("INSERT INTO %s (id, name, directory, cfg_ver) VALUES (:brand_id, :name, :directory, :version)", "endpointman_brand_list");
+								$sth = $this->db->prepare($sql);
+								$sth->execute([
+									':brand_id'  => $temp['brand_id'],
+									':name' 	 => $temp['name'],
+									':directory' => $temp['directory'],
+									':version' 	 => $version[$brand_name],
+								]);
+							}
+							else
+							{
+								//in database already!
+							}
+						}
+
+						foreach ($row as $ava_brands)
+						{
+							$key = $this->system->arraysearchrecursive($ava_brands['directory'], $out, 'directory');
+							if ($key === FALSE)
+							{
+								$this->remove_brand($ava_brands['id']);
+							}
+							else
+							{
+								$key 		= $key[0];
+								$brand_name = $ava_brands['directory'];
+								//TODO: This seems old
+								if (!empty($version) && !empty($version[$brand_name]) && $ava_brands['cfg_ver'] < $version[$brand_name])
+								{ 
+									$out[$key]['update']	  = 1;
+									$out[$key]['update_vers'] = $version[$brand_name];
 								}
 								else
 								{
-									$sql = "INSERT INTO endpointman_brand_list (id, name, directory, cfg_ver) VALUES (:brand_id, :name, :directory, :version)";
-									$sth = $this->db->prepare($sql);
-									$sth->execute([
-										':brand_id'  => $temp['brand_id'],
-										':name' 	 => $temp['name'],
-										':directory' => $temp['directory'],
-										':version' 	 => $version[$brand_name],
-									]);
+									$out[$key]['update'] = NULL;
 								}
-                            }
-							else
-							{
-                                //in database already!
-                            }
-                        }
-						else
-						{
-                        	$error['brand_update_check_local_file'] = sprintf(_("Error: No Local File for %s !"), $data['name'])."<br />"._("Learn how to manually upload packages here (it's easy!):")."<a href='http://wiki.provisioner.net/index.php/Endpoint_manager_manual_upload' target='_blank'>"._("Click Here!")."</a>";
-                        	if ($echomsg == true )
-							{
-                        		out($error['brand_update_check_local_file']);
-                        	}
-                        }
-                    }
-
-                    foreach ($row as $ava_brands)
+							}
+						}
+					}
+					else
 					{
-						$key = $this->system->arraysearchrecursive($ava_brands['directory'], $out, 'directory');
-                        if ($key === FALSE)
+						$error['brand_update_check_master_file'] = sprintf(_("Error: Aborting Brand Downloads. Can't Get Master File, Assuming Timeout Issues!<br>Learn how to manually upload packages here (it's easy!): <a href='%s' target='_blank'>Click Here!</a>"), "http://wiki.provisioner.net/index.php/Endpoint_manager_manual_upload");
+						if ($echomsg == true )
 						{
-							$this->remove_brand($ava_brands['id']);
-                        }
-						else
-						{
-                            $key = $key[0];
-                            $brand_name = $ava_brands['directory'];
-                            //TODO: This seems old
-                            if (!empty($version) && !empty($version[$brand_name]) && $ava_brands['cfg_ver'] < $version[$brand_name])
-							{ 
-                                $out[$key]['update'] = 1;
-                                $out[$key]['update_vers'] = $version[$brand_name];
-                            }
-							else
-							{
-                                $out[$key]['update'] = NULL;
-                            }
-                        }
-                    }
-                } else {
-                	$error['brand_update_check_master_file'] = _("Error: Aborting Brand Downloads. Can't Get Master File, Assuming Timeout Issues!")."<br />"._("Learn how to manually upload packages here (it's easy!):")."<a href='http://wiki.provisioner.net/index.php/Endpoint_manager_manual_upload' target='_blank'>"._("Click Here!")."</a>";
-                	if ($echomsg == true ) {
-                		out($error['brand_update_check_master_file']);
-                	}
-                }
-                return $out;
-            }
-			else
-			{
-				if ($contents == -1)
+							out($error['brand_update_check_master_file']);
+						}
+					}
+					return $out;
+				}
+				else
 				{
-					$error['remote_server'] = _("Error: The Remote server did not return any status information, Please try again later");
+					if ($contents == -1)
+					{
+						$error['remote_server'] = _("Error: The Remote server did not return any status information, Please try again later");
+					}
+					else
+					{
+						$error['remote_server'] = _("Error: The Remote Server Is Currently Syncing With the Master Server, Please try again later");
+					}
+					if ($echomsg == true )
+					{
+						out($error['remote_server']);
+					}
 				}
-				else {
-					$error['remote_server'] = _("Error: The Remote Server Is Currently Syncing With the Master Server, Please try again later");
-				}
-            	if ($echomsg == true ) {
-            		out($error['remote_server']);
-            	}
-            }
+			}
         }
 		else
 		{
             $o = getcwd();
             chdir(dirname($this->epm->PHONE_MODULES_PATH));
-            $path = $this->has_git();
+            $path = $this->epm->has_git();
             exec($path . ' git pull', $output);
             //exec($path . ' git checkout master', $output); //Why am I doing this?
+
             chdir($o);
-            $temp = $this->file2json($local_master);
-            $endpoint_package = $temp['data']['package'];
-            $endpoint_last_mod = $temp['data']['last_modified'];
+            $temp 			  = null;
+			$endpoint_package = null;
+			try
+			{
+				$temp 			   = $this->epm->file2json($local_master);
+				$endpoint_package  = $temp['data']['package'] ?? '';
+				$endpoint_last_mod = $temp['data']['last_modified'] ?? '';
+			}
+			catch (\Exception $e)
+			{
+				$this->error['file2json'] = $e->getMessage();
+			}
+			if (empty($temp))
+			{
 
-            $sql = "UPDATE endpointman_global_vars SET value = '" . $endpoint_last_mod . "' WHERE var_name = 'endpoint_vers'";
-            sql($sql);
+			}
+			elseif (empty($endpoint_package))
+			{
 
-            $out = $temp['data']['brands'];
-            $row = sql('SELECT * FROM  endpointman_brand_list WHERE id > 0', 'getAll', \PDO::FETCH_ASSOC);
+			}
+			else
+			{
+				$sql  = sprintf("UPDATE %s SET value = :endpoint_last_mod WHERE var_name = :find", "endpointman_global_vars");
+				$stmt = $this->db->prepare($sql);
+				$stmt->execute([
+					':endpoint_last_mod' => $endpoint_last_mod,
+					':find' 			 => "endpoint_vers"
+				]);
 
-            foreach ($out as $data) {
-                $temp = $this->file2json($this->epm->PHONE_MODULES_PATH . '/endpoint/' . $data['directory'] . '/brand_data.json');
-                if (key_exists('directory', $temp['data']['brands'])) {
+				$sql  = sprintf('SELECT * FROM %s WHERE id > 0', "endpointman_brand_list");
+				$stmt = $this->db->prepare($sql);
+				$stmt->execute();
+				$row = $stmt->fetchAll(\PDO::FETCH_ASSOC);
 
-                    //Pull in all variables
-                    $directory = $temp['data']['brands']['directory'];
-                    $brand_name = $temp['data']['brands']['name'];
-                    $brand_id = $temp['data']['brands']['brand_id'];
-                    $brand_version = $temp['data']['brands']['last_modified'];
+				$out = $temp['data']['brands'] ?? array();
+				foreach ($out as $data)
+				{
+					$local_brand_data = sprintf("%s/%s/brand_data.json", $local_endpoint, $data['directory']);
+					try
+					{
+						$temp = $this->epm->file2json($local_brand_data);
+					}
+					catch (\Exception $e)
+					{
+						$this->error['file2json_brand'] = $e->getMessage();
+						continue;
+					}
 
-                    $b_data = sql("SELECT id FROM endpointman_brand_list WHERE id = '" . $brand_id . "'", 'getOne');
-                    if ($b_data) {
-                        $sql = "UPDATE endpointman_brand_list SET local = '1', name = '" . $brand_name . "', cfg_ver = '" . $brand_version . "', installed = 1, hidden = 0 WHERE id = " . $brand_id;
-                        sql($sql);
-                    } else {
-                        $sql = "INSERT INTO endpointman_brand_list (id, name, directory, cfg_ver, local, installed) VALUES ('" . $brand_id . "', '" . $brand_name . "', '" . $directory . "', '" . $brand_version . "', '1', '1')";
-                        sql($sql);
-                    }
+					if (! key_exists('directory', $temp['data']['brands']))
+					{
+						continue;
+					}
 
-                    $last_mod = "";
-                    foreach ($temp['data']['brands']['family_list'] as $family_list) {
-                        $last_mod = max($last_mod, $family_list['last_modified']);
+					//Pull in all variables
+					$directory 		= $temp['data']['brands']['directory'] ?? '';
+					$brand_name		= $temp['data']['brands']['name'] ?? '';
+					$brand_id		= $temp['data']['brands']['brand_id'] ?? '';
+					$brand_version 	= $temp['data']['brands']['last_modified'] ?? '';
 
-                        $family_line_xml = $this->file2json($this->epm->PHONE_MODULES_PATH . '/endpoint/' . $directory . '/' . $family_list['directory'] . '/family_data.json');
-                        $family_line_xml['data']['last_modified'] = isset($family_line_xml['data']['last_modified']) ? $family_line_xml['data']['last_modified'] : '';
+					if (empty($directory) || empty($brand_name) || empty($brand_id))
+					{
+						continue;
+					}
 
-                        /* DONT DO THIS YET
-                          $require_firmware = NULL;
-                          if ((key_exists('require_firmware', $family_line_xml['data'])) && ($remote) && ($family_line_xml['data']['require_firmware'] == "TRUE")) {
-                          echo "Firmware Requirment Detected!..........<br/>";
-                          $this->install_firmware($family_line_xml['data']['id']);
-                          }
-                         *
-                         */
 
-                        $data = sql("SELECT id FROM endpointman_product_list WHERE id='" . $brand_id . $family_line_xml['data']['id'] . "'", 'getOne');
-                        $short_name = preg_replace("/\[(.*?)\]/si", "", $family_line_xml['data']['name']);
-                        if ($data) {
-                            $sql = "UPDATE endpointman_product_list SET short_name = '" . $short_name . "', long_name = '" . $family_line_xml['data']['name'] . "', cfg_ver = '" . $family_line_xml['data']['version'] . "', config_files='" . $family_line_xml['data']['configuration_files'] . "' WHERE id = '" . $brand_id . $family_line_xml['data']['id'] . "'";
-                        } else {
-                            $sql = "INSERT INTO endpointman_product_list (`id`, `brand`, `short_name`, `long_name`, `cfg_dir`, `cfg_ver`, `config_files`, `hidden`) VALUES ('" . $brand_id . $family_line_xml['data']['id'] . "', '" . $brand_id . "', '" . $short_name . "', '" . $family_line_xml['data']['name'] . "', '" . $family_line_xml['data']['directory'] . "', '" . $family_line_xml['data']['last_modified'] . "','" . $family_line_xml['data']['configuration_files'] . "', '0')";
-                        }
-                        sql($sql);
+					$sql  = sprintf("SELECT id FROM %s WHERE id = :brand_id", "endpointman_brand_list");
+					$stmt = $this->db->prepare($sql);
+					$stmt->execute([
+						':brand_id' => $brand_id
+					]);
+					if ($stmt->rowCount() === 0)
+					{
+						$sql  = sprintf("INSERT INTO %s (id, name, directory, cfg_ver, local, installed) VALUES (:brand_id, :brand_name, :directory, :brand_version, '1', '1')", "endpointman_brand_list");
+						$stmt = $this->db->prepare($sql);
+						$stmt->execute([
+							':brand_id' 	 => $brand_id,
+							':brand_name' 	 => $brand_name,
+							':directory' 	 => $directory,
+							':brand_version' => $brand_version,
+						]);
+					}
+					else
+					{
+						$sql  = sprintf("UPDATE %s SET local = '1', name = :brand_name, cfg_ver = :brand_version, installed = 1, hidden = 0 WHERE id = :brand_id", "endpointman_brand_list");
+						$stmt = $this->db->prepare($sql);
+						$stmt->execute([
+							':brand_id' 	 => $brand_id,
+							':brand_name' 	 => $brand_name,
+							':brand_version' => $brand_version,
+						]);
+					}
 
-                        foreach ($family_line_xml['data']['model_list'] as $model_list) {
-                            $template_list = implode(",", $model_list['template_data']);
+					$last_mod = "";
+					foreach ($temp['data']['brands']['family_list'] ?? array() as $family_list)
+					{
+						$local_family_data = sprintf("%s/%s/%s/family_data.json", $local_endpoint, $directory, $family_list['directory']);
+						try
+						{
+							$family_line = $this->epm->file2json($local_family_data);
+						}
+						catch (\Exception $e)
+						{
+							$this->error['file2json_family_line'] = $e->getMessage();
+							continue;
+						}
 
-                            $m_data = sql("SELECT id FROM endpointman_model_list WHERE id='" . $brand_id . $family_line_xml['data']['id'] . $model_list['id'] . "'", 'getOne');
-                            if ($m_data) {
-                                $sql = "UPDATE endpointman_model_list SET max_lines = '" . $model_list['lines'] . "', model = '" . $model_list['model'] . "', template_list = '" . $template_list . "' WHERE id = '" . $brand_id . $family_line_xml['data']['id'] . $model_list['id'] . "'";
-                            } else {
-                                $sql = "INSERT INTO endpointman_model_list (`id`, `brand`, `model`, `max_lines`, `product_id`, `template_list`, `enabled`, `hidden`) VALUES ('" . $brand_id . $family_line_xml['data']['id'] . $model_list['id'] . "', '" . $brand_id . "', '" . $model_list['model'] . "', '" . $model_list['lines'] . "', '" . $brand_id . $family_line_xml['data']['id'] . "', '" . $template_list . "', '0', '0')";
-                            }
-                            sql($sql);
+						$brand_id_family_line 				  = $brand_id . $family_line['data']['id'];
+						$last_mod 		   					  = max($last_mod, $family_list['last_modified'] ?? '');
+						$family_line['data']['last_modified'] = $family_line['data']['last_modified'] ?? '';
 
-							if (!$this->sync_model($brand_id . $family_line_xml['data']['id'] . $model_list['id'], $errsync_modal)) {
+						/* DONT DO THIS YET
+						$require_firmware = NULL;
+						if ((key_exists('require_firmware', $family_line['data'])) && ($remote) && ($family_line['data']['require_firmware'] == "TRUE")) {
+						echo "Firmware Requirment Detected!..........<br/>";
+						$this->install_firmware($family_line['data']['id']);
+						}
+						*
+						*/
+
+
+						$short_name = preg_replace("/\[(.*?)\]/si", "", $family_line['data']['name']);
+
+						$sql  = sprintf("SELECT id FROM %s WHERE id= :brand_id_family_line", "endpointman_product_list");
+						$stmt = $this->db->prepare($sql);
+						$stmt->execute([
+							':brand_id_family_line' => $brand_id_family_line
+						]);
+
+						if ($stmt->rowCount() === 0)
+						{
+							$sql  = sprintf("INSERT INTO %s (`id`, `brand`, `short_name`, `long_name`, `cfg_dir`, `cfg_ver`, `config_files`, `hidden`) VALUES (:brand_id_family_line, :brand_id, :short_name, :long_name, :directory, :last_modified, :config_files, '0')", "endpointman_product_list");
+							$stmt = $this->db->prepare($sql);
+							$stmt->execute([
+								':brand_id_family_line' => $brand_id_family_line,
+								':brand_id' 			=> $brand_id,
+								':short_name' 			=> $short_name,
+								':long_name' 			=> $family_line['data']['name'],
+								':directory' 			=> $family_line['data']['directory'],
+								':last_modified' 		=> $family_line['data']['last_modified'],
+								':config_files' 		=> $family_line['data']['configuration_files'],
+							]);
+						}
+						else
+						{
+							$sql  = sprintf("UPDATE %s SET short_name = :short_name, long_name = :long_name, cfg_ver = :cfg_ver, config_files= :config_files WHERE id = :brand_id_family_line", "endpointman_product_list");
+							$stmt = $this->db->prepare($sql);
+							$stmt->execute([
+								':brand_id_family_line' => $brand_id_family_line,
+								':short_name' 			=> $short_name,
+								':long_name' 			=> $family_line['data']['name'],
+								':cfg_ver' 				=> $family_line['data']['version'],
+								':config_files' 		=> $family_line['data']['configuration_files'],
+							]);
+						}
+
+						foreach ($family_line['data']['model_list'] ?? array() as $model_list)
+						{
+							$template_list 				= implode(",", $model_list['template_data']);
+							$brand_id_family_line_model = $brand_id_family_line . $model_list['id'];
+
+							$sql  = sprintf("SELECT id FROM %s WHERE id= :brand_id_family_line_model", "endpointman_model_list");
+							$stmt = $this->db->prepare($sql);
+							$stmt->execute([
+								':brand_id_family_line_model' =>  $brand_id_family_line_model
+							]);
+
+							if ($stmt->rowCount() === 0)
+							{
+								$sql  = sprintf("INSERT INTO %s (`id`, `brand`, `model`, `max_lines`, `product_id`, `template_list`, `enabled`, `hidden`) VALUES (:brand_id_family_line_model, :brand_id, :model, :lines, :brand_id_family_line, :template_list, '0', '0')", "endpointman_model_list");
+								$stmt = $this->db->prepare($sql);
+								$stmt->execute([
+									':brand_id_family_line_model' => $brand_id_family_line_model,
+									':brand_id' 				  => $brand_id,
+									':model' 					  => $model_list['model'],
+									':lines' 					  => $model_list['lines'],
+									':brand_id_family_line' 	  => $brand_id_family_line,
+									':template_list' 			  => $template_list,
+								]);
+							}
+							else
+							{
+								$sql  = sprintf("UPDATE %s SET max_lines = :lines, model = :model, template_list = :template_list WHERE id = :brand_id_family_line_model", "endpointman_model_list");
+								$stmt = $this->db->prepare($sql);
+								$stmt->execute([
+									':lines' 					  => $model_list['lines'],
+									':model' 					  => $model_list['model'],
+									':template_list' 			  => $template_list,
+									':brand_id_family_line_model' => $brand_id_family_line_model,
+								]);
+							}
+
+							if (!$this->sync_model($brand_id . $family_line['data']['id'] . $model_list['id'], $errsync_modal))
+							{
 								$error['sync_module_error'] = sprintf(_("Error: System Error in Sync Model [%s] Function, Load Failure!"), $model_list['model']);
 								if ($echomsg == true ) {
 									out($error['sync_module_error']);
@@ -957,42 +1274,81 @@ class Endpointman_Config
 										out($v);
 									}
 								}
-                            }
-                            unset($errsync_modal);
-                        }
-                        //Phone Models Move Here
-                        $family_id = $brand_id . $family_line_xml['data']['id'];
-                        $sql = "SELECT * FROM endpointman_model_list WHERE product_id = " . $family_id;
-                        $products = sql($sql, 'getall', \PDO::FETCH_ASSOC);
-                        foreach ($products as $data) {
-							if (!$this->system->arraysearchrecursive($data['model'], $family_line_xml['data']['model_list'], 'model')) {
-								if ($echomsg == true ) {
+							}
+							unset($errsync_modal);
+						}
+
+						//Phone Models Move Here
+
+						$sql  = sprintf('SELECT * FROM %s WHERE product_id = :brand_id_family_line', "endpointman_model_list");
+						$stmt = $this->db->prepare($sql);
+						$stmt->execute([
+							'brand_id_family_line' => $brand_id_family_line
+						]);
+						$products = $stmt->fetchAll(\PDO::FETCH_ASSOC);
+						foreach ($products as $data)
+						{
+							if (!$this->system->arraysearchrecursive($data['model'], $family_line['data']['model_list'], 'model'))
+							{
+								if ($echomsg == true )
+								{
 									outn(sprintf(_("Moving/Removing Model '%s' not present in JSON file......"), $data['model']));
 								}
 
-                                $model_name = $data['model'];
-                                $sql = 'DELETE FROM endpointman_model_list WHERE id = ' . $data['id'];
-                                sql($sql);
-                                $sql = "SELECT id FROM endpointman_model_list WHERE model LIKE '" . $model_name . "'";
-                                $new_model_id = sql($sql, 'getOne');
-                                if ($new_model_id) {
-                                    $sql = "UPDATE  endpointman_mac_list SET  model =  '" . $new_model_id . "' WHERE  model = '" . $data['id'] . "'";
-                                } else {
-                                    $sql = "UPDATE  endpointman_mac_list SET  model =  '0' WHERE  model = '" . $data['id'] . "'";
-                                }
-                                sql($sql);
-                                out (_("Done!"));
-                            }
-                        }
-                    }
-                    foreach ($temp['data']['brands']['oui_list'] as $oui) {
-                        $sql = "REPLACE INTO endpointman_oui_list (`oui`, `brand`, `custom`) VALUES ('" . $oui . "', '" . $brand_id . "', '0')";
-                        sql($sql);
-                    }
-                }
-            }
+								$sql  = sprintf("DELETE FROM %s WHERE id = :id", "endpointman_model_list");
+								$stmt = $this->db->prepare($sql);
+								$stmt->execute([
+									':id' => $data['id']
+								]);
+
+								$sql  = sprintf("SELECT id FROM %s WHERE model LIKE :model_name", "endpointman_model_list");
+								$stmt = $this->db->prepare($sql);
+								$stmt->execute([
+									':model_name' => $data['model']
+								]);
+								$new_model_id = $stmt->rowCount() === 0 ? false : ($stmt->fetchColumn() ?? false);
+
+								if ($new_model_id)
+								{
+									$sql  = sprintf("UPDATE %s SET  model = :new_model_id WHERE  model = :model", "endpointman_mac_list");
+									$stmt = $this->db->prepare($sql);
+									$stmt->execute([
+										':new_model_id' => $new_model_id,
+										':model' 		=> $data['id'],
+									]);
+								}
+								else
+								{
+									$sql  = sprintf("UPDATE %s SET  model = '0' WHERE  model = :model", "endpointman_mac_list");
+									$stmt = $this->db->prepare($sql);
+									$stmt->execute([
+										':model' => $data['id'],
+									]);
+								}
+
+								if ($echomsg == true )
+								{
+									out (_("Done!"));
+								}
+							}
+						}
+					}
+
+					foreach ($temp['data']['brands']['oui_list'] ?? array() as $oui)
+					{
+						$sql  = sprintf("REPLACE INTO %s (`oui`, `brand`, `custom`) VALUES (:oui, :brand_id, '0')", "endpointman_oui_list");
+						$stmt = $this->db->prepare($sql);
+						$stmt->execute([
+							':oui' 	 	=> $oui,
+							':brand_id' => $brand_id,
+						]);
+					}
+				}
+			}
         }
     }
+
+
 
 	 /**
      * Sync the XML files (incuding all template files) from the hard drive with the database
@@ -1011,11 +1367,11 @@ class Endpointman_Config
             $brand_row = sql($sql, 'getRow', \PDO::FETCH_ASSOC);
 
 
-            $path_brand_dir = $this->epm->PHONE_MODULES_PATH . '/endpoint/' . $brand_row['directory'];
-            $path_brand_dir_cfg = $path_brand_dir . '/' . $product_row['cfg_dir'];
-            $path_brand_dir_cfg_json = $path_brand_dir_cfg . '/family_data.json';
+            $path_brand_dir 		 = $this->epm->buildPath($this->epm->PHONE_MODULES_PATH, 'endpoint', $brand_row['directory']);
+            $path_brand_dir_cfg 	 = $this->epm->buildPath($path_brand_dir, $product_row['cfg_dir']);
+            $path_brand_dir_cfg_json = $this->epm->buildPath($path_brand_dir_cfg, 'family_data.json');
 
-            if (!file_exists($path_brand_dir)) {
+            if (!file_exists($path_brand_dir)){
             	$error['sync_model'] = sprintf(_("Brand Directory '%s' Doesn't Exist! (%s)"), $brand_row['directory'], $path_brand_dir);
                 return(FALSE);
             }
@@ -1052,8 +1408,7 @@ class Endpointman_Config
             $sql = "UPDATE endpointman_product_list SET long_name = '" . str_replace("'", "''", $long_name) . "', short_name = '" . str_replace("'", "''", $short_name) . "' , cfg_ver = '" . $version . "' WHERE id = '" . $product_row['id'] . "'";
             sql($sql);
 
-            $template_data_array = array();
-            $template_data_array = $this->merge_data($this->epm->PHONE_MODULES_PATH . '/endpoint/' . $brand_row['directory'] . '/' . $product_row['cfg_dir'] . '/', $template_list_array, true, true);
+            $template_data_array = $this->merge_data($this->epm->buildPath($this->epm->PHONE_MODULES_PATH, 'endpoint', $brand_row['directory'], $product_row['cfg_dir']) . '/', $template_list_array, true, true);
 
             $sql = "UPDATE endpointman_model_list SET template_data = '" . serialize($template_data_array) . "' WHERE id = '" . $model . "'";
             sql($sql);
@@ -1071,7 +1426,7 @@ class Endpointman_Config
     	out(_("Install/Update Brand..."));
         if (!$this->configmod->get('use_repo'))
 		{
-			$temp_directory = $this->epm->PHONE_MODULES_PATH . "/temp/provisioner/";
+			$temp_directory = $this->epm->buildPath($this->epm->PHONE_MODULES_PATH, 'temp', 'provisioner') . "/";
             // $temp_directory = $this->system->sys_get_temp_dir() . "/epm_temp/";
 
 			if (!file_exists($temp_directory))
@@ -1099,8 +1454,8 @@ class Endpointman_Config
 			{
 				$row = $stmt->fetch(\PDO::FETCH_ASSOC);
 			
-				$url_brand_data   = $this->UPDATE_PATH . $row['directory'] . "/".$row['directory'].".json";
-				$local_brand_data = $this->epm->PHONE_MODULES_PATH . "/endpoint/" . $row['directory'] . "/brand_data.json";
+				$url_brand_data   = $this->epm->buildUrl($this->UPDATE_PATH, $row['directory'], $row['directory'].".json");
+				$local_brand_data = $this->epm->buildPath($this->epm->PHONE_MODULES_PATH, 'endpoint',  $row['directory'], "brand_data.json");
 
 				$result = $this->system->download_file($url_brand_data, $local_brand_data);
 				if ($result)
@@ -1174,8 +1529,9 @@ class Endpointman_Config
     	out(sprintf(_("Update Brand %s ... "), $package));
 
 		// $temp_directory = $this->system->sys_get_temp_dir() . "/epm_temp/";
-		$temp_directory = $this->epm->PHONE_MODULES_PATH . "/temp/provisioner/";
-		$temp_brand_json = $temp_directory.$package."/brand_data.json";
+
+		$temp_directory  = $this->epm->buildPath($this->epm->PHONE_MODULES_PATH, 'temp', "provisioner");
+		$temp_brand_json = $this->epm->buildPath($temp_directory, $package, "brand_data.json");
 
 		//DEBUG
 		out( sprintf(_("Processing %s..."), $temp_brand_json));
@@ -1195,23 +1551,28 @@ class Endpointman_Config
                 //create directory structure and move files
                 out(sprintf(_("Creating Directory Structure for Brand '%s' and Moving Files..."), $brand_name));
 
-				$local_brand_location = $this->epm->PHONE_MODULES_PATH . "/endpoint/" . $directory;
+				$local_brand_location = $this->epm->buildPath($this->epm->PHONE_MODULES_PATH, 'endpoint', $directory);
 
                 if (!file_exists($local_brand_location))
 				{
                     mkdir($local_brand_location, 0775, true);
                 }
 
-                $dir_iterator = new \RecursiveDirectoryIterator($temp_directory . $directory . "/");
+
+				$path_iterator = $this->epm->buildPath($temp_directory, $directory);
+
+                $dir_iterator = new \RecursiveDirectoryIterator($path_iterator);
                 $iterator 	  = new \RecursiveIteratorIterator($dir_iterator, \RecursiveIteratorIterator::SELF_FIRST);
                 foreach ($iterator as $file)
 				{
                     if (is_dir($file))
 					{
-                        $dir = str_replace($temp_directory . $directory . "/", "", $file);
-                        if (!file_exists($local_brand_location . "/" . $dir))
+                        $dir      = str_replace($path_iterator, "", $file);
+						$path_dir = $this->epm->buildPath($local_brand_location, $dir);
+
+                        if (!file_exists($path_dir))
 						{
-                            mkdir($local_brand_location . "/" . $dir, 0775, TRUE);
+                            mkdir($path_dir, 0775, TRUE);
 //echo ".";
                         }
                     }
@@ -1219,13 +1580,15 @@ class Endpointman_Config
 					{
                         if ((basename($file) != "brand_data.json") OR (!$remote))
 						{
-                            $dir   = str_replace($temp_directory . $directory . "/", "", $file);
-                            $stats = rename($file, $local_brand_location . "/" . $dir);
+                            $dir   	  = str_replace($path_iterator, "", $file);
+							$path_dir = $this->epm->buildPath($local_brand_location, $dir);
+
+                            $stats = rename($file, $path_dir);
                             if ($stats === FALSE)
 							{
                             	out(sprintf(_("- Error Moving %s!"), basename($file)));
                             }
-                            chmod($local_brand_location . "/" . $dir, 0775);
+                            chmod($path_dir, 0775);
 //echo ".";
                         }
                     }
@@ -1280,44 +1643,44 @@ class Endpointman_Config
 
                     $last_mod = max($last_mod, $family_list['last_modified']);
 
-                    $family_line_xml = $this->file2json($this->epm->PHONE_MODULES_PATH . '/endpoint/' . $directory . '/' . $family_list['directory'] . '/family_data.json');
-                    $family_line_xml['data']['last_modified'] = isset($family_line_xml['data']['last_modified']) ? $family_line_xml['data']['last_modified'] : '';
+                    $family_line = $this->file2json($this->epm->buildPath($this->epm->PHONE_MODULES_PATH, 'endpoint', $directory, $family_list['directory'], 'family_data.json'));
+                    $family_line['data']['last_modified'] = isset($family_line['data']['last_modified']) ? $family_line['data']['last_modified'] : '';
 
                     $require_firmware = NULL;
-                    if ((key_exists('require_firmware', $family_line_xml['data'])) && ($remote) && ($family_line_xml['data']['require_firmware'] == "TRUE"))
+                    if ((key_exists('require_firmware', $family_line['data'])) && ($remote) && ($family_line['data']['require_firmware'] == "TRUE"))
 					{
 						out(_("Firmware Requirment Detected!.........."));
-						$this->install_firmware($family_line_xml['data']['id']);
+						$this->install_firmware($family_line['data']['id']);
                     }
 
-                    $data = sql("SELECT id FROM endpointman_product_list WHERE id='" . $brand_id . $family_line_xml['data']['id'] . "'", 'getOne');
-                    $short_name = preg_replace("/\[(.*?)\]/si", "", $family_line_xml['data']['name']);
+                    $data = sql("SELECT id FROM endpointman_product_list WHERE id='" . $brand_id . $family_line['data']['id'] . "'", 'getOne');
+                    $short_name = preg_replace("/\[(.*?)\]/si", "", $family_line['data']['name']);
 
 					if ($data) {
 						if ($this->configmod->get('debug')) echo "-Updating Family ".$short_name."<br/>";
-                        $sql = "UPDATE endpointman_product_list SET short_name = '" . str_replace("'", "''", $short_name) . "', long_name = '" . str_replace("'", "''", $family_line_xml['data']['name']) . "', cfg_ver = '" . $family_line_xml['data']['version'] . "', config_files='" . $family_line_xml['data']['configuration_files'] . "' WHERE id = '" . $brand_id . $family_line_xml['data']['id'] . "'";
+                        $sql = "UPDATE endpointman_product_list SET short_name = '" . str_replace("'", "''", $short_name) . "', long_name = '" . str_replace("'", "''", $family_line['data']['name']) . "', cfg_ver = '" . $family_line['data']['version'] . "', config_files='" . $family_line['data']['configuration_files'] . "' WHERE id = '" . $brand_id . $family_line['data']['id'] . "'";
                     }
 					else {
 						if ($this->configmod->get('debug')) echo "-Inserting Family ".$short_name."<br/>";
                         $sql = sprintf("INSERT INTO endpointman_product_list (`id`, `brand`, `short_name`, `long_name`, `cfg_dir`, `cfg_ver`, `config_files`, `hidden`) VALUES ('%s', '%s', '%s', '%s', '%s', '%s','%s', '0')",
-						$brand_id . $family_line_xml['data']['id'], 
+						$brand_id . $family_line['data']['id'], 
 						$brand_id,
 						str_replace("'", "''", $short_name),
-						str_replace("'", "''", $family_line_xml['data']['name']),
-						$family_line_xml['data']['directory'],
-						$family_line_xml['data']['last_modified'],
-						$family_line_xml['data']['configuration_files']
+						str_replace("'", "''", $family_line['data']['name']),
+						$family_line['data']['directory'],
+						$family_line['data']['last_modified'],
+						$family_line['data']['configuration_files']
 						);
                     }
 					sql($sql);
 
 
-					if (count($family_line_xml['data']['model_list']) > 0) {
+					if (count($family_line['data']['model_list']) > 0) {
 						out(_("-- Updating Model Lines ... "));
-	                    foreach ($family_line_xml['data']['model_list'] as $model_list) {
+	                    foreach ($family_line['data']['model_list'] as $model_list) {
 	                        $template_list = implode(",", $model_list['template_data']);
 
-	                        $model_final_id = $brand_id . $family_line_xml['data']['id'] . $model_list['id'];
+	                        $model_final_id = $brand_id . $family_line['data']['id'] . $model_list['id'];
 	                        $sql = 'SELECT id, global_custom_cfg_data, global_user_cfg_data FROM endpointman_mac_list WHERE model = ' . $model_final_id;
 	                        $old_data = NULL;
 	                        $old_data = sql($sql, 'getAll', \PDO::FETCH_ASSOC);
@@ -1413,19 +1776,19 @@ out(_("Old Data Detected! Migrating ... "));
 	                            }
 	                        }
 
-	                        $m_data = sql("SELECT id FROM endpointman_model_list WHERE id='" . $brand_id . $family_line_xml['data']['id'] . $model_list['id'] . "'", 'getOne');
+	                        $m_data = sql("SELECT id FROM endpointman_model_list WHERE id='" . $brand_id . $family_line['data']['id'] . $model_list['id'] . "'", 'getOne');
 	                        if ($m_data) {
 if ($this->configmod->get('debug')) echo $this->epm->format_txt(_("---Updating Model %_NAMEMOD_%"), "", array("%_NAMEMOD_%" => $model_list['model']));
-	                            $sql = "UPDATE endpointman_model_list SET max_lines = '" . $model_list['lines'] . "', model = '" . $model_list['model'] . "', template_list = '" . $template_list . "' WHERE id = '" . $brand_id . $family_line_xml['data']['id'] . $model_list['id'] . "'";
+	                            $sql = "UPDATE endpointman_model_list SET max_lines = '" . $model_list['lines'] . "', model = '" . $model_list['model'] . "', template_list = '" . $template_list . "' WHERE id = '" . $brand_id . $family_line['data']['id'] . $model_list['id'] . "'";
 	                        }
 							else {
 if ($this->configmod->get('debug')) echo $this->epm->format_txt(_("---Inserting Model %_NAMEMOD_%"), "", array("%_NAMEMOD_%" => $model_list['model']));
-	                            $sql = "INSERT INTO endpointman_model_list (`id`, `brand`, `model`, `max_lines`, `product_id`, `template_list`, `enabled`, `hidden`) VALUES ('" . $brand_id . $family_line_xml['data']['id'] . $model_list['id'] . "', '" . $brand_id . "', '" . $model_list['model'] . "', '" . $model_list['lines'] . "', '" . $brand_id . $family_line_xml['data']['id'] . "', '" . $template_list . "', '0', '0')";
+	                            $sql = "INSERT INTO endpointman_model_list (`id`, `brand`, `model`, `max_lines`, `product_id`, `template_list`, `enabled`, `hidden`) VALUES ('" . $brand_id . $family_line['data']['id'] . $model_list['id'] . "', '" . $brand_id . "', '" . $model_list['model'] . "', '" . $model_list['lines'] . "', '" . $brand_id . $family_line['data']['id'] . "', '" . $template_list . "', '0', '0')";
 	                        }
 	                        sql($sql);
 
-	                        //echo "brand_id:".$brand_id. " - family_line_xml:" . $family_line_xml['data']['id'] . "- model_list:" . $model_list['id']."<br>";
-	                        if (!$this->sync_model($brand_id . $family_line_xml['data']['id'] . $model_list['id'], $errlog)) {
+	                        //echo "brand_id:".$brand_id. " - family_line:" . $family_line['data']['id'] . "- model_list:" . $model_list['id']."<br>";
+	                        if (!$this->sync_model($brand_id . $family_line['data']['id'] . $model_list['id'], $errlog)) {
 	                        	out(_("Error: System Error in Sync Model Function, Load Failure!"));
 								out(_("Error: ").$errlog['sync_model']);
 	                        }
@@ -1435,11 +1798,11 @@ if ($this->configmod->get('debug')) echo $this->epm->format_txt(_("---Inserting 
                     //END Updating Model Lines................
 
                     //Phone Models Move Here
-                    $family_id = $brand_id . $family_line_xml['data']['id'];
+                    $family_id = $brand_id . $family_line['data']['id'];
                     $sql = "SELECT * FROM endpointman_model_list WHERE product_id = " . $family_id;
                     $products = sql($sql, 'getall', \PDO::FETCH_ASSOC);
                     foreach ($products as $data) {
-                        if (!$this->system->arraysearchrecursive($data['model'], $family_line_xml['data']['model_list'], 'model')) {
+                        if (!$this->system->arraysearchrecursive($data['model'], $family_line['data']['model_list'], 'model')) {
 							outn(sprintf(_("Moving/Removing Model '%s' not present in JSON file ... "), $data['model']));
                             $model_name = $data['model'];
                             $sql = 'DELETE FROM endpointman_model_list WHERE id = ' . $data['id'];
@@ -1469,14 +1832,15 @@ if ($this->configmod->get('debug')) echo $this->epm->format_txt(_("---Inserting 
 				}
 				out(_("Done!"));
             } else {
-				outn(sprintf(_("Error: Invalid JSON Structure in %s/brand_data.json"), $temp_directory.$package));
+				outn(sprintf(_("Error: Invalid JSON Structure in %s/brand_data.json"), $this->epm->buildPath($temp_directory, $package)));
             }
         } else {
 			out(_("Error: No 'brand_data.xml' file exists!"));
         }
 
 		outn(_("Removing Temporary Files... "));
-        $this->system->rmrf($temp_directory . $package);
+
+        $this->system->rmrf($this->epm->buildPath($temp_directory, $package));
         out(_("Done!"));
     }
 
@@ -1499,7 +1863,7 @@ if ($this->configmod->get('debug')) echo $this->epm->format_txt(_("---Inserting 
 
 			$sql = "SELECT directory FROM endpointman_brand_list WHERE id = '" . $id . "'";
             $brand_dir = sql($sql, 'getOne');
-            $this->system->rmrf($this->epm->PHONE_MODULES_PATH . "/endpoint/" . $brand_dir);
+            $this->system->rmrf($this->epm->buildPath($this->epm->PHONE_MODULES_PATH, 'endpoint', $brand_dir));
 
             $sql = "DELETE FROM endpointman_model_list WHERE brand = '" . $id . "'";
             sql($sql);
@@ -1510,7 +1874,7 @@ if ($this->configmod->get('debug')) echo $this->epm->format_txt(_("---Inserting 
             $sql = "DELETE FROM endpointman_oui_list WHERE brand = '" . $id . "'";
             sql($sql);
 
-            $this->system->rmrf($this->epm->PHONE_MODULES_PATH . "/" . $brand_dir);
+            $this->system->rmrf($this->epm->buildPath($this->epm->PHONE_MODULES_PATH, $brand_dir));
             $sql = "DELETE FROM endpointman_brand_list WHERE id = '" . $id . "'";
             sql($sql);
 
@@ -1546,10 +1910,10 @@ if ($this->configmod->get('debug')) echo $this->epm->format_txt(_("---Inserting 
     function install_firmware($product_id) {
     	out(_("Installa frimware... "));
 
-        $temp_directory = $this->system->sys_get_temp_dir() . "/epm_temp/";
+        $temp_directory = $this->epm->buildPath($this->system->sys_get_temp_dir(), "epm_temp");
         $sql = 'SELECT endpointman_product_list.*, endpointman_brand_list.directory FROM endpointman_product_list, endpointman_brand_list WHERE endpointman_product_list.brand = endpointman_brand_list.id AND endpointman_product_list.id = ' . $product_id;
         $row = sql($sql, 'getRow', \PDO::FETCH_ASSOC);
-        $json_data = $this->file2json($this->epm->PHONE_MODULES_PATH . "/endpoint/" . $row['directory'] . "/" . $row['cfg_dir'] . "/family_data.json");
+        $json_data = $this->file2json($this->epm->buildPath($this->epm->PHONE_MODULES_PATH, 'endpoint', $row['directory'], $row['cfg_dir'], "family_data.json"));
 
         if ((! isset($json_data['data']['firmware_ver'])) OR (empty($json_data['data']['firmware_ver']))) {
         	out (_("Error: The version of the firmware package is blank!"));
@@ -1561,61 +1925,83 @@ if ($this->configmod->get('debug')) echo $this->epm->format_txt(_("---Inserting 
         	return false;
         }
 
-        if ($json_data['data']['firmware_ver'] > $row['firmware_vers']) {
-            if (!file_exists($temp_directory)) {
+        if ($json_data['data']['firmware_ver'] > $row['firmware_vers'])
+		{
+            if (!file_exists($temp_directory))
+			{
                 mkdir($temp_directory, 0775, true);
             }
-            $md5_xml = $json_data['data']['firmware_md5sum'];
-            $firmware_pkg = $json_data['data']['firmware_pkg'];
+            $md5_xml      	   = $json_data['data']['firmware_md5sum'];
+            $firmware_pkg 	   = $json_data['data']['firmware_pkg'];
+			$firmware_pkg_path = $this->epm->buildPath($temp_directory, $firmware_pkg);
+			$firmware_pkg_url  = $this->epm->buildUrl($this->UPDATE_PATH, $row['directory'], $firmware_pkg);
 
-            if (file_exists($temp_directory . $firmware_pkg)) {
-                $md5_pkg = md5_file($temp_directory . $firmware_pkg);
-                if ($md5_xml == $md5_pkg) {
+            if (file_exists($firmware_pkg_path)) {
+                $md5_pkg = md5_file($firmware_pkg_path);
+                if ($md5_xml == $md5_pkg)
+				{
 					out(_("Skipping download, updated local version..."));
-                } else {
+                }
+				else
+				{
 					out(_("Downloading firmware..."));
-                    if (! $this->system->download_file_with_progress_bar($this->UPDATE_PATH . $row['directory'] . "/" . $firmware_pkg, $temp_directory . $firmware_pkg)) {
+                    if (! $this->system->download_file_with_progress_bar($firmware_pkg_url, $$firmware_pkg_path)) {
 						out(_("Error download frimware package!"));
 						return false;
 					}
-                    $md5_pkg = md5_file($temp_directory . $firmware_pkg);
+                    $md5_pkg = md5_file($firmware_pkg_path);
                 }
-            } else {
+            }
+			else
+			{
 				out(_("Downloading firmware..."));
-                if (! $this->system->download_file_with_progress_bar($this->UPDATE_PATH . $row['directory'] . "/" . $firmware_pkg, $temp_directory . $firmware_pkg)) {
+                if (! $this->system->download_file_with_progress_bar($firmware_pkg_url, $firmware_pkg_path))
+				{
 					out(_("Error download frimware package!"));
 					return false;
 				}
-                $md5_pkg = md5_file($temp_directory . $firmware_pkg);
+                $md5_pkg = md5_file($firmware_pkg_path);
             }
 
 			outn(_("Checking MD5sum of Package... "));
-            if ($md5_xml == $md5_pkg) {
+            if ($md5_xml == $md5_pkg)
+			{
 				out(_("Matches!"));
 
-                if (file_exists($temp_directory . $row['directory'] . "/" . $row['cfg_dir'] . "/firmware")) {
-                    $this->system->rmrf($temp_directory . $row['directory'] . "/" . $row['cfg_dir'] . "/firmware");
+				$path_firmware_dir = $this->epm->buildPath($temp_directory, $row['directory'], $row['cfg_dir'], "firmware");
+                if (file_exists($path_firmware_dir))
+				{
+                    $this->system->rmrf($path_firmware_dir);
                 }
-                mkdir($temp_directory . $row['directory'] . "/" . $row['cfg_dir'] . "/firmware", 0777, TRUE);
+                mkdir($path_firmware_dir, 0777, TRUE);
 
 				out(_("Installing Firmware..."));
 				//TODO: AÑADIR VALIDACION EXTRACCION CORRECTA
-				exec( sprintf("%s -xvf %s%s -C %s%s/%s", $this->configmod->get("tar_location"), $temp_directory, $firmware_pkg, $temp_directory, $row['directory'], $row['cfg_dir']) );
+				exec( sprintf("%s -xvf %s -C %s",
+						$this->configmod->get("tar_location"),
+						$firmware_pkg_path,
+						$this->epm->buildPath($temp_directory, $row['directory'], $row['cfg_dir'])
+					)
+				);
                 // exec("tar -xvf " . $temp_directory . $firmware_pkg . " -C " . $temp_directory . $row['directory'] . "/" . $row['cfg_dir']);
                 $i = 0;
-                foreach (glob($temp_directory . $row['directory'] . "/" . $row['cfg_dir'] . "/firmware/*") as $filename) {
-                    $file = basename($filename);
+                foreach (glob($this->epm->buildPath($path_firmware_dir, "*")) as $filename)
+				{
+                    $file 	  = basename($filename);
                     $list[$i] = $file;
-                    if (!@copy($filename, $this->configmod->get('config_location') . $file)) {
+                    if (!@copy($filename, $this->epm->buildPath($this->configmod->get('config_location'), $file)))
+					{
                     	out(sprintf(_("- Failed To Copy %s!"), $file));
                         $copy_error = TRUE;
-                    } elseif ($this->configmod->get('debug')) {
+                    }
+					elseif ($this->configmod->get('debug'))
+					{
 						out(sprintf(_("- Copied %s to %s."), $file, $this->configmod->get('config_location')));
                     }
                     $i++;
                 }
 
-                $this->system->rmrf($temp_directory . $row['directory']);
+                $this->system->rmrf($this->epm->buildPath($temp_directory, $row['directory']));
                 $list = implode(",", $list);
                 $sql = "UPDATE endpointman_product_list SET firmware_vers = '" . $json_data['data']['firmware_ver'] . "', firmware_files = '" . $list . "' WHERE id = " . $row['id'];
                 sql($sql);
@@ -1681,7 +2067,7 @@ if ($this->configmod->get('debug')) echo $this->epm->format_txt(_("---Inserting 
         if ($row['cfg_dir'] == "") {
             return FALSE;
         } else {
-            $temp = $this->file2json($this->epm->PHONE_MODULES_PATH . "/endpoint/" . $brand_directory . "/" . $row['cfg_dir'] . "/family_data.json");
+            $temp = $this->file2json($this->epm->buildPath($this->epm->PHONE_MODULES_PATH, 'endpoint', $brand_directory, $row['cfg_dir'], "family_data.json"));
 			if (is_array($temp) && ((array_key_exists('data', $temp)) AND (!is_array($temp['data']['firmware_ver'])))) {
                 if ($row['firmware_vers'] < $temp['data']['firmware_ver']) {
                     return $temp;
@@ -1713,7 +2099,7 @@ if ($this->configmod->get('debug')) echo $this->epm->format_txt(_("---Inserting 
             if ($row['cfg_dir'] == "") {
 				return("nothing");
             } else {
-                $temp = $this->file2json($this->epm->PHONE_MODULES_PATH . "/endpoint/" . $brand_directory . "/" . $row['cfg_dir'] . "/family_data.json");
+                $temp = $this->file2json($this->epm->buildPath($this->epm->PHONE_MODULES_PATH, 'endpoint', $brand_directory, $row['cfg_dir'], "family_data.json"));
                 if ( (isset($temp['data']['firmware_ver'])) AND (! empty ($temp['data']['firmware_ver'])) ) {
                     if ($row['firmware_vers'] == "") {
                         return("install");
@@ -1745,11 +2131,12 @@ if ($this->configmod->get('debug')) echo $this->epm->format_txt(_("---Inserting 
      */
     public function file2json($file)
 	{
+		$data_return = false;
         if (file_exists($file))
 		{
             $json = file_get_contents($file);
             $data = json_decode($json, TRUE);
-			$data_return = false;
+			
 
 			switch (json_last_error())
 			{

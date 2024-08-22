@@ -202,7 +202,7 @@ switch ($sub_type) {
             if(!empty($data)) {
                 foreach($data as $row) {
                     if(!class_exists('ProvisionerConfig')) {
-                        require(PHONE_MODULES_PATH.'setup.php');
+                        require(PHONE_MODULES_PATH.'/setup.php');
                     }
                     $phone_info = $endpoint->get_phone_info($row['id']);
 

@@ -4,63 +4,116 @@ use FreePBX\modules\Backup as Base;
 use Symfony\Component\Filesystem\Filesystem;
 use Symfony\Component\Filesystem\Exception\IOExceptionInterface;
 use Symfony\Component\Finder\Finder;
-class Restore Extends Base\RestoreBase{
-	public function runRestore(){
+class Restore Extends Base\RestoreBase
+{
+	public function runRestore()
+	{
+		$epm 	 = $this->FreePBX->Endpointman;
 		$configs = $this->getConfigs();
-		$files = $this->getFiles();
+		$files 	 = $this->getFiles();
 		/*
 		foreach ($configs['data'] as $category) {
 			$this->FreePBX->Endpointman->addCategoryById($category['id'], $category['category'], $category['type']);
 			$this->FreePBX->Endpointman->updateCategoryById($category['id'], $category['type'], $category['random'], $category['application'], $category['format']);
 		}
 		*/
-		$this->importAdvancedSettings($config['settings']);
-		foreach ($files as $file) {
-			$filename = $file->getPathTo().'/'.$file->getFilename();
-			if(file_exists($filename)){
-					continue;
+		
+		$this->importAdvancedSettings($configs['settings']);
+		foreach ($files as $file)
+		{
+			$path_src  = $epm->buildPath($this->tmpdir, 'files', $file->getPathTo(), $file->getFilename());
+			$path_dest = $epm->buildPath($file->getPathTo(), $file->getFilename());
+			if(file_exists($path_dest))
+			{
+				continue;
 			}
-			copy($this->tmpdir.'/files/'.$file->getPathTo().'/'.$file->getFilename(), $filename);
+			copy($path_src, $path_dest);
 		}
 	}
 
-	public function processLegacy($pdo, $data, $tables, $unknownTables){
+	public function processLegacy($pdo, $data, $tables, $unknownTables)
+	{
+		$epm = $this->FreePBX->Endpointman;
+
 		$this->restoreLegacyAdvancedSettings($pdo);
 
-		if(version_compare_freepbx($this->getVersion(),"13","ge")) {
+		if(version_compare_freepbx($this->getVersion(),"13","ge"))
+		{
 			$this->restoreLegacyDatabase($pdo);
 		}
-		else{
+		else
+		{
 			
 		}
 
-		if(!file_exists($this->tmpdir.'/'.$this->FreePBX->Endpointman->PHONE_MODULES_PATH)) {
+		$path_temp_files = $epm->buildPath($this->tmpdir, $epm->PHONE_MODULES_PATH);
+
+		if(!file_exists($path_temp_files))
+		{
 			return;
 		}
 
-		$endpoint_dir_data = $this->FreePBX->Endpointman->PHONE_MODULES_PATH.'/endpoint';
-		$endpoint_dir_temp = $this->FreePBX->Endpointman->PHONE_MODULES_PATH.'/temp';
-		shell_exec("rm -rf $endpoint_dir_data 2>&1");
-		shell_exec("rm -rf $endpoint_dir_temp 2>&1");
+		$endpoint_dir_data = $epm->buildPath($epm->PHONE_MODULES_PATH, 'endpoint');
+		$endpoint_dir_temp = $epm->buildPath($epm->PHONE_MODULES_PATH, 'temp');
 
-		$finder = new Finder();
+		$this->deleteDirectory($endpoint_dir_data);
+		$this->deleteDirectory($endpoint_dir_temp);
+
+		// shell_exec("rm -rf $endpoint_dir_data 2>&1");
+		// shell_exec("rm -rf $endpoint_dir_temp 2>&1");
+
+
+		$src_endpoint_dir_data = $epm->buildPath($this->tmpdir, $endpoint_dir_data);
+		$src_endpoint_dir_temp = $epm->buildPath($this->tmpdir, $endpoint_dir_temp);
+
+		$finder 	= new Finder();
 		$fileSystem = new Filesystem();
-		foreach ($finder->in($this->tmpdir.'/'.$endpoint_dir_data) as $item) {
-			if($item->isDir()) {
-				$fileSystem->mkdir($endpoint_dir_data.'/'.$item->getRelativePathname());
+		foreach ($finder->in($src_endpoint_dir_data) as $item)
+		{
+			$path_item = $epm->buildPath($endpoint_dir_data, $item->getRelativePathname());
+			if($item->isDir())
+			{
+				$fileSystem->mkdir($path_item);
 				continue;
 			}
-			$fileSystem->copy($item->getPathname(), $endpoint_dir_data.'/'.$item->getRelativePathname(), true);
+			$fileSystem->copy($item->getPathname(), $path_item, true);
 		}
 		
-		foreach ($finder->in($this->tmpdir.'/'.$endpoint_dir_temp) as $item) {
-			if($item->isDir()) {
-				$fileSystem->mkdir($endpoint_dir_temp.'/'.$item->getRelativePathname());
+		foreach ($finder->in($src_endpoint_dir_temp) as $item)
+		{
+			$path_item = $epm->buildPath($endpoint_dir_temp, $item->getRelativePathname());
+
+			if($item->isDir())
+			{
+				$fileSystem->mkdir($path_item);
 				continue;
 			}
-			$fileSystem->copy($item->getPathname(), $endpoint_dir_temp.'/'.$item->getRelativePathname(), true);
+			$fileSystem->copy($item->getPathname(), $path_item, true);
 		}
-		
-		
+	}
+
+	private function deleteDirectory($dir)
+	{
+		if (!file_exists($dir)) {
+			return true;
+		}
+	
+		if (!is_dir($dir))
+		{
+			return unlink($dir);
+		}
+	
+		foreach (scandir($dir) as $item)
+		{
+			if ($item == '.' || $item == '..')
+			{
+				continue;
+			}
+			if (! $this->deleteDirectory($dir . DIRECTORY_SEPARATOR . $item))
+			{
+				return false;
+			}
+		}
+		return rmdir($dir);
 	}
 }

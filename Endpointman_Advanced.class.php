@@ -534,9 +534,10 @@ class Endpointman_Advanced
 			} else { $sql_file_list = NULL; }
 
 
-			require_once($this->epm->PHONE_MODULES_PATH . '/setup.php');
-			$class = "endpoint_" . $row['directory'] . "_" . $row['cfg_dir'] . '_phone';
-			$base_class = "endpoint_" . $row['directory'] . '_base';
+			require_once($this->epm->buildPath($this->epm->PHONE_MODULES_PATH, 'setup.php'));
+
+			$class 		  = sprintf("endpoint_%s_%s_phone", $row['directory'], $row['cfg_dir']);
+			$base_class   = sprintf("endpoint_%s_base", $row['directory']);
 			$master_class = "endpoint_base";
 
 			/*********************************************************************************
@@ -622,7 +623,10 @@ class Endpointman_Advanced
 			//TODO: Añadir validacion para ver si $dget['file_name'] esta en el array $config_files
 
 			$filename = $dget['file_name'];
-			$pathfile = $this->epm->PHONE_MODULES_PATH . '/endpoint/' . $row['directory'] . "/" . $row['cfg_dir'] . "/" . $filename;
+
+			
+
+			$pathfile = $this->epm->buildPath($this->epm->PHONE_MODULES_PATH, 'endpoint', $row['directory'], $row['cfg_dir'] , $filename);
 
 
 			if (is_readable($pathfile)) {
@@ -773,8 +777,10 @@ class Endpointman_Advanced
 
 				if ((is_array($config_files)) AND (in_array($dget['file_name'], $config_files)))
 				{
-					$pathdir = $this->epm->PHONE_MODULES_PATH . '/endpoint/' . $row['directory'] . "/" . $row['cfg_dir'] . "/";
-					$pathfile = $pathdir . $dget['file_name'];
+					$pathdir = $this->epm->buildPath($this->epm->PHONE_MODULES_PATH, 'endpoint', $row['directory'], $row['cfg_dir']);
+
+
+					$pathfile = $this->epm->buildPath($pathdir, $dget['file_name']);
 					if ((! file_exists($pathfile)) AND (! is_writable($pathdir))) {
 						$retarr = array("status" => false, "message" => "Directory is not Writable (".$pathdir.")!");
 					}
@@ -889,7 +895,8 @@ class Endpointman_Advanced
 	/**** FUNCIONES SEC MODULO "epm_advanced\manual_upload" ****/
 	public function epm_advanced_manual_upload_list_files_brans_export()
 	{
-		$path_tmp_dir = $this->epm->PHONE_MODULES_PATH."/temp/export/";
+		$path_tmp_dir = $this->epm->buildPath($this->epm->PHONE_MODULES_PATH, 'temp/export');
+
 		$array_list_files = array();
 		$array_count_brand = array();
 
@@ -904,7 +911,7 @@ class Endpointman_Advanced
 				foreach ($l_files as $archivo) {
 					if (in_array($archivo, $array_list_exception)) { continue; }
 
-					$pathandfile = $path_tmp_dir.$archivo;
+					$pathandfile =  $this->epm->buildPath($path_tmp_dir, $archivo);
 					$brand = substr(pathinfo($archivo, PATHINFO_FILENAME), 0, -11);
 					$ftime = substr(pathinfo($archivo, PATHINFO_FILENAME), -10);
 					$datetime = new \DateTime();
@@ -972,7 +979,7 @@ class Endpointman_Advanced
 					out(sprintf(_("Error: %s"), $this->file_upload_error_message($error)));
 				}
 				else {
-					$uploads_dir = $this->epm->PHONE_MODULES_PATH . "/temp";
+					$uploads_dir = $this->epm->buildPath($this->epm->PHONE_MODULES_PATH, 'temp');
 					$name = $_FILES["files"]["name"][$key];
 					$extension = pathinfo($name, PATHINFO_EXTENSION);
 					if ($extension == "tgz") {
@@ -1047,25 +1054,30 @@ class Endpointman_Advanced
 					out(sprintf(_("Error: %s"), $this->file_upload_error_message($error)));
 				}
 				else {
-					$uploads_dir = $this->epm->PHONE_MODULES_PATH . "/temp/export";
+					$uploads_dir = $this->epm->buildPath($this->epm->PHONE_MODULES_PATH, '/temp/export');
+
 					$name = $_FILES["files"]["name"][$key];
 					$extension = pathinfo($name, PATHINFO_EXTENSION);
 					if ($extension == "tgz")
 					{
 						$tmp_name = $_FILES["files"]["tmp_name"][$key];
-						$uploads_dir_file = $uploads_dir."/".$name;
+						$uploads_dir_file = $this->epm->buildPath($uploads_dir, $name);
 						move_uploaded_file($tmp_name, $uploads_dir_file);
 
-						if (file_exists($uploads_dir_file)) {
+						if (file_exists($uploads_dir_file))
+						{
 							outn(_("Extracting Provisioner Package... "));
 							//TODO: Pendiente añadir validacion si exec no da error!!!!
 							exec( sprintf("%s -xvf %s -C %s/", $this->configmod->get("tar_location"), $uploads_dir_file, $uploads_dir) );
 							// exec("tar -xvf ".$uploads_dir_file." -C ".$uploads_dir."/");
 							out(_("Done!"));
 
-							if(!file_exists($this->epm->PHONE_MODULES_PATH."/endpoint")) {
+							
+							$endpoint_dir = $this->epm->buildPath($this->epm->PHONE_MODULES_PATH, 'endpoint');
+							if(!file_exists($endpoint_dir))
+							{
 								outn(_("Creating Provisioner Directory... "));
-								if (mkdir($this->epm->PHONE_MODULES_PATH."/endpoint") == true) {
+								if (mkdir($endpoint_dir) == true) {
 									out(_("Done!"));
 								}
 								else {
@@ -1073,10 +1085,13 @@ class Endpointman_Advanced
 								}
 							}
 
-							if(file_exists($this->epm->PHONE_MODULES_PATH."/endpoint"))
+							if(file_exists($endpoint_dir))
 							{
-								$endpoint_last_mod = filemtime($this->epm->PHONE_MODULES_PATH."/temp/endpoint/base.php");
-								rename($this->epm->PHONE_MODULES_PATH."/temp/endpoint/base.php", $this->epm->PHONE_MODULES_PATH."/endpoint/base.php");
+								$path_file_base_src  = $this->epm->buildPath($this->epm->PHONE_MODULES_PATH, 'temp/endpoint/base.php');
+								$path_file_base_dest = $this->epm->buildPath($this->epm->PHONE_MODULES_PATH, 'endpoint/base.php');
+
+								$endpoint_last_mod = filemtime($path_file_base_src);
+								rename($path_file_base_src, $path_file_base_dest);
 
 								outn(_("Updating Last Modified... "));
 								$sql = "UPDATE endpointman_global_vars SET value = '".$endpoint_last_mod."' WHERE var_name = 'endpoint_vers'";
@@ -1105,7 +1120,7 @@ class Endpointman_Advanced
 		}
 		else {
 			$dget['file_package'] = $_REQUEST['file_package'];
-			$path_tmp_file = $this->epm->PHONE_MODULES_PATH."/temp/export/".$_REQUEST['file_package'];
+			$path_tmp_file = $this->epm->buildPath($this->epm->PHONE_MODULES_PATH, 'temp/export', $_REQUEST['file_package']);
 
 			if (! file_exists($path_tmp_file)) {
 				header('HTTP/1.0 404 Not Found', true, 404);
@@ -1151,12 +1166,20 @@ class Endpointman_Advanced
 				outn(sprintf(_("Exporting %s ... "), $row['name']));
 
 				//TODO:Añadir validacion de si se ha creado el dire correctamente!!!!
-				if(!file_exists($this->epm->PHONE_MODULES_PATH."/temp/export/")) {
-					mkdir($this->epm->PHONE_MODULES_PATH."/temp/export/");
+				$path_tmp_export = $this->epm->buildPath($this->epm->PHONE_MODULES_PATH, 'temp/export');
+
+				if(!file_exists($path_tmp_export)) {
+					mkdir($path_tmp_export);
 				}
 				$time = time();
 				//TODO: Pendiente validar si exec no retorna error!!!!!
-				exec( sprintf("%s zcf %s/temp/export/%s-%s.tgz --exclude .svn --exclude .git --exclude firmware -C %s/endpoint %s", $this->configmod->get("tar_location"), $this->epm->PHONE_MODULES_PATH, $row['directory'], $time, $this->epm->PHONE_MODULES_PATH, $row['directory']) );
+				exec( sprintf("%s zcf %s --exclude .svn --exclude .git --exclude firmware -C %s %s",
+						$this->configmod->get("tar_location"), 
+						$this->epm->buildPath($this->epm->PHONE_MODULES_PATH, 'temp/export', sprintf("%s-%s.tgz", $row['directory'], $time)), 
+						$this->epm->buildPath($this->epm->PHONE_MODULES_PATH, 'endpoint'), 
+						$row['directory']
+					)
+				);
 				// exec("tar zcf ".$this->epm->PHONE_MODULES_PATH."/temp/export/".$row['directory']."-".$time.".tgz --exclude .svn --exclude firmware -C ".$this->epm->PHONE_MODULES_PATH."/endpoint ".$row['directory']);
 				out(_("Done!") . "<br />");
 

@@ -17,7 +17,7 @@
 						</div>
 						<div class="col-md-9">
 							<div class="input-group">
-      							<input type="text" class="form-control" placeholder="<? _('Server PBX...') ?>" id="srvip" name="srvip" value="<?= $config['srvip'] ?>">
+      							<input type="text" class="form-control" placeholder="<?= _('Server PBX...') ?>" id="srvip" name="srvip" value="<?= $config['srvip'] ?>">
       							<span class="input-group-append">
         							<button class="btn btn-default" type="button" id='autodetect' onclick="epm_advanced_tab_setting_input_value_change_bt('#srvip', sValue = '<?= $_SERVER["SERVER_ADDR"] ?>', bSaveChange = true);"><i class='fa fa-search'></i> <?= _("Use me!")?></button>
       							</span>

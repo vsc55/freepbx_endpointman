@@ -129,7 +129,7 @@ class Endpointman extends FreePBX_Helpers implements BMO {
 
 
         //Define the location of phone modules, keeping it outside of the module directory so that when the user updates endpointmanager they don't lose all of their phones
-		$this->PHONE_MODULES_PATH = $this->MODULES_PATH . "/_ep_phone_modules";
+		$this->PHONE_MODULES_PATH = $this->buildPath($this->MODULES_PATH, '_ep_phone_modules');
 
 // if(!defined("PHONE_MODULES_PATH")) {
 // 	define("PHONE_MODULES_PATH", $this->PHONE_MODULES_PATH);
@@ -158,6 +158,10 @@ class Endpointman extends FreePBX_Helpers implements BMO {
 		if (!file_exists($this->PHONE_MODULES_PATH . "/temp/provisioner"))
 		{
 			mkdir($this->PHONE_MODULES_PATH . "/temp/provisioner", 0775, true);
+		}
+		if (!file_exists($this->PHONE_MODULES_PATH . "/temp/export"))
+		{
+			mkdir($this->PHONE_MODULES_PATH . "/temp/export", 0775, true);
 		}
 
 
@@ -1204,7 +1208,7 @@ class Endpointman extends FreePBX_Helpers implements BMO {
 							{
 								if ($this->has_git())
 								{
-									if (!file_exists($this->PHONE_MODULES_PATH . '/.git')) {
+									if (!file_exists($this->buildPath($this->PHONE_MODULES_PATH, '.git'))) {
 										$o = getcwd();
 										chdir(dirname($this->PHONE_MODULES_PATH));
 										$this->rmrf($this->PHONE_MODULES_PATH);
@@ -1220,7 +1224,7 @@ class Endpointman extends FreePBX_Helpers implements BMO {
 							}
 							else
 							{
-								if (file_exists($this->PHONE_MODULES_PATH . '/.git'))
+								if (file_exists($this->buildPath($this->PHONE_MODULES_PATH, '.git')))
 								{
 									$this->rmrf($this->PHONE_MODULES_PATH);
 
@@ -1536,8 +1540,13 @@ class Endpointman extends FreePBX_Helpers implements BMO {
 				break;
 
 			case "upload_master_xml":
-				if (file_exists($this->PHONE_MODULES_PATH."/temp/master.xml")) {
-					$handle = fopen($this->PHONE_MODULES_PATH."/temp/master.xml", "rb");
+
+
+				$file_xml_tmp  = $this->buildPath($this->PHONE_MODULES_PATH, 'temp', 'master.xml');
+				$file_xml_dest = $this->buildPath($this->PHONE_MODULES_PATH, 'master.xml');
+
+				if (file_exists($file_xml_tmp)) {
+					$handle = fopen($file_xml_tmp, "rb");
 					$contents = stream_get_contents($handle);
 					fclose($handle);
 					@$a = simplexml_load_string($contents);
@@ -1545,7 +1554,7 @@ class Endpointman extends FreePBX_Helpers implements BMO {
 						echo "Not a valid xml file";
 						break;
 					} else {
-						rename($this->PHONE_MODULES_PATH."/temp/master.xml", $this->PHONE_MODULES_PATH."/master.xml");
+						rename($file_xml_tmp, $file_xml_dest);
 						echo "Move Successful<br />";
 						$this->update_check();
 						echo "Updating Brands<br />";
@@ -1566,7 +1575,13 @@ class Endpointman extends FreePBX_Helpers implements BMO {
 
 
 
-
+	/**
+	 * Checks if a value exists in a multidimensional array recursively.
+	 *
+	 * @param mixed $needle The value to search for.
+	 * @param array $haystack The array to search in.
+	 * @return bool Returns true if the value is found, false otherwise.
+	 */
 	public static function in_array_recursive($needle, $haystack)
 	{
         $it = new \RecursiveIteratorIterator(new \RecursiveArrayIterator($haystack));
@@ -1580,6 +1595,12 @@ class Endpointman extends FreePBX_Helpers implements BMO {
         return FALSE;
     }
 
+	/**
+	 * Finds the specified executable file.
+	 *
+	 * @param string $exec The name of the executable file to find.
+	 * @return string|null The full path of the executable file if found, or null if not found.
+	 */
 	public static function find_exec($exec)
 	{
 		$data_return = trim($exec);
@@ -1607,6 +1628,14 @@ class Endpointman extends FreePBX_Helpers implements BMO {
 		return $data_return;
 	}
 
+	/**
+	 * Formats the given text with the specified CSS class and replaces any specified text.
+	 *
+	 * @param string $texto The text to be formatted.
+	 * @param string $css_class The CSS class to be applied to the formatted text.
+	 * @param array $remplace_txt An array of text replacements to be made in the formatted text.
+	 * @return string The formatted text wrapped in a paragraph tag with the specified CSS class.
+	 */
 	function format_txt($texto = "", $css_class = "", $remplace_txt = array())
 	{
 		if (count($remplace_txt) > 0)
@@ -1619,6 +1648,19 @@ class Endpointman extends FreePBX_Helpers implements BMO {
 		return sprintf('<p class="%s">%s</p>', $css_class, $texto);
 	}
 
+	/**
+	 * Generates an XML string from an array or object.
+	 *
+	 * This function recursively converts an array or object into an XML string.
+	 * It uses the provided node name to create XML tags for each element.
+	 * Numeric keys are replaced with the provided node name.
+	 * The generated XML string is indented using tabs.
+	 *
+	 * @param array|object $array The array or object to convert to XML.
+	 * @param string $node_name The name of the XML node.
+	 * @param int $tab The current indentation level (default: -1).
+	 * @return string The generated XML string.
+	 */
 	function generate_xml_from_array ($array, $node_name, &$tab = -1)
 	{
 		$tab++;
@@ -1647,10 +1689,12 @@ class Endpointman extends FreePBX_Helpers implements BMO {
 
 
 	/**
-     * Reads a file. Json decodes it and will report any errors back
-     * @param string $file location of file
-     * @return mixed return false or generate Exception on error, array on success
-     */
+	 * Converts a file to JSON format and returns the decoded data.
+	 *
+	 * @param string $file The path to the file.
+	 * @return mixed The decoded data from the file.
+	 * @throws \Exception If there is an error while decoding the JSON or if the file cannot be found.
+	 */
     public function file2json($file)
 	{
         if (file_exists($file))
@@ -1698,11 +1742,34 @@ class Endpointman extends FreePBX_Helpers implements BMO {
     }
 
 
+	/**
+	 * Builds a URL by concatenating multiple path segments.
+	 *
+	 * @param string ...$paths The path segments to concatenate.
+	 * @return string The concatenated path.
+	 */
+	public function buildUrl(...$paths)
+	{
+		$paths = array_filter($paths, fn($path) => !empty($path));
+		$paths = array_map(fn($path) => trim($path, "/"), $paths);
+		$path = implode("/", $paths);
+		return $path;
+    }
 
 
-
-
-
+	/**
+	 * Builds a path by concatenating multiple path segments.
+	 *
+	 * @param string ...$paths The path segments to concatenate.
+	 * @return string The concatenated path.
+	 */
+	public function buildPath(...$paths)
+	{
+		$paths = array_filter($paths, fn($path) => !empty($path));
+		$paths = array_map(fn($path) => trim($path, DIRECTORY_SEPARATOR), $paths);
+		$path = implode(DIRECTORY_SEPARATOR, $paths);
+		return $path;
+    }
 
 
 
@@ -1772,19 +1839,22 @@ class Endpointman extends FreePBX_Helpers implements BMO {
         return($temp);
     }
 
-	function has_git() {
+	/**
+	 * Checks if Git is installed on the system.
+	 *
+	 * @return string|false The path to Git executable if Git is installed, false otherwise.
+	 */
+	public function has_git()
+	{
         exec('which git', $output);
-
         $git = file_exists($line = trim(current($output))) ? $line : 'git';
-
         unset($output);
 
         exec($git . ' --version', $output);
-
         preg_match('#^(git version)#', current($output), $matches);
 
-        return!empty($matches[0]) ? $git : false;
-        echo!empty($matches[0]) ? 'installed' : 'nope';
+        return !empty($matches[0]) ? $git : false;
+        echo !empty($matches[0]) ? 'installed' : 'nope';
     }
 
 	function tftp_check() {

@@ -13,15 +13,19 @@ class Backup Extends Base\BackupBase
 			'settings' => $this->dumpAdvancedSettings()
 		]);
 		*/
-		$dirs = [];
-		$varlibdir = $this->FreePBX->Endpointman->PHONE_MODULES_PATH;
-		$iterator = new RecursiveDirectoryIterator($varlibdir.'endpoint', RecursiveDirectoryIterator::SKIP_DOTS);
+		$dirs 				= [];
+		$epm 			 	= $this->FreePBX->Endpointman;
+		$location_endpoint	= $epm->buildPath($epm->PHONE_MODULES_PATH, "endpoint");
+		$location_temp		= $epm->buildPath($epm->PHONE_MODULES_PATH, "temp");
+
+		$iterator = new RecursiveDirectoryIterator($location_endpoint, RecursiveDirectoryIterator::SKIP_DOTS);
 		foreach (new RecursiveIteratorIterator($iterator) as $file)
 		{
 			$dirs[] = $file->getPath();
 			$this->addFile($file->getBasename(), $file->getPath(), '', "endpoint");
 		}
-		$iterator = new RecursiveDirectoryIterator($varlibdir.'temp', RecursiveDirectoryIterator::SKIP_DOTS);
+
+		$iterator = new RecursiveDirectoryIterator($location_temp, RecursiveDirectoryIterator::SKIP_DOTS);
 		foreach (new RecursiveIteratorIterator($iterator) as $file)
 		{
 			$dirs[] = $file->getPath();
