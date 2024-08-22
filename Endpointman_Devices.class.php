@@ -62,11 +62,9 @@ class Endpointman_Devices
 		return $retarr;
 	}
 	
-	public function doConfigPageInit($module_tab = "", $command = "") {
-		
-	}
+	public function doConfigPageInit($module_tab = "", $command = "") { }
 	
-	public function getRightNav($request) {
+	public function getRightNav($request, $params = array()) {
 		return "";
 	}
 	

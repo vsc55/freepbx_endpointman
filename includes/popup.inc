@@ -17,7 +17,7 @@ if($_REQUEST['pop_type'] == 'edit_specifics') {
         $sql = 'SELECT max_lines FROM endpointman_model_list WHERE id = '. $phone_info['model_id'];
 
         $lines = $endpoint->eda->sql($sql, 'getOne');
-        $merged = $endpoint->merge_data(PHONE_MODULES_PATH . 'endpoint/', $template_list,$lines);
+        $merged = $endpoint->epm->merge_data(PHONE_MODULES_PATH . 'endpoint/', $template_list,$lines, false);
 
         //remove stuff that is meaningless in this context
         unset($merged['data']['globals']['globals']['option|mac']);

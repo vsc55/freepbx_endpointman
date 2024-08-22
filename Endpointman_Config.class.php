@@ -14,6 +14,9 @@ class Endpointman_Config
 {
 	public $UPDATE_PATH;
 	public $PROVISIONER_BASE;
+	public $error = array (
+		'file2json' => '',
+	);
 
 	public function __construct($epm)
 	{
@@ -140,7 +143,7 @@ class Endpointman_Config
 		}
 	}
 
-	public function getRightNav($request) {
+	public function getRightNav($request, $params = array()) {
 		return "";
 	}
 
@@ -676,10 +679,23 @@ class Endpointman_Config
 			$data = $stmt->rowCount() === 0 ? null : $stmt->fetch(\PDO::FETCH_ASSOC);
 
 			//TODO: Comment download update_status becouse not exist in repostitory GitHub and Set 0 becouse not existe Pakage File in repositopry.
-            $contents = file_get_contents($this->UPDATE_PATH . "/update_status");
-			// $contents = 0;
+            
 			
-            if ($contents != '1') {
+			try
+			{
+				$contents = file_get_contents($this->UPDATE_PATH . "/update_status");
+				if ($contents === FALSE)
+				{
+					throw new \Exception(_("The stream could not be opened: the requested url was not found or there was a problem with the request."));
+				}
+			} catch (\Exception $e)
+			{
+				// dbug("Error: " . $e->getMessage());
+				$contents = -1;
+			}
+			
+            if ($contents == '0')
+			{
                 if (($data == "") OR ($data <= $endpoint_last_mod))
 				{
 					//TODO: ERROR Pakage file not exist in repository GitHub.
@@ -689,11 +705,13 @@ class Endpointman_Config
                     	if ($echomsg == true ) {
                     		out($error['brand_update_check_json']);
                     	}
-                    } else {
+                    }
+					else
+					{
 						exec( sprintf("%s -xvf %s%s -C %s", $this->configmod->get("tar_location"), $temp_location, $endpoint_package, $temp_location) );
 						// exec("tar -xvf " . $temp_location . $endpoint_package . " -C " . $temp_location);
                         if (!file_exists($this->epm->PHONE_MODULES_PATH . "/endpoint")) {
-                            mkdir($this->epm->PHONE_MODULES_PATH . "/endpoint");
+                            mkdir($this->epm->PHONE_MODULES_PATH . "/endpoint", 0775, true);
                         }
 
                         //TODO: Automate this somehow...
@@ -825,10 +843,13 @@ class Endpointman_Config
                             $key = $key[0];
                             $brand_name = $ava_brands['directory'];
                             //TODO: This seems old
-                            if ($ava_brands['cfg_ver'] < $version[$brand_name]) {
+                            if (!empty($version) && !empty($version[$brand_name]) && $ava_brands['cfg_ver'] < $version[$brand_name])
+							{ 
                                 $out[$key]['update'] = 1;
                                 $out[$key]['update_vers'] = $version[$brand_name];
-                            } else {
+                            }
+							else
+							{
                                 $out[$key]['update'] = NULL;
                             }
                         }
@@ -840,8 +861,16 @@ class Endpointman_Config
                 	}
                 }
                 return $out;
-            } else {
-            	$error['remote_server'] = _("Error: The Remote Server Is Currently Syncing With the Master Server, Please try again later");
+            }
+			else
+			{
+				if ($contents == -1)
+				{
+					$error['remote_server'] = _("Error: The Remote server did not return any status information, Please try again later");
+				}
+				else {
+					$error['remote_server'] = _("Error: The Remote Server Is Currently Syncing With the Master Server, Please try again later");
+				}
             	if ($echomsg == true ) {
             		out($error['remote_server']);
             	}
@@ -1024,7 +1053,7 @@ class Endpointman_Config
             sql($sql);
 
             $template_data_array = array();
-            $template_data_array = $this->merge_data($this->epm->PHONE_MODULES_PATH . '/endpoint/' . $brand_row['directory'] . '/' . $product_row['cfg_dir'] . '/', $template_list_array);
+            $template_data_array = $this->merge_data($this->epm->PHONE_MODULES_PATH . '/endpoint/' . $brand_row['directory'] . '/' . $product_row['cfg_dir'] . '/', $template_list_array, true, true);
 
             $sql = "UPDATE endpointman_model_list SET template_data = '" . serialize($template_data_array) . "' WHERE id = '" . $model . "'";
             sql($sql);
@@ -1048,7 +1077,7 @@ class Endpointman_Config
 			if (!file_exists($temp_directory))
 			{
 				out(_("Creating EPM temp directory..."));
-				if (! mkdir($temp_directory))
+				if (! @mkdir($temp_directory, 0775, true))
 				{
 					out(sprintf(_("Error: Failed to create the directory '%s', please Check Permissions!"), $temp_directory));
 					return false;
@@ -1170,7 +1199,7 @@ class Endpointman_Config
 
                 if (!file_exists($local_brand_location))
 				{
-                    mkdir($local_brand_location);
+                    mkdir($local_brand_location, 0775, true);
                 }
 
                 $dir_iterator = new \RecursiveDirectoryIterator($temp_directory . $directory . "/");
@@ -1264,16 +1293,22 @@ class Endpointman_Config
                     $data = sql("SELECT id FROM endpointman_product_list WHERE id='" . $brand_id . $family_line_xml['data']['id'] . "'", 'getOne');
                     $short_name = preg_replace("/\[(.*?)\]/si", "", $family_line_xml['data']['name']);
 
-					dbug($family_line_xml);
 					if ($data) {
 						if ($this->configmod->get('debug')) echo "-Updating Family ".$short_name."<br/>";
                         $sql = "UPDATE endpointman_product_list SET short_name = '" . str_replace("'", "''", $short_name) . "', long_name = '" . str_replace("'", "''", $family_line_xml['data']['name']) . "', cfg_ver = '" . $family_line_xml['data']['version'] . "', config_files='" . $family_line_xml['data']['configuration_files'] . "' WHERE id = '" . $brand_id . $family_line_xml['data']['id'] . "'";
                     }
 					else {
 						if ($this->configmod->get('debug')) echo "-Inserting Family ".$short_name."<br/>";
-                        $sql = "INSERT INTO endpointman_product_list (`id`, `brand`, `short_name`, `long_name`, `cfg_dir`, `cfg_ver`, `config_files`, `hidden`) VALUES ('" . $brand_id . $family_line_xml['data']['id'] . "', '" . $brand_id . "', '" . str_replace("'", "''", $short_name) . "', '" . str_replace("'", "''", $family_line_xml['data']['name']) . "', '" . $family_line_xml['data']['directory'] . "', '" . $family_line_xml['data']['last_modified'] . "','" . $family_line_xml['data']['configuration_files'] . "', '0')";
+                        $sql = sprintf("INSERT INTO endpointman_product_list (`id`, `brand`, `short_name`, `long_name`, `cfg_dir`, `cfg_ver`, `config_files`, `hidden`) VALUES ('%s', '%s', '%s', '%s', '%s', '%s','%s', '0')",
+						$brand_id . $family_line_xml['data']['id'], 
+						$brand_id,
+						str_replace("'", "''", $short_name),
+						str_replace("'", "''", $family_line_xml['data']['name']),
+						$family_line_xml['data']['directory'],
+						$family_line_xml['data']['last_modified'],
+						$family_line_xml['data']['configuration_files']
+						);
                     }
-					dbug($sql);
 					sql($sql);
 
 
@@ -1380,11 +1415,11 @@ out(_("Old Data Detected! Migrating ... "));
 
 	                        $m_data = sql("SELECT id FROM endpointman_model_list WHERE id='" . $brand_id . $family_line_xml['data']['id'] . $model_list['id'] . "'", 'getOne');
 	                        if ($m_data) {
-if ($this->configmod->get('debug')) echo format_txt(_("---Updating Model %_NAMEMOD_%"), "", array("%_NAMEMOD_%" => $model_list['model']));
+if ($this->configmod->get('debug')) echo $this->epm->format_txt(_("---Updating Model %_NAMEMOD_%"), "", array("%_NAMEMOD_%" => $model_list['model']));
 	                            $sql = "UPDATE endpointman_model_list SET max_lines = '" . $model_list['lines'] . "', model = '" . $model_list['model'] . "', template_list = '" . $template_list . "' WHERE id = '" . $brand_id . $family_line_xml['data']['id'] . $model_list['id'] . "'";
 	                        }
 							else {
-if ($this->configmod->get('debug')) echo format_txt(_("---Inserting Model %_NAMEMOD_%"), "", array("%_NAMEMOD_%" => $model_list['model']));
+if ($this->configmod->get('debug')) echo $this->epm->format_txt(_("---Inserting Model %_NAMEMOD_%"), "", array("%_NAMEMOD_%" => $model_list['model']));
 	                            $sql = "INSERT INTO endpointman_model_list (`id`, `brand`, `model`, `max_lines`, `product_id`, `template_list`, `enabled`, `hidden`) VALUES ('" . $brand_id . $family_line_xml['data']['id'] . $model_list['id'] . "', '" . $brand_id . "', '" . $model_list['model'] . "', '" . $model_list['lines'] . "', '" . $brand_id . $family_line_xml['data']['id'] . "', '" . $template_list . "', '0', '0')";
 	                        }
 	                        sql($sql);
@@ -1528,7 +1563,7 @@ if ($this->configmod->get('debug')) echo format_txt(_("---Inserting Model %_NAME
 
         if ($json_data['data']['firmware_ver'] > $row['firmware_vers']) {
             if (!file_exists($temp_directory)) {
-                mkdir($temp_directory);
+                mkdir($temp_directory, 0775, true);
             }
             $md5_xml = $json_data['data']['firmware_md5sum'];
             $firmware_pkg = $json_data['data']['firmware_pkg'];
@@ -1707,141 +1742,233 @@ if ($this->configmod->get('debug')) echo format_txt(_("---Inserting Model %_NAME
      * Reads a file. Json decodes it and will report any errors back
      * @param string $file location of file
      * @return mixed false on error, array on success
-     * @version 2.11
      */
-    function file2json($file) {
-        if (file_exists($file)) {
+    public function file2json($file)
+	{
+        if (file_exists($file))
+		{
             $json = file_get_contents($file);
             $data = json_decode($json, TRUE);
-            if(function_exists('json_last_error')) {
-                switch (json_last_error()) {
-                    case JSON_ERROR_NONE:
-                        return($data);
-                        break;
-                    case JSON_ERROR_DEPTH:
-                        $this->error['file2json'] = _('Maximum stack depth exceeded');
-                        break;
-                    case JSON_ERROR_STATE_MISMATCH:
-                        $this->error['file2json'] = _('Underflow or the modes mismatch');
-                        break;
-                    case JSON_ERROR_CTRL_CHAR:
-                        $this->error['file2json'] = _('Unexpected control character found');
-                        break;
-                    case JSON_ERROR_SYNTAX:
-                        $this->error['file2json'] = _('Syntax error, malformed JSON');
-                        break;
-                    case JSON_ERROR_UTF8:
-                        $this->error['file2json'] = _('Malformed UTF-8 characters, possibly incorrectly encoded');
-                        break;
-                    default:
-                        $this->error['file2json'] = _('Unknown error');
-                        break;
-                }
-                return(false);
-            } else {
-                //Probably an older version of PHP. That's ok though
-                return($data);
-            }
-        } else {
-            $this->error['file2json'] = _('Cant find file:').' '.$file ;
-            return(false);
+			$data_return = false;
+
+			switch (json_last_error())
+			{
+				case JSON_ERROR_NONE:
+					$data_return = $data;
+					break;
+
+				case JSON_ERROR_DEPTH:
+					$this->error['file2json'] = _('Maximum stack depth exceeded');
+					// throw new \Exception(_('Maximum stack depth exceeded'));
+					break;
+
+				case JSON_ERROR_STATE_MISMATCH:
+					$this->error['file2json'] = _('Underflow or the modes mismatch');
+					// throw new \Exception(_('Underflow or the modes mismatch'));
+					break;
+
+				case JSON_ERROR_CTRL_CHAR:
+					$this->error['file2json'] = _('Unexpected control character found');
+					// throw new \Exception(_('Unexpected control character found'));
+					break;
+
+				case JSON_ERROR_SYNTAX:
+					$this->error['file2json'] = _('Syntax error, malformed JSON');
+					// throw new \Exception(_('Syntax error, malformed JSON'));
+					break;
+
+				case JSON_ERROR_UTF8:
+					$this->error['file2json'] = _('Malformed UTF-8 characters, possibly incorrectly encoded');
+					// throw new \Exception(_('Malformed UTF-8 characters, possibly incorrectly encoded'));
+					break;
+
+				default:
+					$this->error['file2json'] = _('Unknown error');
+					// throw new \Exception(_('Unknown error'));
+					break;
+			}
         }
+		else
+		{
+            $this->error['file2json'] = sprintf(_('Cant find file: %s'), $file);
+        }
+		return $data_return;
     }
 
 
+	/**
+	 * Merges data from JSON files into a structured array based on category and subcategory data.
+	 * This function processes each file specified in the template list, extracting and organizing 
+	 * data according to its defined structure. It handles various item types within subcategories,
+	 * applies transformations to loop structures, and aggregates final results into a comprehensive array.
+	 * Errors during processing are collected and can be output or handled based on parameters.
+	 *
+	 * @param string $path The base path where the JSON files are located.
+	 * @param array $template_list An array of filenames (relative to the base path) to process.
+	 * @param int $maxlines The maximum number of lines to process in 'loop_line_options' type items.
+	 * @param bool $show_error Determines whether to output errors.
+	 * @param bool $show_error_mode_out Determines the mode of error output; `true` will use the `out()` function, `false` will use `echo`.
+	 * @return array Returns a nested array of processed data categorized by 'category' and 'subcategory' names.
+	 * @note Errors related to file existence, JSON decoding, and data structure validations are handled internally and reported as part of the function's error management system.
+	 */	
+	public function merge_data($path, $template_list, $maxlines = 12, $show_error = true, $show_error_mode_out = true)
+	{
+		$data  = array();
+		$errors = [];
 
-
-
-
-	function merge_data($path, $template_list, $maxlines = 12) {
-    	//TODO: fix
-    	foreach ($template_list as $files_data) {
+    	foreach ($template_list as $files_data)
+		{
     		$full_path = $path . $files_data;
-    		if (file_exists($full_path)) {
-    			$temp_files_data = $this->file2json($full_path);
-    			foreach ($temp_files_data['template_data']['category'] as $category) {
-    				$category_name = $category['name'];
-    				foreach ($category['subcategory'] as $subcategory) {
-    					$subcategory_name = $subcategory['name'];
-    					$items_fin = array();
-    					$items_loop = array();
-    					$break_count = 0;
-    					foreach ($subcategory['item'] as $item) {
-    						switch ($item['type']) {
-    							case 'loop_line_options':
-    								for ($i = 1; $i <= $maxlines; $i++) {
-    									$var_nam = "lineloop|line_" . $i;
-    									foreach ($item['data']['item'] as $item_loop) {
-    										if ($item_loop['type'] != 'break') {
-    											$z = str_replace("\$", "", $item_loop['variable']);
-    											$items_loop[$var_nam][$z] = $item_loop;
-    											$items_loop[$var_nam][$z]['description'] = str_replace('{$count}', $i, $items_loop[$var_nam][$z]['description']);
-    											$items_loop[$var_nam][$z]['default_value'] = $items_loop[$var_nam][$z]['default_value'];
-    											$items_loop[$var_nam][$z]['default_value'] = str_replace('{$count}', $i, $items_loop[$var_nam][$z]['default_value']);
-    											$items_loop[$var_nam][$z]['line_loop'] = TRUE;
-    											$items_loop[$var_nam][$z]['line_count'] = $i;
-    										} elseif ($item_loop['type'] == 'break') {
-    											$items_loop[$var_nam]['break_' . $break_count]['type'] = 'break';
-    											$break_count++;
-    										}
-    									}
-    								}
-    								$items_fin = array_merge($items_fin, $items_loop);
-    								break;
-    							case 'loop':
-    								for ($i = $item['loop_start']; $i <= $item['loop_end']; $i++) {
-    									$name = explode("_", $item['data']['item'][0]['variable']);
-    									$var_nam = "loop|" . str_replace("\$", "", $name[0]) . "_" . $i;
-    									foreach ($item['data']['item'] as $item_loop) {
-    										if ($item_loop['type'] != 'break') {
-    											$z_tmp = explode("_", $item_loop['variable']);
-    											$z = $z_tmp[1];
-    											$items_loop[$var_nam][$z] = $item_loop;
-    											$items_loop[$var_nam][$z]['description'] = str_replace('{$count}', $i, $items_loop[$var_nam][$z]['description']);
-    											$items_loop[$var_nam][$z]['variable'] = str_replace('_', '_' . $i . '_', $items_loop[$var_nam][$z]['variable']);
-    											$items_loop[$var_nam][$z]['default_value'] = isset($items_loop[$var_nam][$z]['default_value']) ? $items_loop[$var_nam][$z]['default_value'] : '';
-    											$items_loop[$var_nam][$z]['loop'] = TRUE;
-    											$items_loop[$var_nam][$z]['loop_count'] = $i;
-    										} elseif ($item_loop['type'] == 'break') {
-    											$items_loop[$var_nam]['break_' . $break_count]['type'] = 'break';
-    											$break_count++;
-    										}
-    									}
-    								}
-    								$items_fin = array_merge($items_fin, $items_loop);
-    								break;
-    							case 'break':
-    								$items_fin['break|' . $break_count]['type'] = 'break';
-    								$break_count++;
-    								break;
-    							default:
-    								$var_nam = "option|" . str_replace("\$", "", (isset($item['variable'])? $item['variable'] : ""));
-    								$items_fin[$var_nam] = $item;
-    								break;
-    						}
-    					}
-    					if (isset($data['data'][$category_name][$subcategory_name])) {
-    						$old_sc = $data['data'][$category_name][$subcategory_name];
-    						$sub_cat_data[$category_name][$subcategory_name] = array();
-    						$sub_cat_data[$category_name][$subcategory_name] = array_merge($old_sc, $items_fin);
-    					} else {
-    						$sub_cat_data[$category_name][$subcategory_name] = $items_fin;
-    					}
-    				}
-    				if (isset($data['data'][$category_name])) {
-    					$old_c = $data['data'][$category_name];
-    					$new_c = $sub_cat_data[$category_name];
-    					$sub_cat_data[$category_name] = array();
-    					$data['data'][$category_name] = array_merge($old_c, $new_c);
-    				} else {
-    					$data['data'][$category_name] = $sub_cat_data[$category_name];
-    				}
-    			}
-    		}
+
+			try
+			{
+				$temp_files_data = $this->epm->file2json($full_path);
+				if ($temp_files_data === false)
+				{
+					$errors[] = sprintf(_("<b>ERROR:</b> file2json return false for the file '%s'."), $full_path);
+					continue;
+				}
+			}
+			catch (\Exception $e)
+			{
+				$errors[] = sprintf(_("<b>ERROR:</b> %s"), $e->getMessage());
+				continue;
+			}
+
+			if (empty($temp_files_data['template_data']['category']) || !is_array($temp_files_data['template_data']['category']) )
+			{
+				$errors[] = sprintf(_("ERROR: Category in the file <b>'%s'</b> is not array!"), $full_path);
+				continue;
+			}
+
+			foreach ($temp_files_data['template_data']['category'] as $category)
+			{
+				$category_name = $category['name'];
+
+				if (empty($category['subcategory']) || !is_array($category['subcategory']) )
+				{
+					$errors[] = sprintf(_("ERROR: Subcategory <b>'%s'</b> in the file <b>'%s'</b> is not array!"), $category['name'], $full_path);
+					continue;
+				}
+				foreach ($category['subcategory'] as $subcategory)
+				{
+					$subcategory_name = $subcategory['name'] ?? 'Settings';
+					$items_fin 		  = array();
+					$items_loop 	  = array();
+					$break_count 	  = 0;
+					foreach ($subcategory['item'] as $item)
+					{
+						switch ($item['type']) 
+						{
+							case 'loop_line_options':
+								for ($i = 1; $i <= $maxlines; $i++) 
+								{
+									$var_nam = "lineloop|line_" . $i;
+									foreach ($item['data']['item'] as $item_loop)
+									{
+										if ($item_loop['type'] != 'break')
+										{
+											$z = str_replace("\$", "", $item_loop['variable']);
+											$items_loop[$var_nam][$z] 					= $item_loop;
+											$items_loop[$var_nam][$z]['description'] 	= str_replace('{$count}', $i, $items_loop[$var_nam][$z]['description']);
+											$items_loop[$var_nam][$z]['default_value'] 	= $items_loop[$var_nam][$z]['default_value'];
+											$items_loop[$var_nam][$z]['default_value'] 	= str_replace('{$count}', $i, $items_loop[$var_nam][$z]['default_value']);
+											$items_loop[$var_nam][$z]['line_loop'] 		= TRUE;
+											$items_loop[$var_nam][$z]['line_count'] 	= $i;
+										}
+										elseif ($item_loop['type'] == 'break')
+										{
+											$items_loop[$var_nam]['break_' . $break_count]['type'] = 'break';
+											$break_count++;
+										}
+									}
+								}
+								$items_fin = array_merge($items_fin, $items_loop);
+								break;
+
+							case 'loop':
+								for ($i = $item['loop_start']; $i <= $item['loop_end']; $i++)
+								{
+									$name 	 = explode("_", $item['data']['item'][0]['variable']);
+									$var_nam = "loop|" . str_replace("\$", "", $name[0]) . "_" . $i;
+									foreach ($item['data']['item'] as $item_loop)
+									{
+										if ($item_loop['type'] != 'break')
+										{
+											$z_tmp = explode("_", $item_loop['variable'] ?? '');
+											if (count($z_tmp) < 2) {
+												$errors[] = sprintf(_("<b>Skip:</b> Loop Variable <b>'%s'</b> format not valid!"), $item_loop['variable'] ?? '');
+												continue;
+											}
+											$z = $z_tmp[1];
+											$items_loop[$var_nam][$z] 					= $item_loop;
+											$items_loop[$var_nam][$z]['description'] 	= str_replace('{$count}', $i, $items_loop[$var_nam][$z]['description']);
+											$items_loop[$var_nam][$z]['variable'] 		= str_replace('_', '_' . $i . '_', $items_loop[$var_nam][$z]['variable']);
+											$items_loop[$var_nam][$z]['default_value'] 	= isset($items_loop[$var_nam][$z]['default_value']) ? $items_loop[$var_nam][$z]['default_value'] : '';
+											$items_loop[$var_nam][$z]['loop'] 			= TRUE;
+											$items_loop[$var_nam][$z]['loop_count'] 	= $i;
+										}
+										elseif ($item_loop['type'] == 'break')
+										{
+											$items_loop[$var_nam]['break_' . $break_count]['type'] = 'break';
+											$break_count++;
+										}
+									}
+								}
+								$items_fin = array_merge($items_fin, $items_loop);
+								break;
+
+							case 'break':
+								$items_fin['break|' . $break_count]['type'] = 'break';
+								$break_count++;
+								break;
+
+							default:
+								$var_nam = "option|" . str_replace("\$", "", (isset($item['variable'])? $item['variable'] : ""));
+								$items_fin[$var_nam] = $item;
+								break;
+						}
+					}
+					if (isset($data['data'][$category_name][$subcategory_name]))
+					{
+						$old_sc 										 = $data['data'][$category_name][$subcategory_name];
+						$sub_cat_data[$category_name][$subcategory_name] = array();
+						$sub_cat_data[$category_name][$subcategory_name] = array_merge($old_sc, $items_fin);
+					}
+					else
+					{
+						$sub_cat_data[$category_name][$subcategory_name] = $items_fin;
+					}
+				}
+				if (isset($data['data'][$category_name]))
+				{
+					$old_c 						  = $data['data'][$category_name];
+					$new_c 						  = $sub_cat_data[$category_name];
+					$sub_cat_data[$category_name] = array();
+					$data['data'][$category_name] = array_merge($old_c, $new_c);
+				}
+				else
+				{
+					$data['data'][$category_name] = $sub_cat_data[$category_name];
+				}
+			}
     	}
+
+		if ($show_error)
+		{
+			foreach ($errors as $error)
+			{
+				if ($show_error_mode_out)
+				{
+					out($error);
+				}
+				else {
+					echo $error;
+				}
+			}
+		}
+
     	return($data);
     }
 
-
 }
-?>

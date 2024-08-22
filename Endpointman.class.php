@@ -24,50 +24,26 @@ require_once('Endpointman_Advanced.class.php');
 require_once('Endpointman_Templates.class.php');
 require_once('Endpointman_Devices.class.php');
 
-function format_txt($texto = "", $css_class = "", $remplace_txt = array())
-{
-	if (count($remplace_txt) > 0)
-	{
-		foreach ($remplace_txt as $clave => $valor) {
-			$texto = str_replace($clave, $valor, $texto);
-		}
-	}
-	return '<p ' . ($css_class != '' ? 'class="' . $css_class . '"' : '') . '>'.$texto.'</p>';
-}
-
-function generate_xml_from_array ($array, $node_name, &$tab = -1)
-{
-	$tab++;
-	$xml ="";
-	if (is_array($array) || is_object($array)) {
-		foreach ($array as $key=>$value) {
-			if (is_numeric($key)) {
-				$key = $node_name;
-			}
-
-			$xml .= str_repeat("	", $tab). '<' . $key . '>' . "\n";
-			$xml .= generate_xml_from_array($value, $node_name, $tab);
-			$xml .= str_repeat("	", $tab). '</' . $key . '>' . "\n";
-
-		}
-	} else {
-		$xml = str_repeat("	", $tab) . htmlspecialchars($array, ENT_QUOTES) . "\n";
-	}
-	$tab--;
-	return $xml;
-}
-
 #[\AllowDynamicProperties]
 class Endpointman extends FreePBX_Helpers implements BMO {
 
-	//public $epm_config;
+	public $epm_config 	 	 = null;
+	public $epm_advanced 	 = null;
+	public $epm_templates 	 = null;
+	public $epm_devices 	 = null;
+	public $epm_oss 		 = null;
+	public $epm_placeholders = null;
+
 	public $freepbx   = null;
 	public $db		  = null; //Database from FreePBX
 	public $config 	  = null;
 	public $configmod = null;
 	public $system    = null;
 	public $eda       = null; //endpoint data abstraction layer
+	public $astman	  = null;
 	
+	private $endpoint = null;
+
 	// public $tpl; //Template System Object (RAIN TPL)
 
     public $error   = array(); //error construct
@@ -79,9 +55,20 @@ class Endpointman extends FreePBX_Helpers implements BMO {
 	public $PHONE_MODULES_PATH;
 	public $PROVISIONER_BASE;
 
-	private $URL_PROVISIONER = "http://mirror.freepbx.org/provisioner/v3/";
+	
+	// const URL_PROVISIONER = "http://mirror.freepbx.org/provisioner/v3/";
+	const URL_PROVISIONER = "https://raw.githubusercontent.com/billsimon/provisioner/packaging/";
+	
+	const TABLES = array(
+		'devices' 		 	=> 'devices',
+		'epm_line_list'  	=> 'endpointman_line_list',
+		'epm_model_list' 	=> 'endpointman_model_list',
+		'epm_template_list' => 'endpointman_template_list',
+		'epm_product_list'  => 'endpointman_product_list',
+		'epm_mac_list' 		=> 'endpointman_mac_list',
+	);
 
-
+	
 	private $pagedata;
 
 	// final public const ASTERISK_SECTION = 'app-queueprio';
@@ -97,6 +84,7 @@ class Endpointman extends FreePBX_Helpers implements BMO {
 		$this->freepbx 	 = $freepbx;
 		$this->db 		 = $freepbx->Database;
 		$this->config 	 = $freepbx->Config;
+		$this->astman 	 = $freepbx->astman;
 		$this->configmod = new Endpointman\Config();
 		$this->system 	 = new epm_system();
 		$this->eda 		 = new epm_data_abstraction($this);
@@ -149,7 +137,7 @@ class Endpointman extends FreePBX_Helpers implements BMO {
 		
 		if (!file_exists($this->PHONE_MODULES_PATH))
 		{
-			mkdir($this->PHONE_MODULES_PATH, 0775);
+			mkdir($this->PHONE_MODULES_PATH, 0775, true);
 		}
 		if (file_exists($this->PHONE_MODULES_PATH . "/setup.php"))
 		{
@@ -160,6 +148,21 @@ class Endpointman extends FreePBX_Helpers implements BMO {
 			die(_('Endpoint Manager can not create the modules folder!'));
 		}
 		
+
+
+		if (!file_exists($this->PHONE_MODULES_PATH . "/endpoint"))
+		{
+			mkdir($this->PHONE_MODULES_PATH . "/endpoint", 0775, true);
+		}
+
+		if (!file_exists($this->PHONE_MODULES_PATH . "/temp/provisioner"))
+		{
+			mkdir($this->PHONE_MODULES_PATH . "/temp/provisioner", 0775, true);
+		}
+
+
+
+
 
         //Define error reporting
         if (($this->configmod->get('debug')) AND (!isset($_REQUEST['quietmode'])))
@@ -229,9 +232,9 @@ class Endpointman extends FreePBX_Helpers implements BMO {
 	{
 		// ** Allow remote consultation with Postman **
 		// ********************************************
-		// $setting['authenticate'] = false;
-		// $setting['allowremote'] = true;
-		// return true;
+		$setting['authenticate'] = false;
+		$setting['allowremote'] = true;
+		return true;
 		// ********************************************
 
 		$module_sec = isset($_REQUEST['module_sec']) ? trim($_REQUEST['module_sec']) : '';
@@ -265,97 +268,525 @@ class Endpointman extends FreePBX_Helpers implements BMO {
         return false;
     }
 
-    public function ajaxHandler() {
+    public function ajaxHandler()
+	{
+		$request = freepbxGetSanitizedRequest();
 
-		$module_sec = isset($_REQUEST['module_sec']) ? trim($_REQUEST['module_sec']) : '';
-		$module_tab = isset($_REQUEST['module_tab']) ? trim($_REQUEST['module_tab']) : '';
-		$command    = isset($_REQUEST['command'])	 ? trim($_REQUEST['command']) : '';
+		$module_sec = isset($request['module_sec']) ? trim($request['module_sec']) : '';
+		$module_tab = isset($request['module_tab']) ? trim($request['module_tab']) : '';
+		$command    = $request['command'] ?? null;
 
-		if ($command == "")
+		$data_return = false;
+
+		if (empty($command))
 		{
-			return array(
-				"status" => false,
+			$data_return = array(
+				"status"  => false,
 				"message" => _("No command was sent!")
 			);
 		}
-
-		$arrVal['mod_sec'] = array(
-			"epm_devices",
-			"epm_oss",
-			"epm_placeholders",
-			"epm_templates",
-			"epm_config",
-			"epm_advanced"
-		);
-
-		if (! in_array($module_sec, $arrVal['mod_sec'])) {
-			return array("status" => false, "message" => _("Invalid section module!"));
-		}
-
-		switch ($module_sec)
+		else
 		{
-			case "epm_devices":
-				return $this->epm_devices->ajaxHandler($module_tab, $command);
-				break;
+			switch ($module_sec)
+			{
+				case "epm_devices":
+					$data_return = $this->epm_devices->ajaxHandler($module_tab, $command);
+					break;
 
-			case "epm_oss":
-				return $this->epm_oss->ajaxHandler($module_tab, $command);
-				break;
-			case "epm_placeholders":
-				return $this->epm_placeholders->ajaxHandler($module_tab, $command);
-				break;
+				case "epm_oss":
+					$data_return = $this->epm_oss->ajaxHandler($module_tab, $command);
+					break;
+				case "epm_placeholders":
+					$data_return = $this->epm_placeholders->ajaxHandler($module_tab, $command);
+					break;
 
-			case "epm_templates":
-				return $this->epm_templates->ajaxHandler($module_tab, $command);
-				break;
+				case "epm_templates":
+					$data_return = $this->epm_templates->ajaxHandler($module_tab, $command);
+					break;
 
-			case "epm_config":
-				return $this->epm_config->ajaxHandler($module_tab, $command);
-				break;
+				case "epm_config":
+					$data_return = $this->epm_config->ajaxHandler($module_tab, $command);
+					break;
 
-			case "epm_advanced":
-				return $this->epm_advanced->ajaxHandler($module_tab, $command);
-				break;
+				case "epm_advanced":
+					$data_return = $this->epm_advanced->ajaxHandler($module_tab, $command);
+					break;
+
+				case "epm_ajax":
+					$id = $request['id'] ?? null;
+					
+					//Although id == "0" is redundant since emty encompasses it, it is left for better code compression.
+					if(empty($id) or $id == "0")
+					{
+						$data_return = array(
+							0 => array(
+								"optionValue"  => "",
+								"optionDisplay" => ""
+							)
+						);
+					}
+					else
+					{
+						$macid = $request['macid'] ?? null;
+						$mac   = $request['mac'] ?? null;
+
+						switch($command)
+						{
+							case "model":
+								$sql = sprintf("SELECT * FROM %s WHERE enabled = 1 AND brand = %s", self::TABLES['epm_model_list'], $id);
+								break;
+							
+							case "template":
+								$sql = sprintf("SELECT id, name as model FROM  %s WHERE  product_id = '%s'", self::TABLES['epm_template_list'], $id);
+								break;
+
+							case "mtemplate":
+								$sql = sprintf("SELECT id, name as model FROM  %s WHERE  model_id = '%s'", self::TABLES['epm_template_list'], $id);
+								break;
+
+							case "template2":
+								$sql = sprintf(
+									"SELECT DISTINCT etl.id, etl.name as model FROM %s as etl, %s as eml, %s as epl
+									WHERE etl.product_id = eml.product_id AND eml.product_id = epl.id AND eml.id = '%s'",
+									self::TABLES['epm_template_list'], self::TABLES['epm_model_list'], self::TABLES['epm_product_list'], $id
+								);
+								break;
+
+							case "model_clone":
+								$sql = sprintf(
+									"SELECT eml.id, eml.model as model FROM %s as eml, %s as epl
+									WHERE epl.id = eml.product_id AND eml.enabled = 1 AND eml.hidden = 0 AND product_id = '%s'",
+									self::TABLES['epm_model_list'], self::TABLES['epm_product_list'], $id
+								);
+								break;
+
+							case "lines":
+								if(!empty($macid))
+								{
+									$sql = sprintf(
+										"SELECT eml.max_lines FROM %s as eml, %s as ell, %s as emacl
+										WHERE emacl.id = ell.mac_id AND eml.id = emacl.model AND ell.luid = %s",
+										self::TABLES['epm_model_list'], self::TABLES['epm_line_list'], self::TABLES['epm_mac_list'], $macid
+									);
+								}
+								elseif(!empty($mac))
+								{
+									$sql   = sprintf("SELECT id FROM %s WHERE mac = '%s'", self::TABLES['epm_mac_list'], $this->epm_advanced->mac_check_clean($mac));
+									$macid = $this->eda->sql($sql, 'getOne');
+									if($macid)
+									{
+										$mac = $macid;
+										$sql = sprintf(
+											"SELECT eml.max_lines FROM %s as eml, %s as ell, %s as emacl
+											WHERE emacl.id = ell.mac_id AND eml.id = emacl.model AND emacl.id = %s",
+											self::TABLES['epm_model_list'], self::TABLES['epm_line_list'], self::TABLES['epm_mac_list'], $macid
+										);
+									}
+									else
+									{
+										$mac = null;
+										$sql = sprintf("SELECT max_lines FROM %s WHERE id = '%s'", self::TABLES['epm_model_list'], $id);
+									}
+								}
+								else
+								{
+									$sql = sprintf("SELECT max_lines FROM %s WHERE id = '%s'", self::TABLES['epm_model_list'], $id);
+								}
+								break;	
+						}
+
+						switch($command)
+						{
+							case "template":
+							case "template2":
+							case "mtemplate":
+								$out[0]['optionValue'] = 0;
+								$out[0]['optionDisplay'] = _("Custom...");
+								$i=1;
+								break;
+
+							case "model":
+								$out[0]['optionValue'] = 0;
+								$out[0]['optionDisplay'] = "";
+								$i=1;
+								break;
+
+							default:
+								$i=0;
+						}
+
+						
+					
+						$result = array();
+						if(($command == "lines") && (!empty($mac)) && (!empty($macid)))
+						{
+							$count = $this->eda->sql($sql, 'getOne');
+							for($z=0; $z<$count; $z++)
+							{
+								$result[$z] = array(
+									'id' => $z + 1,
+									'model' => $z + 1,
+								);
+							}
+						}
+						elseif(!empty($macid))
+						{
+							$result = $this->linesAvailable($macid);
+						}
+						elseif(!empty($mac))
+						{
+							$result = $this->linesAvailable(NULL, $mac);
+						}
+						else
+						{
+							$result = $this->eda->sql($sql, 'getAll', \PDO::FETCH_ASSOC);
+						}
+
+						$data_return = array();
+						foreach($result as $row)
+						{
+							if((!empty($macid)) OR (!empty($mac)))
+							{
+								$data_return[$i] = array(
+									'optionValue'   => $row['value'],
+									'optionDisplay' => $row['text'],
+								);
+							}
+							else
+							{
+								$data_return[$i] = array(
+									'optionValue'   => $row['id'],
+									'optionDisplay' => $row['model'],
+								);
+							}
+							$i++;
+						}
+					}
+					break;
+
+				default:
+					$data_return = array(
+						"status" => false,
+						"message" => _("Invalid section module!"),
+					);
+			}
 		}
-		return false;
+		return $data_return;
     }
 
-	public static function myDialplanHooks() {
+	public static function myDialplanHooks()
+	{
 		return true;
 	}
 
-	public function doConfigPageInit($page) {
+	public function doDialplanHook(&$ext, $engine, $priority)
+	{
+		global $core_conf;
+
+		if ($engine != "asterisk") { return; }
+
+		// if (isset($core_conf) && is_a($core_conf, "core_conf") && (method_exists($core_conf, 'addSipNotify')))
+		if (isset($core_conf) && $core_conf instanceof core_conf && method_exists($core_conf, 'addSipNotify')) {
+			$sipNotifications = [
+				'polycom-check-cfg' 	 => ['Event' => 'check-sync', 'Content-Length' => '0'],
+				'polycom-reboot' 		 => ['Event' => 'check-sync', 'Content-Length' => '0'],
+				'sipura-check-cfg' 		 => ['Event' => 'resync', 'Content-Length' => '0'],
+				'grandstream-check-cfg'  => ['Event' => 'sys-control'],
+				'cisco-check-cfg' 		 => ['Event' => 'check-sync', 'Content-Length' => '0'],
+				'reboot-snom' 			 => ['Event' => 'reboot', 'Content-Length' => '0'],
+				'aastra-check-cfg' 		 => ['Event' => 'check-sync', 'Content-Length' => '0'],
+				'linksys-cold-restart' 	 => ['Event' => 'reboot_now', 'Content-Length' => '0'],
+				'linksys-warm-restart' 	 => ['Event' => 'restart_now', 'Content-Length' => '0'],
+				'spa-reboot' 			 => ['Event' => 'reboot', 'Content-Length' => '0'],
+				'reboot-yealink' 		 => ['Event' => 'check-sync;reboot=true', 'Content-Length' => '0'],
+				'reboot-gigaset' 		 => ['Event' => 'check-sync;reboot=true', 'Content-Length' => '0'],
+				'panasonic-check-cfg' 	 => ['Event' => 'check-sync', 'Content-Length' => '0'],
+				'snom-check-cfg' 		 => ['Event' => 'check-sync', 'Content-Length' => '0'],
+			];
+		
+			foreach ($sipNotifications as $name => $params)
+			{
+				$core_conf->addSipNotify($name, $params);
+			}
+		}
+	}	
+
+	public static function myGuiHooks()
+	{
+		return array("core");
+	}
+
+	// Called when generating the page
+	public function doGuiHook(&$cc)
+	{
+		$request = freepbxGetSanitizedRequest();
+		$display = $request['display'] 	 ?? '';
+
+		if ($display != "extensions" && $display != "devices")
+		{
+			return;
+		}
+
+
+		$action     = $request['action'] 	 	?? null;
+		$extdisplay = $request['extdisplay'] 	?? null;
+		$tech		= $request['tech_hardware'] ?? null;
+
+		if (!empty($extdisplay))
+		{
+			$sql = sprintf("SELECT tech FROM %s WHERE id = %s", self::TABLES['devices'], $extdisplay);
+			// $tech = $this->endpoint->eda->sql($sql, 'getOne');
+			$tech = $this->eda->sql($sql, 'getOne');
+		}
+
+		$extension_address = $this->astman->database_get("SIP", "Registry/".$extdisplay);
+		$extension_address = explode(":", $extension_address);
+		// echo $extension_address['0'];
+
+		if (in_array($tech, array('sip', 'pjsip', 'sip_generic')))
+		{
+			// Don't display this stuff it it's on a 'This xtn has been deleted' page.
+			if ($action != 'del')
+			{
+				$section = _('End Point Manager');
+
+				$js = "
+					$.ajaxSetup({ cache: false });
+					$.ajax({
+						url: window.FreePBX.ajaxurl,
+						type: 'POST',
+						data: {
+							module: 'endpointman',
+							module_sec: 'epm_ajax',
+							module_tab: '',
+							command: 'model',
+							id: value
+						},
+						dataType: 'json',
+						error: function(xhr, ajaxOptions, thrownError) {
+							fpbxToast('"._('ERROR AJAX:')." ' + thrownError,'ERROR (' + xhr.status + ')!','error');
+							return false;
+						},
+						success: function(j) {
+							var options = '';
+							for (var i = 0; i < j.length; i++) {
+								options += sprintf('<option value=\"%s\">%s</option>', j[i].optionValue, j[i].optionDisplay);
+							}
+							$('#epm_model').html(options);
+							$('#epm_model option:first').attr('selected', 'selected');
+							$('#epm_temps').html('<option></option>');
+							$('#epm_temps option:first').attr('selected', 'selected');
+							$('#epm_line').html('<option></option>');
+							$('#epm_line option:first').attr('selected', 'selected');
+						}
+					});
+				";
+				$cc->addjsfunc('brand_change(value)', $js);
+				unset($js);
+
+				// $sql = sprintf("SELECT mac_id, luid, line FROM %s WHERE ext = '%s'", self::TABLES['epm_line_list'], $extdisplay);
+				// $line_info = $this->endpoint->eda->sql($sql, 'getRow', \PDO::FETCH_ASSOC);
+				
+				$sql = sprintf("SELECT * FROM %s WHERE ext = '%s'", self::TABLES['epm_line_list'], $extdisplay);
+				$line_info = $this->eda->sql($sql, 'getRow', \PDO::FETCH_ASSOC);
+				if ($line_info)
+				{
+					$js = "
+						$.ajaxSetup({ cache: false });
+						$.ajax({
+							url: window.FreePBX.ajaxurl,
+							type: 'POST',
+							data: {
+								module: 'endpointman',
+								module_sec: 'epm_ajax',
+								module_tab: '',
+								command: 'template2',
+								id: value
+							},
+							dataType: 'json',
+							error: function(xhr, ajaxOptions, thrownError) {
+								fpbxToast('"._('ERROR AJAX:')." ' + thrownError,'ERROR (' + xhr.status + ')!','error');
+								return false;
+							},
+							success: function(j) {
+								var options = '';
+								for (var i = 0; i < j.length; i++) {
+									options += sprintf('<option value=\"%s\">%s</option>', j[i].optionValue, j[i].optionDisplay);
+								}
+								$('#epm_temps').html(options);
+								$('#epm_temps option:first').attr('selected', 'selected');
+							}
+						});
+
+						$.ajaxSetup({ cache: false });
+						$.ajax({
+							url: window.FreePBX.ajaxurl,
+							type: 'POST',
+							data: {
+								module: 'endpointman',
+								module_sec: 'epm_ajax',
+								module_tab: '',
+								macid: macid,
+								command: 'lines',
+								id: value
+							},
+							dataType: 'json',
+							error: function(xhr, ajaxOptions, thrownError) {
+								fpbxToast('"._('ERROR AJAX:')." ' + thrownError,'ERROR (' + xhr.status + ')!','error');
+								return false;
+							},
+							success: function(j) {
+								var options = '';
+								for (var i = 0; i < j.length; i++) {
+									options += sprintf('<option value=\"%s\">%s</option>', j[i].optionValue, j[i].optionDisplay);
+								}
+								$('#epm_line').html(options);
+								$('#epm_line option:first').attr('selected', 'selected');
+							}
+						});
+					";
+					$cc->addjsfunc('model_change(value,macid)', $js);
+					unset($js);
+
+					$info = $this->endpoint->get_phone_info($line_info['mac_id']);
+
+					$brand_list = $this->brands_available($info['brand_id'], true);
+					if (!empty($info['brand_id']))
+					{
+						$model_list 	= $this->endpoint->models_available(NULL, $info['brand_id']);
+						$line_list		= $this->linesAvailable($line_info['luid']);
+						$template_list 	= $this->endpoint->display_templates($info['product_id']);
+					}
+					else
+					{
+						$model_list 	= array();
+						$line_list 		= array();
+						$template_list  = array();
+					}
+
+					$checked = false;
+					$cc->addguielem($section, new \gui_checkbox('epm_delete', $checked, _('Delete'), _('Delete this Extension from Endpoint Manager')), 9);
+					$cc->addguielem($section, new \guitext('epm_account_phone', sprintf('<a href="%s" target="_blank" id ="%s">%s</a>', sprintf("http://%s", $extension_address[0]), "epm_account_phone", _('Go to phone web interface')) ));
+					$cc->addguielem($section, new \gui_textbox('epm_mac', $info['mac'], _('MAC Address'), _('The MAC Address of the Phone Assigned to this Extension/Device. <br />(Leave Blank to Remove from Endpoint Manager)'), '', _('Please enter a valid MAC Address'), true, 17, false), 9);
+					$cc->addguielem($section, new \gui_selectbox('epm_brand', $brand_list, $info['brand_id'], _('Brand'), _('The Brand of this Phone.'), false, 'frm_' . $display . '_brand_change(this.options[this.selectedIndex].value)', false), 9);
+					$cc->addguielem($section, new \gui_selectbox('epm_model', $model_list, $info['model_id'], _('Model'), _('The Model of this Phone.'), false, 'frm_' . $display . '_model_change(this.options[this.selectedIndex].value,\'' . $line_info['luid'] . '\')', false), 9);
+					$cc->addguielem($section, new \gui_selectbox('epm_line', $line_list, $line_info['line'], _('Line'), _('The Line of this Extension/Device.'), false, '', false), 9);
+					$cc->addguielem($section, new \gui_selectbox('epm_temps', $template_list, $info['template_id'], _('Template', 'The Template of this Phone.'), false, '', false), 9);
+					$cc->addguielem($section, new \gui_checkbox('epm_reboot', $checked, _('Reboot'), _('Reboot this Phone on Submit')), 9);
+				}
+				else
+				{
+
+					$js = "
+						$.ajaxSetup({ cache: false });
+						$.ajax({
+							url: window.FreePBX.ajaxurl,
+							type: 'POST',
+							data: {
+								module: 'endpointman',
+								module_sec: 'epm_ajax',
+								module_tab: '',
+								command: 'template2',
+								id: value
+							},
+							dataType: 'json',
+							error: function(xhr, ajaxOptions, thrownError) {
+								fpbxToast('"._('ERROR AJAX:')." ' + thrownError,'ERROR (' + xhr.status + ')!','error');
+								return false;
+							},
+							success: function(j) {
+								var options = '';
+								for (var i = 0; i < j.length; i++) {
+									options += sprintf('<option value=\"%s\">%s</option>', j[i].optionValue, j[i].optionDisplay);
+								}
+								$('#epm_temps').html(options);
+								$('#epm_temps option:first').attr('selected', 'selected');
+							}
+						});
+
+						$.ajaxSetup({ cache: false });
+						$.ajax({
+							url: window.FreePBX.ajaxurl,
+							type: 'POST',
+							data: {
+								module: 'endpointman',
+								module_sec: 'epm_ajax',
+								module_tab: '',
+								mac: mac,
+								command: 'lines',
+								id: value
+							},
+							dataType: 'json',
+							error: function(xhr, ajaxOptions, thrownError) {
+								fpbxToast('"._('ERROR AJAX:')." ' + thrownError,'ERROR (' + xhr.status + ')!','error');
+								return false;
+							},
+							success: function(j) {
+								var options = '';
+								for (var i = 0; i < j.length; i++) {
+									options += sprintf('<option value=\"%s\">%s</option>', j[i].optionValue, j[i].optionDisplay);
+								}
+								$('#epm_line').html(options);
+								$('#epm_line option:first').attr('selected', 'selected');
+							}
+						});
+					";
+					$cc->addjsfunc('model_change(value,mac)', $js);
+					unset($js);
+
+					$brand_list 	= $this->brands_available(NULL, true);
+					$model_list 	= array();
+					$line_list 		= array();
+					$template_list 	= array();
+
+					$cc->addguielem($section, new \gui_textbox('epm_mac', "", _('MAC Address'), _('The MAC Address of the Phone Assigned to this Extension/Device. <br />(Leave Blank to Remove from Endpoint Manager)'), '', _('Please enter a valid MAC Address'), true, 17, false), 9);
+					$cc->addguielem($section, new \gui_selectbox('epm_brand', $brand_list, "", _('Brand'), _('The Brand of this Phone.'), false, 'frm_' . $display . '_brand_change(this.options[this.selectedIndex].value)', false), 9);
+					$cc->addguielem($section, new \gui_selectbox('epm_model', $model_list, "", _('Model'), _('The Model of this Phone.'), false, 'frm_' . $display . '_model_change(this.options[this.selectedIndex].value,document.getElementById(\'epm_mac\').value)', false), 9);
+					$cc->addguielem($section, new \gui_selectbox('epm_line', $line_list, "", _('Line'), _('The Line of this Extension/Device.'), false, '', false), 9);
+					$cc->addguielem($section, new \gui_selectbox('epm_temps', $template_list, "", _('Template'), _('The Template of this Phone.'), false, '', false), 9);
+					$cc->addguielem($section, new \guitext('epm_note', _('Note: This might reboot the phone if it\'s already registered to Asterisk')));
+				}
+			}
+		}
+		return;
+	}
+
+	public static function myConfigPageInits()
+	{
+		return array("extensions", "devices");
+	}
+
+	/**
+	 * Get Inital Display
+	 * @param {string} $display The Page name
+	 */
+	public function doConfigPageInit($display)
+	{
+		$request = freepbxGetSanitizedRequest();
+
 		//TODO: Pendiente revisar y eliminar moule_tab.
-		$module_tab = isset($_REQUEST['module_tab'])? trim($_REQUEST['module_tab']) : '';
+		$module_tab = isset($request['module_tab'])? trim($request['module_tab']) : '';
 		if ($module_tab == "") {
-			$module_tab = isset($_REQUEST['subpage'])? trim($_REQUEST['subpage']) : '';
+			$module_tab = isset($request['subpage'])? trim($request['subpage']) : '';
 		}
-		$command = isset($_REQUEST['command'])? trim($_REQUEST['command']) : '';
+		$command = isset($request['command'])? trim($request['command']) : '';
+		$extdisplay = '';
+		$step2 = false;
 
-
-		$arrVal['mod_sec'] = array(
-			"epm_devices",
-			"epm_oss",
-			"epm_placeholders",
-			"epm_templates",
-			"epm_config",
-			"epm_advanced"
-		);
-		if (! in_array($page, $arrVal['mod_sec'])) {
-			die(_("Invalid section module!"));
-		}
-
-		switch ($page)
+		switch ($display)
 		{
 			case "epm_devices":
 				$this->epm_devices->doConfigPageInit($module_tab, $command);
 				break;
+
 			case "epm_oss":
 				$this->epm_oss->doConfigPageInit($module_tab, $command);
 				break;
+
 			case "epm_placeholders":
 				$this->epm_placeholders->doConfigPageInit($module_tab, $command);
 				break;
+
 			case "epm_templates":
 				$this->epm_templates->doConfigPageInit($module_tab, $command);
 				break;
@@ -367,10 +798,221 @@ class Endpointman extends FreePBX_Helpers implements BMO {
 			case "epm_advanced":
 				$this->epm_advanced->doConfigPageInit($module_tab, $command);
 				break;
+			
+			case "extensions":
+				$extdisplay = $request['extension'] ?? $request['extdisplay'] ?? null;
+				$step2 = true;
+				break;
+	
+			case "devices":
+				$extdisplay = $request['deviceid'] ?? $request['extdisplay'] ?? null;
+				$step2 = true;
+				break;
+
+			default:
+				// die(_("Invalid section module!"));
+				return true;
 		}
+
+
+		if ($step2 = false)
+		{
+			return true;
+		}
+
+
+		$type       = '';
+		$tech       = '';
+
+		if (isset($extdisplay) && !empty($extdisplay))
+		{
+			$sql = "SELECT tech FROM devices WHERE id = :id";
+			$stmt = $this->db->prepare($sql);
+			$stmt->execute([':id' => $extdisplay]);
+			if ($stmt->rowCount() === 0)
+			{
+				$tech = "sip";
+				$type = 'new';
+			}
+			else
+			{
+				$tech = $stmt->fetch(\PDO::FETCH_ASSOC);
+				if(in_array($tech, ['sip', 'pjsip']))
+				{
+					$type = 'edit';
+				}
+			}
+		}
+		elseif(isset($request['tech_hardware']) OR isset($request['tech']))
+		{
+			$tech = $request['tech_hardware'] ?? $request['tech'];
+			if (in_array($tech, ['sip_generic', 'sip', 'pjsip']))
+			{
+				$tech = "sip";
+				$type = 'new';
+			}
+		}
+
+		if ((($tech == 'sip') OR ($tech == 'pjsip')) AND (!empty($type)))
+		{
+			$action = $request['action'] ?? null;
+			$delete = $request['epm_delete'] ?? null;
+
+			if (file_exists($this->LOCAL_PATH . "/includes/functions.inc"))
+			{
+				require_once($this->LOCAL_PATH . "/includes/functions.inc");
+
+				$this->endpoint = new \endpointmanager($this);
+				ini_set('display_errors', 0);
+
+				switch($action)
+				{
+					case "del":
+						$sql = sprintf("SELECT mac_id, luid FROM %s WHERE ext = %s", self::TABLES['epm_line_list'], $extdisplay);
+						// $macid = $this->endpoint->eda->sql($sql, 'getRow', \PDO::FETCH_ASSOC);
+						$macid = $this->eda->sql($sql, 'getRow', \PDO::FETCH_ASSOC);
+						if ($macid) {
+							$this->endpoint->delete_line($macid['luid'], TRUE);
+						}
+						break;
+
+					case "add":
+					case "edit":
+						if (isset($delete))
+						{
+							$sql = sprintf("SELECT mac_id, luid FROM %s WHERE ext = %s", self::TABLES['epm_line_list'], $extdisplay);
+							// $macid = $this->endpoint->eda->sql($sql, 'getRow', \PDO::FETCH_ASSOC);
+							$macid = $this->eda->sql($sql, 'getRow', \PDO::FETCH_ASSOC);
+							if ($macid) {
+								$this->endpoint->delete_line($macid['luid'], TRUE);
+							}
+						}
+	
+						$mac = isset($request['epm_mac']) ? $request['epm_mac'] : null;
+						if (!empty($mac))
+						{
+							//Mac is set
+							$brand = isset($request['epm_brand']) ? $request['epm_brand'] : null;
+							$model = isset($request['epm_model']) ? $request['epm_model'] : null;
+							$line  = isset($request['epm_line']) ? $request['epm_line'] : null;
+							$temp  = isset($request['epm_temps']) ? $request['epm_temps'] : null;
+							if (isset($request['name']))
+							{
+								$name = isset($request['name']) ? $request['name'] : null;
+							}
+							else
+							{
+								$name = isset($request['description']) ? $request['description'] : null;
+							}
+							if (isset($request['deviceid']))
+							{
+								if ($request['devicetype'] == "fixed")
+								{
+									//SQL to get the Description of the  extension from the extension table
+									$sql = sprintf("SELECT name FROM %s WHERE extension = '%s'", "users", $request['deviceuser']);
+									// $name_o = $this->endpoint->eda->sql($sql, 'getOne');
+									$name_o = $this->eda->sql($sql, 'getOne');
+									if($name_o) {
+										$name = $name_o;
+									}
+								}
+							}
+	
+							$reboot = isset($request['epm_reboot']) ? $request['epm_reboot'] : null;
+	
+							if ($this->epm_advanced->mac_check_clean($mac))
+							{
+								$sql = sprintf("SELECT id FROM %s WHERE mac = '%s'", "endpointman_mac_list", $this->epm_advanced->mac_check_clean($mac));
+								// $macid = $this->endpoint->eda->sql($sql, 'getOne');
+								$macid = $this->eda->sql($sql, 'getOne');
+								if ($macid)
+								{
+									//In Database already
+	
+									$sql = sprintf('SELECT * FROM %s WHERE ext = %s AND mac_id = %s', self::TABLES['epm_line_list'], $extdisplay, $macid);
+									// $lines_list = & $this->endpoint->eda->sql($sql, 'getRow', \PDO::FETCH_ASSOC);
+									$lines_list = & $this->eda->sql($sql, 'getRow', \PDO::FETCH_ASSOC);
+	
+									if (($lines_list) AND (isset($model)) AND (isset($line)) AND (!isset($delete)) AND (isset($temp)))
+									{
+										//Modifying line already in the database
+										$this->endpoint->update_device($macid, $model, $temp, $lines_list['luid'], $name, $lines_list['line']);
+	
+										$row = $this->endpoint->get_phone_info($macid);
+										if (isset($reboot))
+										{
+											$this->endpoint->prepare_configs($row);
+										}
+										else
+										{
+											$this->endpoint->prepare_configs($row, FALSE);
+										}
+									}
+									elseif ((isset($model)) AND (!isset($delete)) AND (isset($line)) AND (isset($temp)))
+									{
+										//Add line to the database
+	
+										if (empty($line))
+										{
+											$this->endpoint->add_line($macid, NULL, $extdisplay, $name);
+										}
+										else
+										{
+											$this->endpoint->add_line($macid, $line, $extdisplay, $name);
+										}
+	
+										$this->endpoint->update_device($macid, $model, $temp, NULL, NULL, NULL, FALSE);
+	
+										$row = $this->endpoint->get_phone_info($macid);
+										if (isset($reboot))
+										{
+											$this->endpoint->prepare_configs($row);
+										}
+										else
+										{
+											$this->endpoint->prepare_configs($row, FALSE);
+										}
+									}
+								}
+								elseif (!isset($delete))
+								{
+									//Add Extension/Phone to database
+									$mac_id = $this->endpoint->add_device($mac, $model, $extdisplay, $temp, NULL, $name);
+	
+									if ($mac_id)
+									{
+										debug('Write files?');
+										$row = $this->endpoint->get_phone_info($mac_id);
+										$this->endpoint->prepare_configs($row);
+									}
+								}
+							}
+						}
+						break;
+				}
+
+				// global $currentcomponent;
+				// Add the 'process' function - this gets called when the page is loaded, to hook into
+				// displaying stuff on the page.
+				// $currentcomponent->addguifunc('endpointman_configpageload');
+			}
+			else
+			{
+				//System can't find the include file.
+			}
+    	}
+
+
 	}
 
-	public function doGeneralPost() {
+
+	
+	
+
+
+
+	public function doGeneralPost()
+	{
 		if (!isset($_REQUEST['Submit'])) 	{ return; }
 		if (!isset($_REQUEST['display'])) 	{ return; }
 
@@ -420,8 +1062,6 @@ class Endpointman extends FreePBX_Helpers implements BMO {
 
 	public function showPage($page, $params = array())
 	{
-		global $active_modules;
-		
 		$data = array(
 			"epm"		    => $this,
 			'request'	    => $_REQUEST,
@@ -429,7 +1069,7 @@ class Endpointman extends FreePBX_Helpers implements BMO {
 			'endpoint_warn' => "",
 		);
 
-		if (!empty($active_modules['endpoint']['rawname']))
+		if ($this->isActiveModule('endpoint'))
 		{
 			if ($this->configmod->get("disable_endpoint_warning") !== "1")
 			{
@@ -609,7 +1249,7 @@ class Endpointman extends FreePBX_Helpers implements BMO {
 							$data_tab['config']['tar_location']  	= $this->configmod->get("tar_location");
 							$data_tab['config']['netstat_location'] = $this->configmod->get("netstat_location");
 							$data_tab['config']['update_server']  	= $this->configmod->get("update_server");
-							$data_tab['config']['default_mirror']	= $this->URL_PROVISIONER;
+							$data_tab['config']['default_mirror']	= self::URL_PROVISIONER;
 							$data_tab['config']['disable_endpoint_warning'] = $this->configmod->get("disable_endpoint_warning");
 							$data_tab['config']['enable_ari']  		= $this->configmod->get("enable_ari");
 							$data_tab['config']['debug']  			= $this->configmod->get("debug");
@@ -660,8 +1300,16 @@ class Endpointman extends FreePBX_Helpers implements BMO {
 		return $data_return;
 	}
 
-	public function getActiveModules() {
+	public function getActiveModules()
+	{
+		global $active_modules;
+		return $active_modules;
+	}
 
+	public function isActiveModule($name)
+	{
+		$modules = $this->getActiveModules();
+		return !empty($modules[$name]['rawname']);
 	}
 
 	//http://wiki.freepbx.org/display/FOP/Adding+Floating+Right+Nav+to+Your+Module
@@ -670,11 +1318,12 @@ class Endpointman extends FreePBX_Helpers implements BMO {
 		$data_return = "";
 		$data = array(
 			"epm" 	  => $this,
-			"request" => $request
+			"request" => $request,
+			"display" => strtolower($request['display']),
 		);
 		$data = array_merge($data, $params);
 
-		switch($request['display'])
+		switch($data['display'])
 		{
 			case 'epm_oss':
 			case 'epm_devices':
@@ -689,38 +1338,37 @@ class Endpointman extends FreePBX_Helpers implements BMO {
 	}
 
 	//http://wiki.freepbx.org/pages/viewpage.action?pageId=29753755
-	public function getActionBar($request) {
-			if (! isset($_REQUEST['display']))
-			return '';
-
-		switch($_REQUEST['display'])
+	public function getActionBar($request)
+	{
+		$display = $request['display'] ?? '';
+		$data_return = "";
+		switch($display)
 		{
 			case "epm_devices":
-				return $this->epm_devices->getActionBar($request);
+				$data_return = $this->epm_devices->getActionBar($request);
 				break;
 
 			case "epm_oss":
-				return $this->epm_oss->getActionBar($request);
+				$data_return = $this->epm_oss->getActionBar($request);
 				break;
+
 			case "epm_placeholders":
-				return $this->epm_placeholders->getActionBar($request);
+				$data_return = $this->epm_placeholders->getActionBar($request);
 				break;
+
 			case "epm_config":
-				return $this->epm_config->getActionBar($request);
+				$data_return = $this->epm_config->getActionBar($request);
 				break;
 
 			case "epm_advanced":
-				return $this->epm_advanced->getActionBar($request);
+				$data_return = $this->epm_advanced->getActionBar($request);
 				break;
 
 			case "epm_templates":
-				return $this->epm_templates->getActionBar($request);
+				$data_return = $this->epm_templates->getActionBar($request);
 				break;
-
-			default:
-		        return '';
-
 		}
+		return $data_return;
 	}
 
 	public function install()
@@ -786,7 +1434,7 @@ class Endpointman extends FreePBX_Helpers implements BMO {
 			['gmtoff', ''],
 			['gmthr', ''],
 			['config_location', '/tftpboot/'],
-			['update_server', $this->URL_PROVISIONER],
+			['update_server', self::URL_PROVISIONER],
 			['version', $epmxmlversion],
 			['enable_ari', '0'],
 			['debug', '0'],
@@ -821,11 +1469,11 @@ class Endpointman extends FreePBX_Helpers implements BMO {
 			$sth->execute($row);
 		}
 
-		if ($epmdbversion < "14.0.0.1")
+		if ($epmdbversion < "14.0.0.1" || $epmdbversion < "17.0.0.0")
 		{
 			$sql = "UPDATE endpointman_global_vars SET value = :url WHERE var_name = 'update_server'";
 			$sth = $this->db->prepare($sql);
-			$sth->execute([':url' => $this->URL_PROVISIONER]);
+			$sth->execute([':url' => self::URL_PROVISIONER]);
 		}
 
 		out(_("OK"));
@@ -838,7 +1486,8 @@ class Endpointman extends FreePBX_Helpers implements BMO {
 		out(_("OK"));
 	}
 
-	public function uninstall() {
+	public function uninstall()
+	{
 		if(file_exists($this->PHONE_MODULES_PATH))
 		{
 			out(_("Removing Phone Modules Directory"));
@@ -860,18 +1509,17 @@ class Endpointman extends FreePBX_Helpers implements BMO {
 		return true;
 	}
 
-	public function backup() {
-	}
+	public function backup() { }
+    public function restore($backup) { }
 
-    public function restore($backup) {
-	}
-
-	public function setDatabase($pdo){
+	public function setDatabase($pdo)
+	{
 		$this->db = $pdo;
 		return $this;
 	}
 	
-	public function resetDatabase(){
+	public function resetDatabase()
+	{
 		$this->db = $this->FreePBX->Database;
 		return $this;
 	}
@@ -917,6 +1565,21 @@ class Endpointman extends FreePBX_Helpers implements BMO {
 	}
 
 
+
+
+	public static function in_array_recursive($needle, $haystack)
+	{
+        $it = new \RecursiveIteratorIterator(new \RecursiveArrayIterator($haystack));
+        foreach ($it AS $element)
+		{
+            if ($element == $needle)
+			{
+                return TRUE;
+            }
+        }
+        return FALSE;
+    }
+
 	public static function find_exec($exec)
 	{
 		$data_return = trim($exec);
@@ -944,6 +1607,105 @@ class Endpointman extends FreePBX_Helpers implements BMO {
 		return $data_return;
 	}
 
+	function format_txt($texto = "", $css_class = "", $remplace_txt = array())
+	{
+		if (count($remplace_txt) > 0)
+		{
+			foreach ($remplace_txt as $clave => $valor)
+			{
+				$texto = str_replace($clave, $valor, $texto);
+			}
+		}
+		return sprintf('<p class="%s">%s</p>', $css_class, $texto);
+	}
+
+	function generate_xml_from_array ($array, $node_name, &$tab = -1)
+	{
+		$tab++;
+		$xml ="";
+		if (is_array($array) || is_object($array))
+		{
+			foreach ($array as $key=>$value)
+			{
+				if (is_numeric($key))
+				{
+					$key = $node_name;
+				}
+				$xml .= sprintf("%s<%s>\n", str_repeat("	", $tab), $key);
+				$xml .= $this->generate_xml_from_array($value, $node_name, $tab);
+				$xml .= sprintf("%s</%s>\n", str_repeat("	", $tab), $key);
+
+			}
+		}
+		else
+		{
+			$xml = sprintf("%s%s\n", str_repeat("	", $tab), htmlspecialchars($array, ENT_QUOTES));
+		}
+		$tab--;
+		return $xml;
+	}
+
+
+	/**
+     * Reads a file. Json decodes it and will report any errors back
+     * @param string $file location of file
+     * @return mixed return false or generate Exception on error, array on success
+     */
+    public function file2json($file)
+	{
+        if (file_exists($file))
+		{
+            $json = file_get_contents($file);
+            $data = json_decode($json, TRUE);
+			$data_return = false;
+
+			switch (json_last_error())
+			{
+				case JSON_ERROR_NONE:
+					$data_return = $data;
+					break;
+
+				case JSON_ERROR_DEPTH:
+					throw new \Exception(_('Maximum stack depth exceeded'));
+					break;
+
+				case JSON_ERROR_STATE_MISMATCH:
+					throw new \Exception(_('Underflow or the modes mismatch'));
+					break;
+
+				case JSON_ERROR_CTRL_CHAR:
+					throw new \Exception(_('Unexpected control character found'));
+					break;
+
+				case JSON_ERROR_SYNTAX:
+					throw new \Exception(_('Syntax error, malformed JSON'));
+					break;
+
+				case JSON_ERROR_UTF8:
+					throw new \Exception(_('Malformed UTF-8 characters, possibly incorrectly encoded'));
+					break;
+
+				default:
+					throw new \Exception(_('Unknown error'));
+					break;
+			}
+        }
+		else
+		{
+			throw new \Exception(sprintf(_('Cant find file: %s'), $file));
+        }
+		return $data_return;
+    }
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -964,74 +1726,13 @@ class Endpointman extends FreePBX_Helpers implements BMO {
 	*****************************************/
 
 
-
-
-
-	//TODO: DUPLICADO AQUI Y EN epm_advandec
-	/**
-     * This function takes a string and tries to determine if it's a valid mac addess, return FALSE if invalid
-     * @param string $mac The full mac address
-     * @return mixed The cleaned up MAC is it was a MAC or False if not a mac
-
-    function mac_check_clean($mac) {
-    	if ((strlen($mac) == "17") OR (strlen($mac) == "12")) {
-    		//It might be better to use switch here instead of these IF statements...
-    		//Is the mac separated by colons(:) or dashes(-)?
-    		if (preg_match("/[0-9a-f][0-9a-f][:-]" .
-    				"[0-9a-f][0-9a-f][:-]" .
-    				"[0-9a-f][0-9a-f][:-]" .
-    				"[0-9a-f][0-9a-f][:-]" .
-    				"[0-9a-f][0-9a-f][:-]" .
-    				"[0-9a-f][0-9a-f]/i", $mac)) {
-    				return(strtoupper(str_replace(":", "", str_replace("-", "", $mac))));
-    				//Is the string exactly 12 characters?
-    		} elseif (strlen($mac) == "12") {
-    			//Now is the string a valid HEX mac address?
-    			if (preg_match("/[0-9a-f][0-9a-f]" .
-    					"[0-9a-f][0-9a-f]" .
-    					"[0-9a-f][0-9a-f]" .
-    					"[0-9a-f][0-9a-f]" .
-    					"[0-9a-f][0-9a-f]" .
-    					"[0-9a-f][0-9a-f]/i", $mac)) {
-    					return(strtoupper($mac));
-    			} else {
-    				return(FALSE);
-    			}
-    			//Is the mac separated by whitespaces?
-    		} elseif (preg_match("/[0-9a-f][0-9a-f][\s]" .
-    				"[0-9a-f][0-9a-f][\s]" .
-    				"[0-9a-f][0-9a-f][\s]" .
-    				"[0-9a-f][0-9a-f][\s]" .
-    				"[0-9a-f][0-9a-f][\s]" .
-    				"[0-9a-f][0-9a-f]/i", $mac)) {
-    				return(strtoupper(str_replace(" ", "", $mac)));
-    		} else {
-    			return(FALSE);
-    		}
-    	} else {
-    		return(FALSE);
-    	}
-    }
-     */
-
-
-
-
-
-
-
-
-
-
-
-
-
 	/**
      * Returns list of Brands that are installed and not hidden and that have at least one model enabled under them
      * @param integer $selected ID Number of the brand that is supposed to be selected in a drop-down list box
      * @return array Number array used to generate a select box
      */
-    function brands_available($selected = NULL, $show_blank=TRUE) {
+    function brands_available($selected = NULL, $show_blank=TRUE)
+	{
         $data = $this->eda->all_active_brands();
 		$temp = [];
         if ($show_blank) {
@@ -1175,6 +1876,117 @@ echo $this->error['tftp_check'];
 
 
 
+
+
+	private function linesAvailable($lineid=NULL, $macid=NULL)
+	{
+        if (isset($lineid))
+		{
+            $sql = sprintf("SELECT max_lines FROM %s as eml WHERE id = (SELECT emacl.model FROM %s as emacl, %s as ell WHERE ell.luid = %s AND ell.mac_id = emacl.id)", self::TABLES['epm_model_list'], self::TABLES['epm_mac_list'], self::TABLES['epm_line_list'], $lineid);
+
+            $sql_l = sprintf("SELECT line, mac_id FROM `%s` WHERE luid = %s", self::TABLES['epm_line_list'], $lineid);
+            $line = $this->eda->sql($sql_l, 'getRow', \PDO::FETCH_ASSOC);
+
+            $sql_lu = sprintf("SELECT line FROM %s WHERE mac_id = %s", self::TABLES['epm_line_list'], $line['mac_id']);
+        }
+		elseif (isset($macid))
+		{
+            $sql = sprintf("SELECT max_lines FROM %s WHERE id = (SELECT model FROM %s WHERE id =%s)", self::TABLES['epm_model_list'], self::TABLES['epm_mac_list'], $macid);
+            $sql_lu = sprintf("SELECT line FROM %s WHERE mac_id = %s", self::TABLES['epm_line_list'], $macid);
+
+            $line['line'] = 0;
+        }
+
+        $max_lines  = $this->eda->sql($sql, 'getOne');
+        $lines_used = $this->eda->sql($sql_lu, 'getAll');
+
+        for ($i = 1; $i <= $max_lines; $i++)
+		{
+            if ($i == $line['line'])
+			{
+                $temp[$i]['value'] = $i;
+                $temp[$i]['text'] = $i;
+                $temp[$i]['selected'] = "selected";
+            }
+			else
+			{
+                if (! self::in_array_recursive($i, $lines_used))
+				{
+                    $temp[$i]['value'] = $i;
+                    $temp[$i]['text']  = $i;
+                }
+            }
+        }
+        if (isset($temp))
+		{
+            return($temp);
+        }
+		else
+		{
+            return FALSE;
+        }
+    }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
     /**
 
 
@@ -1212,7 +2024,7 @@ echo $this->error['tftp_check'];
     						$template = 0;
     					}
 
-    					$sql = "SELECT mac_id FROM endpointman_line_list WHERE ext = " . $ext;
+    					$sql = "SELECT mac_id FROM " . self::TABLES['epm_line_list'] . " WHERE ext = " . $ext;
     					$used = sql($sql, 'getOne');
 
 					if (($used) AND (! $this->configmod->get('show_all_registrations'))) {
@@ -1243,7 +2055,7 @@ echo $this->error['tftp_check'];
     						$line = 1;
     					}
 
-    					$sql = "INSERT INTO `endpointman_line_list` (`mac_id`, `ext`, `line`, `description`) VALUES ('" . $ext_id . "', '" . $ext . "', '" . $line . "', '" . addslashes($name) . "')";
+    					$sql = "INSERT INTO `". self::TABLES['epm_line_list'] ."` (`mac_id`, `ext`, `line`, `description`) VALUES ('" . $ext_id . "', '" . $ext . "', '" . $line . "', '" . addslashes($name) . "')";
     					sql($sql);
 
 //$this->message['add_device'][] =
@@ -1268,14 +2080,14 @@ echo $this->error['tftp_check'];
     	if ((!isset($line)) AND (!isset($ext))) {
     		if ($this->linesAvailable(NULL, $mac_id)) {
     			if ($this->eda->all_unused_registrations()) {
-    				$sql = 'SELECT * FROM endpointman_line_list WHERE mac_id = ' . $mac_id;
+    				$sql = 'SELECT * FROM '.self::TABLES['epm_line_list'].' WHERE mac_id = ' . $mac_id;
     				$lines_list = sql($sql, 'getAll', \PDO::FETCH_ASSOC);
 
     				foreach ($lines_list as $row) {
     					$sql = "SELECT description FROM devices WHERE id = " . $row['ext'];
     					$name = sql($sql, 'getOne');
 
-    					$sql = "UPDATE endpointman_line_list SET line = '" . $row['line'] . "', ext = '" . $row['ext'] . "', description = '" . $this->eda->escapeSimple($name) . "' WHERE luid =  " . $row['luid'];
+    					$sql = "UPDATE ".self::TABLES['epm_line_list']." SET line = '" . $row['line'] . "', ext = '" . $row['ext'] . "', description = '" . $this->eda->escapeSimple($name) . "' WHERE luid =  " . $row['luid'];
     					sql($sql);
     				}
 
@@ -1285,7 +2097,7 @@ echo $this->error['tftp_check'];
     				$sql = "SELECT description FROM devices WHERE id = " . $reg[0]['value'];
     				$name = sql($sql, 'getOne');
 
-    				$sql = "INSERT INTO `endpointman_line_list` (`mac_id`, `ext`, `line`, `description`) VALUES ('" . $mac_id . "', '" . $reg[0]['value'] . "', '" . $lines[0]['value'] . "', '" . addslashes($name) . "')";
+    				$sql = "INSERT INTO `".self::TABLES['epm_line_list']."` (`mac_id`, `ext`, `line`, `description`) VALUES ('" . $mac_id . "', '" . $reg[0]['value'] . "', '" . $lines[0]['value'] . "', '" . addslashes($name) . "')";
     				sql($sql);
 
 //$this->message['add_line'] =
@@ -1347,42 +2159,7 @@ echo $this->error['tftp_check'];
     }
 
 
-    function linesAvailable($lineid=NULL, $macid=NULL) {
-    	if (isset($lineid)) {
-    		$sql = "SELECT max_lines FROM endpointman_model_list WHERE id = (SELECT endpointman_mac_list.model FROM endpointman_mac_list, endpointman_line_list WHERE endpointman_line_list.luid = " . $lineid . " AND endpointman_line_list.mac_id = endpointman_mac_list.id)";
-
-    		$sql_l = "SELECT line, mac_id FROM `endpointman_line_list` WHERE luid = " . $lineid;
-    		$line = sql($sql_l, 'getRow', \PDO::FETCH_ASSOC);
-
-    		$sql_lu = "SELECT line FROM endpointman_line_list WHERE mac_id = " . $line['mac_id'];
-    	} elseif (isset($macid)) {
-    		$sql = "SELECT max_lines FROM endpointman_model_list WHERE id = (SELECT model FROM endpointman_mac_list WHERE id =" . $macid . ")";
-    		$sql_lu = "SELECT line FROM endpointman_line_list WHERE mac_id = " . $macid;
-
-    		$line['line'] = 0;
-    	}
-
-    	$max_lines = sql($sql, 'getOne');
-    	$lines_used = sql($sql_lu, 'getAll');
-
-    	for ($i = 1; $i <= $max_lines; $i++) {
-    		if ($i == $line['line']) {
-    			$temp[$i]['value'] = $i;
-    			$temp[$i]['text'] = $i;
-    			$temp[$i]['selected'] = "selected";
-    		} else {
-    			if (!$this->in_array_recursive($i, $lines_used)) {
-    				$temp[$i]['value'] = $i;
-    				$temp[$i]['text'] = $i;
-    			}
-    		}
-    	}
-    	if (isset($temp)) {
-    		return($temp);
-    	} else {
-    		return FALSE;
-    	}
-    }
+    
 
 
 
@@ -2245,19 +3022,7 @@ $this->error['parse_configs'] = "File not written to hard drive!";
 
 
 
-    function in_array_recursive($needle, $haystack) {
-
-        $it = new RecursiveIteratorIterator(new RecursiveArrayIterator($haystack));
-
-        foreach ($it AS $element) {
-            if ($element == $needle) {
-                return TRUE;
-            }
-        }
-        return FALSE;
-    }
-
-
+   
 
 
 

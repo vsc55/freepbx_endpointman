@@ -116,43 +116,44 @@ class Endpointman_Templates
 		return $retarr;
 	}
 	
-	public function doConfigPageInit($module_tab = "", $command = "") {
-		
-	}
+	public function doConfigPageInit($module_tab = "", $command = "") { }
 	
-	public function getRightNav($request) {
-		if(isset($request['subpage']) && $request['subpage'] == "editor") {
-			return load_view(__DIR__."/views/epm_templates/editor.views.rnav.php",array());
-		} else {
-			return '';
+	public function getRightNav($request, $params = array())
+	{
+		$data_return = "";
+		if(isset($request['subpage']) && $request['subpage'] == "editor")
+		{
+			$data_return = load_view(__DIR__."/views/epm_templates/editor.views.rnav.php", $params);
 		}
+		return $data_return;
 	}
 	
-	public function getActionBar($request) {
+	public function getActionBar($request)
+	{
 		$buttons = array();
-        switch($request['subpage']) {
+        switch(strtolower($request['subpage']))
+		{
             case 'editor':
                 $buttons = array(
 					'delete' => array(
-                        'name' => 'delete',
-                        'id' => 'delete',
-                        'value' => _('Delete'),
+                        'name' 	 => 'delete',
+                        'id' 	 => 'delete',
+                        'value'  => _('Delete'),
                         'hidden' => ''
                     ),
 					'save' => array(
-                        'name' => 'submit',
-                        'id' => 'save',
-                        'value' => _('Save'),
+                        'name' 	 => 'submit',
+                        'id' 	 => 'save',
+                        'value'  => _('Save'),
                         'hidden' => ''
                     )
                 );
 				
-				if(empty($request['idsel']) && empty($request['custom'])){
-					$buttons = NULL;
+				if(empty($request['idsel']) && empty($request['custom']))
+				{
+					$buttons = "";
 				}
             	break;
-				
-			default:
         }
         return $buttons;
 	}

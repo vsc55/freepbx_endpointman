@@ -10,8 +10,6 @@
 require 'functions.inc';
 $endpoint = new endpointmanager();
 
-include 'json.inc';
-
 function in_array_recursive($needle, $haystack) {
     $it = new RecursiveIteratorIterator(new RecursiveArrayIterator($haystack));
     foreach($it AS $element) {
@@ -29,11 +27,16 @@ if(($_REQUEST['id'] == "") OR ($_REQUEST['id'] == "0")) {
 	die();
 }
 
-if($_REQUEST['atype'] == "model") {
+if($_REQUEST['atype'] == "model")
+{
 	$sql = "SELECT * FROM endpointman_model_list WHERE enabled = 1 AND brand =". $_GET['id'];
-} elseif ($_REQUEST['atype'] == "template") {
+}
+elseif ($_REQUEST['atype'] == "template")
+{
 	$sql = "SELECT id, name as model FROM  endpointman_template_list WHERE  product_id = '". $_GET['id']."'";
-} elseif ($_REQUEST['atype'] == "mtemplate") {
+}
+elseif ($_REQUEST['atype'] == "mtemplate")
+{
 	$sql = "SELECT id, name as model FROM  endpointman_template_list WHERE  model_id = '". $_GET['id']."'";
 } elseif ($_REQUEST['atype'] == "template2") {
 	$sql = "SELECT DISTINCT endpointman_template_list.id, endpointman_template_list.name as model FROM endpointman_template_list, endpointman_model_list, endpointman_product_list WHERE endpointman_template_list.product_id = endpointman_model_list.product_id AND endpointman_model_list.product_id = endpointman_product_list.id AND endpointman_model_list.id = '". $_GET['id']."'";

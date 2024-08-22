@@ -264,7 +264,7 @@ class Endpointman_Advanced
 		}
 	}
 
-	public function getRightNav($request) {
+	public function getRightNav($request, $params = array()) {
 		return "";
 	}
 
@@ -665,7 +665,7 @@ class Endpointman_Advanced
 				$sendidt = $data['id'];
 				$original_name = $dget['file_name'];
 				$config_data = unserialize($data['template_data']);
-				$config_data = generate_xml_from_array ($config_data, 'node');
+				$config_data = $this->epm->generate_xml_from_array ($config_data, 'node');
 			}
 
 			$type = $dget['type_file'];
@@ -1384,46 +1384,19 @@ FreePBX::Endpointman()->add_device($mac, $model_id, $ext, 0, $line_id, $descript
      * @param string $mac The full mac address
      * @return mixed The cleaned up MAC is it was a MAC or False if not a mac
      */
-    function mac_check_clean($mac) {
-    	if ((strlen($mac) == "17") OR (strlen($mac) == "12")) {
-    		//It might be better to use switch here instead of these IF statements...
-    		//Is the mac separated by colons(:) or dashes(-)?
-    		if (preg_match("/[0-9a-f][0-9a-f][:-]" .
-    				"[0-9a-f][0-9a-f][:-]" .
-    				"[0-9a-f][0-9a-f][:-]" .
-    				"[0-9a-f][0-9a-f][:-]" .
-    				"[0-9a-f][0-9a-f][:-]" .
-    				"[0-9a-f][0-9a-f]/i", $mac)) {
-    				return(strtoupper(str_replace(":", "", str_replace("-", "", $mac))));
-    				//Is the string exactly 12 characters?
-    		} elseif (strlen($mac) == "12") {
-    			//Now is the string a valid HEX mac address?
-    			if (preg_match("/[0-9a-f][0-9a-f]" .
-    					"[0-9a-f][0-9a-f]" .
-    					"[0-9a-f][0-9a-f]" .
-    					"[0-9a-f][0-9a-f]" .
-    					"[0-9a-f][0-9a-f]" .
-    					"[0-9a-f][0-9a-f]/i", $mac)) {
-    					return(strtoupper($mac));
-    			} else {
-    				return(FALSE);
-    			}
-    			//Is the mac separated by whitespaces?
-    		} elseif (preg_match("/[0-9a-f][0-9a-f][\s]" .
-    				"[0-9a-f][0-9a-f][\s]" .
-    				"[0-9a-f][0-9a-f][\s]" .
-    				"[0-9a-f][0-9a-f][\s]" .
-    				"[0-9a-f][0-9a-f][\s]" .
-    				"[0-9a-f][0-9a-f]/i", $mac)) {
-    				return(strtoupper(str_replace(" ", "", $mac)));
-    		} else {
-    			return(FALSE);
-    		}
-    	} else {
-    		return(FALSE);
-    	}
+    function mac_check_clean($mac)
+	{
+		// regular expression that validates mac with :, -, spaces, or without separators
+		$pattern = '/^([0-9a-f]{2}[:-]?){5}([0-9a-f]{2})$/i';
+
+		// check if the mac complies with the pattern
+		if (preg_match($pattern, $mac))
+		{
+			// clean the mac of non-hexadecimal characters and convert them to uppercase
+			return strtoupper(preg_replace('/[^0-9a-f]/i', '', $mac));
+		}
+		// return false if not a valid mac address
+		return false;
     }
-
-
 
 }

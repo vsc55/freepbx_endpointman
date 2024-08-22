@@ -28,12 +28,13 @@ class endpointmanager {
      * @global object $db Pear DB information, we move this into a public variable
      */
 
-    function __construct()
+    function __construct($epm)
     {
         dbug("Create : endpointmanager : functions.inc - Endpintmain");
         global $amp_conf;
 
-        $this->epm = \FreePBX::Endpointman();
+        // $this->epm = \FreePBX::Endpointman();
+        $this->epm = $epm;
         $this->eda = $this->epm->eda; // new \epm_data_abstraction();
 
         $this->global_cfg = $this->eda->get_stored_globals();
@@ -3075,95 +3076,6 @@ if(!defined("LOCAL_PATH")) {
         }
     }
 
-    function merge_data($path, $template_list, $maxlines = 12) {
-        //TODO: fix
-        foreach ($template_list as $files_data) {
-            $full_path = $path . $files_data;
-            if (file_exists($full_path)) {
-                $temp_files_data = $this->file2json($full_path);
-                foreach ($temp_files_data['template_data']['category'] as $category) {
-                    $category_name = $category['name'];
-                    foreach ($category['subcategory'] as $subcategory) {
-                        $subcategory_name = $subcategory['name'];
-                        $items_fin = array();
-                        $items_loop = array();
-                        $break_count = 0;
-                        foreach ($subcategory['item'] as $item) {
-                            switch ($item['type']) {
-                                case 'loop_line_options':
-                                    for ($i = 1; $i <= $maxlines; $i++) {
-                                        $var_nam = "lineloop|line_" . $i;
-                                        foreach ($item['data']['item'] as $item_loop) {
-                                            if ($item_loop['type'] != 'break') {
-                                                $z = str_replace("\$", "", $item_loop['variable']);
-                                                $items_loop[$var_nam][$z] = $item_loop;
-                                                $items_loop[$var_nam][$z]['description'] = str_replace('{$count}', $i, $items_loop[$var_nam][$z]['description']);
-                                                $items_loop[$var_nam][$z]['default_value'] = $items_loop[$var_nam][$z]['default_value'];
-                                                $items_loop[$var_nam][$z]['default_value'] = str_replace('{$count}', $i, $items_loop[$var_nam][$z]['default_value']);
-                                                $items_loop[$var_nam][$z]['line_loop'] = TRUE;
-                                                $items_loop[$var_nam][$z]['line_count'] = $i;
-                                            } elseif ($item_loop['type'] == 'break') {
-                                                $items_loop[$var_nam]['break_' . $break_count]['type'] = 'break';
-                                                $break_count++;
-                                            }
-                                        }
-                                    }
-                                    $items_fin = array_merge($items_fin, $items_loop);
-                                    break;
-                                case 'loop':
-                                    for ($i = $item['loop_start']; $i <= $item['loop_end']; $i++) {
-                                        $name = explode("_", $item['data']['item'][0]['variable']);
-                                        $var_nam = "loop|" . str_replace("\$", "", $name[0]) . "_" . $i;
-                                        foreach ($item['data']['item'] as $item_loop) {
-                                            if ($item_loop['type'] != 'break') {
-                                                $z_tmp = explode("_", $item_loop['variable']);
-                                                $z = $z_tmp[1];
-                                                $items_loop[$var_nam][$z] = $item_loop;
-                                                $items_loop[$var_nam][$z]['description'] = str_replace('{$count}', $i, $items_loop[$var_nam][$z]['description']);
-                                                $items_loop[$var_nam][$z]['variable'] = str_replace('_', '_' . $i . '_', $items_loop[$var_nam][$z]['variable']);
-                                                $items_loop[$var_nam][$z]['default_value'] = isset($items_loop[$var_nam][$z]['default_value']) ? $items_loop[$var_nam][$z]['default_value'] : '';
-                                                $items_loop[$var_nam][$z]['loop'] = TRUE;
-                                                $items_loop[$var_nam][$z]['loop_count'] = $i;
-                                            } elseif ($item_loop['type'] == 'break') {
-                                                $items_loop[$var_nam]['break_' . $break_count]['type'] = 'break';
-                                                $break_count++;
-                                            }
-                                        }
-                                    }
-                                    $items_fin = array_merge($items_fin, $items_loop);
-                                    break;
-                                case 'break':
-                                    $items_fin['break|' . $break_count]['type'] = 'break';
-                                    $break_count++;
-                                    break;
-                                default:
-                                    $var_nam = "option|" . str_replace("\$", "", $item['variable']);
-                                    $items_fin[$var_nam] = $item;
-                                    break;
-                            }
-                        }
-                        if (isset($data['data'][$category_name][$subcategory_name])) {
-                            $old_sc = $data['data'][$category_name][$subcategory_name];
-                            $sub_cat_data[$category_name][$subcategory_name] = array();
-                            $sub_cat_data[$category_name][$subcategory_name] = array_merge($old_sc, $items_fin);
-                        } else {
-                            $sub_cat_data[$category_name][$subcategory_name] = $items_fin;
-                        }
-                    }
-                    if (isset($data['data'][$category_name])) {
-                        $old_c = $data['data'][$category_name];
-                        $new_c = $sub_cat_data[$category_name];
-                        $sub_cat_data[$category_name] = array();
-                        $data['data'][$category_name] = array_merge($old_c, $new_c);
-                    } else {
-                        $data['data'][$category_name] = $sub_cat_data[$category_name];
-                    }
-                }
-            }
-        }
-        return($data);
-    }
-
     /**
      * Sync the XML files (incuding all template files) from the hard drive with the database
      * @param int $model Model ID
@@ -3224,7 +3136,7 @@ if(!defined("LOCAL_PATH")) {
 
             $template_data_array = array();
 
-            $template_data_array = $this->merge_data(PHONE_MODULES_PATH . '/endpoint/' . $brand_row['directory'] . '/' . $product_row['cfg_dir'] . '/', $template_list_array);
+            $template_data_array = $this->epm->epm_config->merge_data(PHONE_MODULES_PATH . '/endpoint/' . $brand_row['directory'] . '/' . $product_row['cfg_dir'] . '/', $template_list_array, true, false);
 
             $sql = "UPDATE endpointman_model_list SET template_data = '" . serialize($template_data_array) . "' WHERE id = '" . $model . "'";
             $this->eda->sql($sql);
@@ -3756,33 +3668,6 @@ if(!defined("LOCAL_PATH")) {
             $temp[$i]['selected'] = "selected";
         }
 
-        return($temp);
-    }
-
-    /**
-     * Returns list of Brands that are installed and not hidden and that have at least one model enabled under them
-     * @param integer $selected ID Number of the brand that is supposed to be selected in a drop-down list box
-     * @return array Number array used to generate a select box
-     */
-    function brands_available($selected = NULL, $show_blank=TRUE) {
-        $data = $this->eda->all_active_brands();
-        if ($show_blank) {
-            $temp[0]['value'] = "";
-            $temp[0]['text'] = "";
-            $i = 1;
-        } else {
-            $i = 0;
-        }
-        foreach ($data as $row) {
-            $temp[$i]['value'] = $row['id'];
-            $temp[$i]['text'] = $row['name'];
-            if ($row['id'] == $selected) {
-                $temp[$i]['selected'] = TRUE;
-            } else {
-                $temp[$i]['selected'] = NULL;
-            }
-            $i++;
-        }
         return($temp);
     }
 
