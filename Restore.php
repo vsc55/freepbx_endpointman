@@ -54,7 +54,7 @@ class Restore Extends Base\RestoreBase
 		}
 
 		$endpoint_dir_data = $epm->buildPath($epm->PHONE_MODULES_PATH, 'endpoint');
-		$endpoint_dir_temp = $epm->buildPath($epm->PHONE_MODULES_PATH, 'temp');
+		$endpoint_dir_temp = $epm->buildPath($epm->TEMP_PATH);
 
 		$this->deleteDirectory($endpoint_dir_data);
 		$this->deleteDirectory($endpoint_dir_temp);

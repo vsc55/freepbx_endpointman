@@ -49,13 +49,18 @@ class Endpointman extends FreePBX_Helpers implements BMO {
     public $error   = array(); //error construct
     public $message = array(); //message construct
 
-	public $UPDATE_PATH;
-    public $MODULES_PATH;
-	public $LOCAL_PATH;
-	public $PHONE_MODULES_PATH;
-	public $PROVISIONER_BASE;
+	public $URL_UPDATE;
 
-	
+    public $MODULES_PATH;
+	public $MODULE_PATH;
+
+	public $PHONE_MODULES_PATH;
+	public $PROVISIONER_PATH;
+	public $EXPORT_PATH;
+	public $TEMP_PATH;
+
+	public $PROVISIONER_BASE; // Obsolete now used PHONE_MODULES_PATH
+
 	// const URL_PROVISIONER = "http://mirror.freepbx.org/provisioner/v3/";
 	const URL_PROVISIONER = "https://raw.githubusercontent.com/billsimon/provisioner/packaging/";
 	
@@ -96,77 +101,36 @@ class Endpointman extends FreePBX_Helpers implements BMO {
         $this->error   = array();
         $this->message = array();
 
+		// Set TimeZone by config FREEPBX
 		$this->configmod->set('tz', $this->config->get('PHPTIMEZONE'));
 		date_default_timezone_set($this->configmod->get('tz'));
 
-		$this->UPDATE_PATH = $this->configmod->get('update_server');
-        $this->MODULES_PATH = $this->config->get('AMPWEBROOT') . '/admin/modules';
 
+		$this->URL_UPDATE   = $this->configmod->get('update_server');
+        $this->MODULES_PATH = $this->buildPath($this->config->get('AMPWEBROOT'), 'admin', 'modules');
+		$this->MODULE_PATH 	= $this->buildPath($this->MODULES_PATH, "endpointman");
 
-// if(!defined("UPDATE_PATH")) {
-// 	define("UPDATE_PATH", $this->UPDATE_PATH);
-// }
-// if(!defined("MODULES_PATH")) {
-// 	define("MODULES_PATH", $this->MODULES_PATH);
-// }
-
-
-        //Determine if local path is correct!
-        if (file_exists($this->MODULES_PATH . "/endpointman"))
-		{
-            $this->LOCAL_PATH = $this->MODULES_PATH . "/endpointman";
-
-// if(!defined("LOCAL_PATH")) {
-// 	define("LOCAL_PATH", $this->LOCAL_PATH);
-// }
-
-        }
-		else
-		{
-            die(_("Can't Load Local Endpoint Manager Directory!"));
-        }
-
-
-
-        //Define the location of phone modules, keeping it outside of the module directory so that when the user updates endpointmanager they don't lose all of their phones
+		// Define the location of phone modules, keeping it outside of the module directory so that when 
+		// the user updates endpointmanager they don't lose all of their phones
+		// TODO: Migrate _ep_phone_modules to spool or other location
 		$this->PHONE_MODULES_PATH = $this->buildPath($this->MODULES_PATH, '_ep_phone_modules');
 
-// if(!defined("PHONE_MODULES_PATH")) {
-// 	define("PHONE_MODULES_PATH", $this->PHONE_MODULES_PATH);
-// }
-		
-		if (!file_exists($this->PHONE_MODULES_PATH))
+		$this->TEMP_PATH 		  = $this->buildPath($this->PHONE_MODULES_PATH, "temp");
+		$this->PROVISIONER_PATH   = $this->buildPath($this->TEMP_PATH, "provisioner");
+		$this->EXPORT_PATH		  = $this->buildPath($this->TEMP_PATH, "export");
+
+        if (! file_exists($this->MODULE_PATH))
 		{
-			mkdir($this->PHONE_MODULES_PATH, 0775, true);
-		}
-		if (file_exists($this->PHONE_MODULES_PATH . "/setup.php"))
-		{
-			unlink($this->PHONE_MODULES_PATH . "/setup.php");
-		}
+            die(sprintf(_("Can't Load Local Endpoint Manager Directory (%s)!"), __CLASS__));
+        }
+
+		// Check if directories needed are created
+		$this->checkPathsFiles();
+
 		if (!file_exists($this->PHONE_MODULES_PATH))
 		{
 			die(_('Endpoint Manager can not create the modules folder!'));
 		}
-		
-
-
-		if (!file_exists($this->PHONE_MODULES_PATH . "/endpoint"))
-		{
-			mkdir($this->PHONE_MODULES_PATH . "/endpoint", 0775, true);
-		}
-
-		if (!file_exists($this->PHONE_MODULES_PATH . "/temp/provisioner"))
-		{
-			mkdir($this->PHONE_MODULES_PATH . "/temp/provisioner", 0775, true);
-		}
-		if (!file_exists($this->PHONE_MODULES_PATH . "/temp/export"))
-		{
-			mkdir($this->PHONE_MODULES_PATH . "/temp/export", 0775, true);
-		}
-
-
-
-
 
         //Define error reporting
         if (($this->configmod->get('debug')) AND (!isset($_REQUEST['quietmode'])))
@@ -204,7 +168,7 @@ class Endpointman extends FreePBX_Helpers implements BMO {
             }
         }
 
-        //$this->tpl = new RainTPL(LOCAL_PATH . '/_old/templates/freepbx', LOCAL_PATH . '/_old/templates/freepbx/compiled', '/admin/assets/endpointman/images');
+        //$this->tpl = new RainTPL(MODULE_PATH . '/_old/templates/freepbx', MODULE_PATH . '/_old/templates/freepbx/compiled', '/admin/assets/endpointman/images');
 		//$this->tpl = new RainTPL('/admin/assets/endpointman/images');
 
 		$this->epm_config 		= new Endpointman_Config($this);
@@ -215,20 +179,137 @@ class Endpointman extends FreePBX_Helpers implements BMO {
 		$this->epm_placeholders = new Endpointman_Devices($this);
 	}
 
+	private function checkPathsFiles()
+	{
+		$return_data = true;
+		$operations = [
+			[
+				'path'			=> $this->buildPath($this->PHONE_MODULES_PATH),
+				'permissions'	=> 0755,
+				'type'			=> 'dir',
+				'action'		=> 'check',
+				'action_error'	=> 'break'
+			],
+			[
+				'path'	 => $this->buildPath($this->PHONE_MODULES_PATH, "setup.php"),
+				'action' => 'del'
+			],
+			[
+				'path' 		  => $this->buildPath($this->PHONE_MODULES_PATH, "endpoint"),
+				'permissions' => 0755,
+				'type' 		  => 'dir',
+				'action' 	  => 'check'
+			],
+			[
+				'path' 		  => $this->TEMP_PATH,
+				'permissions' => 0755,
+				'type' 		  => 'dir',
+				'action' 	  => 'check'
+			],
+			[
+				'path' 		  => $this->PROVISIONER_PATH,
+				'permissions' => 0755,
+				'type' 		  => 'dir',
+				'action' 	  => 'check'
+			],
+			[
+				'path' 		  => $this->EXPORT_PATH,
+				'permissions' => 0755,
+				'type' 		  => 'dir',
+				'action' 	  => 'check'
+			],
+		];
+		foreach ($operations as $operation)
+		{
+			$path 			= $operation['path'] 				?? '';
+			$permissions	= $operation['permissions'] 		?? 0775;
+			$recursive		= $operation['recursive']			?? true;
+			$action			= strtolower($operation['action'])	?? 'check';
+			$action_error	= $operation['action_error'] 		?? '';
+			$action_return 	= true;
+
+			if (empty($path))
+			{
+				continue;
+			}
+
+			switch(strtolower($action))
+			{
+				case 'check':
+					if (!file_exists($path))
+					{
+						if ($operation['type'] === 'dir')
+						{
+							$action_return = mkdir($path, $permissions, $recursive);
+						}
+						else
+						{
+							$action_return = touch($path);
+							if ($action_return)
+							{
+								$action_return = chmod($path, $permissions);
+							}
+						}
+					}
+					else
+					{
+						// Get only the permission bits
+						$currentPermissions = fileperms($path) & 0777;
+						if ($currentPermissions !== $permissions)
+						{
+							$action_return = chmod($path, $permissions);
+						}
+					}
+					break;
+
+				case 'del':
+					if (file_exists($path))
+					{
+						if (is_dir($path))
+						{
+							$action_return = rmdir($path);
+						}
+						else
+						{
+							$action_return = unlink($path);
+						}
+					}
+					
+					break;
+			}
+
+			if ($action_return === false)
+			{
+				$return_data = false;
+				if ($action_error === 'break')
+				{
+					break;
+				}
+			}
+		}
+
+		return $return_data;
+	}
+
+
 	public function chownFreepbx()
 	{
-		$webroot = $this->config->get('AMPWEBROOT');
-		$modulesdir = $webroot . '/admin/modules/';
 		$files = array();
-		$files[] = array('type' => 'dir',
-						'path' => $modulesdir . '/_ep_phone_modules/',
-						'perms' => 0755);
-		$files[] = array('type' => 'file',
-						'path' => $modulesdir . '/_ep_phone_modules/setup.php',
-						'perms' => 0755);
-		$files[] = array('type' => 'dir',
-						'path' => '/tftpboot',
-						'perms' => 0755);
+		$files[] = array(
+			'type'  => 'dir',
+			'path'  => $this->PHONE_MODULES_PATH,
+			'perms' => 0755
+		);
+		$files[] = array(
+			'type'  => 'file',
+			'path'  => $this->buildPath($this->PHONE_MODULES_PATH, "setup.php"),
+			'perms' => 0755
+		);
+		$files[] = array(
+			'type'  => 'dir',
+			'path'  => '/tftpboot',
+			'perms' => 0755
+		);
 		return $files;
 	}
 
@@ -863,9 +944,12 @@ class Endpointman extends FreePBX_Helpers implements BMO {
 			$action = $request['action'] ?? null;
 			$delete = $request['epm_delete'] ?? null;
 
-			if (file_exists($this->LOCAL_PATH . "/includes/functions.inc"))
+
+			$path_funciones_inf = $this->buildPath($this->MODULE_PATH, 'includes/functions.inc');
+
+			if (file_exists($path_funciones_inf))
 			{
-				require_once($this->LOCAL_PATH . "/includes/functions.inc");
+				require_once($path_funciones_inf);
 
 				$this->endpoint = new \endpointmanager($this);
 				ini_set('display_errors', 0);
@@ -1057,7 +1141,7 @@ class Endpointman extends FreePBX_Helpers implements BMO {
 		{
 			foreach($this->pagedata as &$page) {
 				ob_start();
-				include($this->LOCAL_PATH . $page['page']);
+				include( $this->buildPath($this->MODULE_PATH, $page['page']));
 				$page['content'] = ob_get_contents();
 				ob_end_clean();
 			}
@@ -1390,7 +1474,7 @@ class Endpointman extends FreePBX_Helpers implements BMO {
 		if (!file_exists($this->PHONE_MODULES_PATH . "/setup.php"))
 		{
 			outn(_("Moving Auto Provisioner Class..."));
-    		copy($this->LOCAL_PATH . "/install/setup.php", $this->PHONE_MODULES_PATH . "/setup.php");
+    		copy($this->MODULE_PATH . "/install/setup.php", $this->PHONE_MODULES_PATH . "/setup.php");
 			out(_("OK"));
 		}
 
@@ -1405,7 +1489,7 @@ class Endpointman extends FreePBX_Helpers implements BMO {
 		if(!file_exists($provisioning))
 		{
 			outn(_('Creating symlink to web provisioner...'));
-			if (!symlink($this->LOCAL_PATH . "/provisioning", $provisioning))
+			if (!symlink($this->MODULE_PATH . "/provisioning", $provisioning))
 			{
 				out(_("Error!"));
 				out(sprintf(_("<strong>Your permissions are wrong on %s, web provisioning link not created!</strong>")), $this->config->get('AMPWEBROOT'));
@@ -1543,7 +1627,7 @@ class Endpointman extends FreePBX_Helpers implements BMO {
 			case "upload_master_xml":
 
 
-				$file_xml_tmp  = $this->buildPath($this->PHONE_MODULES_PATH, 'temp', 'master.xml');
+				$file_xml_tmp  = $this->buildPath($this->TEMP_PATH, 'master.xml');
 				$file_xml_dest = $this->buildPath($this->PHONE_MODULES_PATH, 'master.xml');
 
 				if (file_exists($file_xml_tmp)) {
@@ -1767,9 +1851,14 @@ class Endpointman extends FreePBX_Helpers implements BMO {
 	public function buildPath(...$paths)
 	{
 		$paths = array_filter($paths, fn($path) => !empty($path));
+		$initialSeparator = '';
+		if (isset($paths[0]) && strpos($paths[0], DIRECTORY_SEPARATOR) === 0)
+		{
+			$initialSeparator = DIRECTORY_SEPARATOR;
+		}
 		$paths = array_map(fn($path) => trim($path, DIRECTORY_SEPARATOR), $paths);
-		$path = implode(DIRECTORY_SEPARATOR, $paths);
-		return $path;
+		$path  = implode(DIRECTORY_SEPARATOR, $paths);
+		return $initialSeparator.$path;
     }
 
 
@@ -1921,10 +2010,12 @@ echo $this->error['tftp_check'];
     function submit_config($brand, $product, $orig_name, $data) {
     	$posturl = 'http://www.provisioner.net/submit_config.php';
 
-    	$fp = fopen($this->LOCAL_PATH . '/data.txt', 'w');
+		$file_name_with_full_path = $this->buildPath($this->MODULE_PATH, 'data.txt');
+
+    	$fp = fopen( $file_name_with_full_path, 'w');
     	fwrite($fp, $data);
     	fclose($fp);
-    	$file_name_with_full_path = $this->LOCAL_PATH . "/data.txt";
+    	
 
     	$postvars = array('brand' => $brand, 'product' => $product, 'origname' => htmlentities(addslashes($orig_name)), 'file_contents' => '@' . $file_name_with_full_path);
 

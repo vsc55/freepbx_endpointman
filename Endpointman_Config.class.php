@@ -12,8 +12,6 @@ namespace FreePBX\modules;
 #[\AllowDynamicProperties]
 class Endpointman_Config
 {
-	public $UPDATE_PATH;
-	public $PROVISIONER_BASE;
 	public $error = array (
 		'file2json' => '',
 	);
@@ -27,15 +25,13 @@ class Endpointman_Config
 		$this->configmod = $epm->configmod;
 		$this->system 	 = $epm->system;
 
-		$this->UPDATE_PATH 	= $this->configmod->get('update_server');
-
-		if (! file_exists($this->epm->LOCAL_PATH))
+		if (! file_exists($this->epm->MODULE_PATH))
 		{
-            die(_("Can't Load Local Endpoint Manager Directory!"));
+            die(sprintf(_("[%s] Can't Load Local Endpoint Manager Directory!"), __CLASS__));
         }
 		if (! file_exists($this->epm->PHONE_MODULES_PATH))
 		{
-            die(_('Endpoint Manager can not create the modules folder!'));
+            die(sprintf(_('[%s] Endpoint Manager can not create the modules folder!'), __CLASS__));
         }        
 	}
 
@@ -742,10 +738,10 @@ class Endpointman_Config
 	 */
     public function update_check($echomsg = false, &$error=array())
 	{
-		$url_master     = $this->epm->buildUrl($this->UPDATE_PATH, "master.json");
-		$url_status	    = $this->epm->buildUrl($this->UPDATE_PATH, "update_status");
+		$url_master     = $this->epm->buildUrl($this->epm->URL_UPDATE, "master.json");
+		$url_status	    = $this->epm->buildUrl($this->epm->URL_UPDATE, "update_status");
 		$local_endpoint = $this->epm->buildPath($this->epm->PHONE_MODULES_PATH, "endpoint");
-		$temp_location  = $this->epm->buildPath($this->epm->PHONE_MODULES_PATH, "temp/provisioner");
+		$temp_location  = $this->epm->buildPath($this->epm->PHONE_MODULES_PATH, "temp", "provisioner");
 		$local_master   = $this->epm->buildPath($local_endpoint, "master.json");
 		
 		if (!file_exists($local_endpoint))
@@ -833,7 +829,7 @@ class Endpointman_Config
 				{
 					if (($data == "") OR ($data <= $endpoint_last_mod))
 					{
-						$url_package  = $this->epm->buildUrl($this->UPDATE_PATH, $endpoint_package);
+						$url_package  = $this->epm->buildUrl($this->epm->URL_UPDATE, $endpoint_package);
 						$path_package = $this->epm->buildPath($temp_location, $endpoint_package);
 
 						//TODO: ERROR Pakage file not exist in repository GitHub.
@@ -854,8 +850,8 @@ class Endpointman_Config
 							$files = [
 								"setup.php",
 								"autoload.php",
-								"endpoint/base.php",
-								"endpoint/global_template_data.json"
+								$this->epm->buildPath("endpoint', 'base.php"),
+								$this->epm->buildPath("endpoint', 'global_template_data.json"),
 							];
 							foreach ($files as $file)
 							{
@@ -906,8 +902,8 @@ class Endpointman_Config
 							]);
 							$local = $stmt->rowCount() === 0 ? false : $stmt->fetch(\PDO::FETCH_ASSOC);
 
-							$url_brand_data  = $this->epm->buildUrl($this->UPDATE_PATH, $data['directory'])."/".$data['directory'].".json";
-							$local_brand_data = sprintf("%s/%s/brand_data.json", $local_endpoint, $data['directory']);
+							$url_brand_data   = $this->epm->buildUrl($this->epm->URL_UPDATE, $data['directory'], $data['directory'].".json");
+							$local_brand_data = $this->epm->buildPath($local_endpoint, $data['directory'], 'brand_data.json');
 							if (!$local)
 							{
 								if ($echomsg == true)
@@ -1111,7 +1107,7 @@ class Endpointman_Config
 				$out = $temp['data']['brands'] ?? array();
 				foreach ($out as $data)
 				{
-					$local_brand_data = sprintf("%s/%s/brand_data.json", $local_endpoint, $data['directory']);
+					$local_brand_data = $this->epm->buildPath($local_endpoint, $data['directory'], 'brand_data.json');
 					try
 					{
 						$temp = $this->epm->file2json($local_brand_data);
@@ -1169,7 +1165,7 @@ class Endpointman_Config
 					$last_mod = "";
 					foreach ($temp['data']['brands']['family_list'] ?? array() as $family_list)
 					{
-						$local_family_data = sprintf("%s/%s/%s/family_data.json", $local_endpoint, $directory, $family_list['directory']);
+						$local_family_data = $this->epm->buildPath($local_endpoint, $directory, $family_list['directory'], "family_data.json");
 						try
 						{
 							$family_line = $this->epm->file2json($local_family_data);
@@ -1408,7 +1404,7 @@ class Endpointman_Config
             $sql = "UPDATE endpointman_product_list SET long_name = '" . str_replace("'", "''", $long_name) . "', short_name = '" . str_replace("'", "''", $short_name) . "' , cfg_ver = '" . $version . "' WHERE id = '" . $product_row['id'] . "'";
             sql($sql);
 
-            $template_data_array = $this->merge_data($this->epm->buildPath($this->epm->PHONE_MODULES_PATH, 'endpoint', $brand_row['directory'], $product_row['cfg_dir']) . '/', $template_list_array, true, true);
+            $template_data_array = $this->merge_data($this->epm->buildPath($this->epm->PHONE_MODULES_PATH, 'endpoint', $brand_row['directory'], $product_row['cfg_dir']), $template_list_array, true, true);
 
             $sql = "UPDATE endpointman_model_list SET template_data = '" . serialize($template_data_array) . "' WHERE id = '" . $model . "'";
             sql($sql);
@@ -1426,7 +1422,7 @@ class Endpointman_Config
     	out(_("Install/Update Brand..."));
         if (!$this->configmod->get('use_repo'))
 		{
-			$temp_directory = $this->epm->buildPath($this->epm->PHONE_MODULES_PATH, 'temp', 'provisioner') . "/";
+			$temp_directory = $this->epm->PROVISIONER_PATH;
             // $temp_directory = $this->system->sys_get_temp_dir() . "/epm_temp/";
 
 			if (!file_exists($temp_directory))
@@ -1454,7 +1450,7 @@ class Endpointman_Config
 			{
 				$row = $stmt->fetch(\PDO::FETCH_ASSOC);
 			
-				$url_brand_data   = $this->epm->buildUrl($this->UPDATE_PATH, $row['directory'], $row['directory'].".json");
+				$url_brand_data   = $this->epm->buildUrl($this->epm->URL_UPDATE, $row['directory'], $row['directory'].".json");
 				$local_brand_data = $this->epm->buildPath($this->epm->PHONE_MODULES_PATH, 'endpoint',  $row['directory'], "brand_data.json");
 
 				$result = $this->system->download_file($url_brand_data, $local_brand_data);
@@ -1466,12 +1462,16 @@ class Endpointman_Config
 					$package = $temp['data']['brands']['package'];
 
 					out(_("Downloading Brand Package..."));
-					if ($this->system->download_file_with_progress_bar($this->UPDATE_PATH . $row['directory'] . '/' . $package, $temp_directory . $package))
+
+					$url_package  = $this->epm->buildUrl($this->epm->URL_UPDATE, $row['directory'], $package);
+					$path_package = $this->epm->buildPath($temp_directory, $package);
+
+					if ($this->system->download_file_with_progress_bar($url_package, $path_package))
 					{
-						if (file_exists($temp_directory . $package))
+						if (file_exists($path_package))
 						{
 							$md5_xml = $temp['data']['brands']['md5sum'];
-							$md5_pkg = md5_file($temp_directory . $package);
+							$md5_pkg = md5_file($path_package);
 
 							outn(_("Checking MD5sum of Package.... "));
 							if ($md5_xml == $md5_pkg)
@@ -1480,12 +1480,13 @@ class Endpointman_Config
 
 								outn(_("Extracting Tarball........ "));
 								//TODO: PENDIENTE VALIDAR SI DA ERROR LA DESCOMPRESION
-								exec( sprintf("%s -xvf %s%s -C %s", $this->configmod->get("tar_location"), $temp_directory, $package, $temp_directory) );
-								// exec("tar -xvf " . $temp_directory . $package . " -C " . $temp_directory);
+								exec( sprintf("%s -xvf %s -C %s", $this->configmod->get("tar_location"), $path_package, $temp_directory) );
+								// exec("tar -xvf " . $path_package . " -C " . $temp_directory);
 								out(_("Done!"));
 
 								//Update File in the temp directory
-								copy($local_brand_data, $temp_directory . $row['directory'] . '/brand_data.json');
+								$path_package_json = $this->epm->buildPath($temp_directory, $row['directory'], "brand_data.json");
+								copy($local_brand_data, $path_package_json);
 								$this->update_brand($row['directory'], TRUE);
 							}
 							else
@@ -1530,7 +1531,7 @@ class Endpointman_Config
 
 		// $temp_directory = $this->system->sys_get_temp_dir() . "/epm_temp/";
 
-		$temp_directory  = $this->epm->buildPath($this->epm->PHONE_MODULES_PATH, 'temp', "provisioner");
+		$temp_directory  = $this->epm->PROVISIONER_PATH;
 		$temp_brand_json = $this->epm->buildPath($temp_directory, $package, "brand_data.json");
 
 		//DEBUG
@@ -1910,7 +1911,9 @@ if ($this->configmod->get('debug')) echo $this->epm->format_txt(_("---Inserting 
     function install_firmware($product_id) {
     	out(_("Installa frimware... "));
 
-        $temp_directory = $this->epm->buildPath($this->system->sys_get_temp_dir(), "epm_temp");
+		//TOOD: Review howto create temp directory
+        // $temp_directory = $this->epm->buildPath($this->system->sys_get_temp_dir(), "/epm_temp/");
+		$temp_directory = $this->epm->PROVISIONER_PATH;
         $sql = 'SELECT endpointman_product_list.*, endpointman_brand_list.directory FROM endpointman_product_list, endpointman_brand_list WHERE endpointman_product_list.brand = endpointman_brand_list.id AND endpointman_product_list.id = ' . $product_id;
         $row = sql($sql, 'getRow', \PDO::FETCH_ASSOC);
         $json_data = $this->file2json($this->epm->buildPath($this->epm->PHONE_MODULES_PATH, 'endpoint', $row['directory'], $row['cfg_dir'], "family_data.json"));
@@ -1934,7 +1937,7 @@ if ($this->configmod->get('debug')) echo $this->epm->format_txt(_("---Inserting 
             $md5_xml      	   = $json_data['data']['firmware_md5sum'];
             $firmware_pkg 	   = $json_data['data']['firmware_pkg'];
 			$firmware_pkg_path = $this->epm->buildPath($temp_directory, $firmware_pkg);
-			$firmware_pkg_url  = $this->epm->buildUrl($this->UPDATE_PATH, $row['directory'], $firmware_pkg);
+			$firmware_pkg_url  = $this->epm->buildUrl($this->epm->URL_UPDATE, $row['directory'], $firmware_pkg);
 
             if (file_exists($firmware_pkg_path)) {
                 $md5_pkg = md5_file($firmware_pkg_path);

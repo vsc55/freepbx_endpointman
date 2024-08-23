@@ -36,9 +36,9 @@ else
 	die(_("Please create /tftpboot, even if you won't use it"));
 }
 
-if(!is_writeable($epm->LOCAL_PATH))
+if(!is_writeable($epm->MODULE_PATH))
 {
-	chmod($epm->LOCAL_PATH, 0764);
+	chmod($epm->MODULE_PATH, 0764);
 }
 if(!is_writeable($epm->PHONE_MODULES_PATH))
 {
@@ -67,4 +67,4 @@ if(isset($global_cfg['debug']) && $global_cfg['debug'])
 {
 	$debug .= "Request Variables: \n".print_r($_REQUEST, TRUE);
 }
-include LOCAL_PATH.'/includes/devices_manager.inc';
+include FreePBX::Endpointman()->MODULE_PATH.'/includes/devices_manager.inc';

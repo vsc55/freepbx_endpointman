@@ -59,8 +59,8 @@ class endpointmanager {
         }
 
 
-if(!defined("UPDATE_PATH")) {
-    define("UPDATE_PATH", $this->global_cfg['update_server']);
+if(!defined("URL_UPDATE")) {
+    define("URL_UPDATE", $this->global_cfg['update_server']);
 }
 if(!defined("MODULES_PATH")) {
     define("MODULES_PATH", dirname(dirname(dirname(__FILE__))) . '/');
@@ -78,7 +78,7 @@ if(!defined("LOCAL_PATH")) {
         }
         else
         {
-            die(_("Can't Load Local Endpoint Manager Directory!"));
+            die(sprintf(_("Can't Load Local Endpoint Manager Directory (%s)!"), __CLASS__));
         }
 
         //Define the location of phone modules, keeping it outside of the module directory so that when the user updates endpointmanager they don't lose all of their phones
@@ -2401,13 +2401,13 @@ if(!defined("LOCAL_PATH")) {
                     echo "Skipping download....<br />";
                 } else {
                     echo "<div style='float: left'>Downloading firmware...</div><div style='float: left' id=\"DivExample\">.</div>";
-                    $this->download_file_with_progress_bar(UPDATE_PATH . $row['directory'] . "/" . $firmware_pkg, $temp_directory . $firmware_pkg);
+                    $this->download_file_with_progress_bar(URL_UPDATE . $row['directory'] . "/" . $firmware_pkg, $temp_directory . $firmware_pkg);
                     echo "<script type='text/javascript'>document.getElementById('DivExample').innerHTML='Done!';</script><br />";
                     $md5_pkg = md5_file($temp_directory . $firmware_pkg);
                 }
             } else {
                 echo "<div style='float: left'>Downloading firmware...</div><div style='float: left' id=\"DivExample\">.</div>";
-                $this->download_file_with_progress_bar(UPDATE_PATH . $row['directory'] . "/" . $firmware_pkg, $temp_directory . $firmware_pkg);
+                $this->download_file_with_progress_bar(URL_UPDATE . $row['directory'] . "/" . $firmware_pkg, $temp_directory . $firmware_pkg);
                 echo "<script type='text/javascript'>document.getElementById('DivExample').innerHTML='Done!';</script><br />";
                 $md5_pkg = md5_file($temp_directory . $firmware_pkg);
             }
@@ -2502,7 +2502,7 @@ if(!defined("LOCAL_PATH")) {
 	    }
             $row = $this->eda->sql('SELECT * FROM  endpointman_brand_list WHERE id =' . $id, 'getAll', \PDO::FETCH_ASSOC);
             echo "Downloading Brand JSON.....";
-            $result = $this->download_file(UPDATE_PATH . $row[0]['directory'] . "/" . $row[0]['directory'] . ".json", PHONE_MODULES_PATH . "endpoint/" . $row[0]['directory'] . "/brand_data.json");
+            $result = $this->download_file(URL_UPDATE . $row[0]['directory'] . "/" . $row[0]['directory'] . ".json", PHONE_MODULES_PATH . "endpoint/" . $row[0]['directory'] . "/brand_data.json");
 
             if ($result) {
                 echo "Done!<br/>";
@@ -2511,7 +2511,7 @@ if(!defined("LOCAL_PATH")) {
                 $package = $temp['data']['brands']['package'];
 
                 echo "<div style='float: left'>Downloading Brand Package...</div><div style='float: left' id=\"DivExample\">.</div>";
-                $this->download_file_with_progress_bar(UPDATE_PATH . $row[0]['directory'] . '/' . $package, $temp_directory . $package);
+                $this->download_file_with_progress_bar(URL_UPDATE . $row[0]['directory'] . '/' . $package, $temp_directory . $package);
                 echo "<script type='text/javascript'>document.getElementById('DivExample').innerHTML='Done!';</script><br />";
 
                 if (file_exists($temp_directory . $package)) {

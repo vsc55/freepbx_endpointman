@@ -19,31 +19,34 @@ if (!empty($active_modules['endpoint']['rawname'])) {
 
 require_once dirname(__FILE__).'/config.php';
 
+$module_path = FreePBX::Endpointman()->MODULE_PATH;
+
+
 switch ($page) {
     case 'advanced':
-        include LOCAL_PATH . '/includes/advanced.inc';
+        include $module_path . '/includes/advanced.inc';
         break;
     case 'epm_oss':
-        include LOCAL_PATH . '/includes/advanced.inc';
+        include $module_path . '/includes/advanced.inc';
         break;
 
     case 'template_manager':
-        include LOCAL_PATH . '/includes/template_manager.inc';
+        include $module_path . '/includes/template_manager.inc';
         break;
 
     case 'devices_manager';
-        include LOCAL_PATH . '/includes/devices_manager.inc';
+        include $module_path . '/includes/devices_manager.inc';
         break;
 
     case 'brand_model_manager':
-        include LOCAL_PATH . '/includes/brand_model_manager.inc';
+        include $module_path . '/includes/brand_model_manager.inc';
         break;
 
     case 'installer':
-        include LOCAL_PATH . '/install.inc';
+        include $module_path . '/install.inc';
         break;
 
     default:
-        include LOCAL_PATH . '/includes/devices_manager.inc';
+        include $module_path . '/includes/devices_manager.inc';
 		
 }
