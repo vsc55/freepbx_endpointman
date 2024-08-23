@@ -198,7 +198,7 @@ class Endpointman_Advanced
 					"message" => sprintf(_("Tab '%s' not valid!"), $module_tab)
 				);
 		}
-		if ($command_allow)
+		if (! $command_allow)
 		{
 			$retarr = array(
 				"status" => false,

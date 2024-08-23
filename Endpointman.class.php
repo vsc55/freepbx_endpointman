@@ -300,6 +300,7 @@ class Endpointman extends FreePBX_Helpers implements BMO {
 				case "epm_oss":
 					$data_return = $this->epm_oss->ajaxHandler($module_tab, $command);
 					break;
+
 				case "epm_placeholders":
 					$data_return = $this->epm_placeholders->ajaxHandler($module_tab, $command);
 					break;
@@ -1245,7 +1246,7 @@ class Endpointman extends FreePBX_Helpers implements BMO {
 							$data_tab['config']['adminpass']  		= $this->configmod->get("adminpass");
 							$data_tab['config']['userpass']  		= $this->configmod->get("userpass");
 							$data_tab['config']['ls_tz']  			= $this->listTZ($this->configmod->get("tz"));
-							$data_tab['config']['PHPTIMEZONE']  	= $this->configmod->get("PHPTIMEZONE");
+							$data_tab['config']['PHPTIMEZONE']  	= $this->config->get('PHPTIMEZONE');
 							$data_tab['config']['ntp']  			= $this->configmod->get("ntp");
 							$data_tab['config']['nmap_location']  	= $this->configmod->get("nmap_location");
 							$data_tab['config']['arp_location']  	= $this->configmod->get("arp_location");

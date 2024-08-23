@@ -807,7 +807,7 @@ function epm_advanced_tab_setting_input_value_change_bt(sNameID = "", sValue = "
 {
 	if (sNameID === "" ) { return false; }
 	
-	epm_global_input_value_change_bt(sNameID,sValue, bSetFocus);
+	epm_global_input_value_change_bt(sNameID, sValue, bSetFocus);
 	if (bSaveChange === true) {
 		epm_advanced_tab_setting_input_change(sNameID);
 	}
@@ -816,11 +816,19 @@ function epm_advanced_tab_setting_input_value_change_bt(sNameID = "", sValue = "
 function epm_advanced_tab_setting_input_change(obt)
 {
 	var idtab = epm_global_get_tab_actual();
-	if (idtab === "") { return; }
+	if (idtab === "") {
+		fpbxToast(_('ERROR: Missing tabs!'), 'error');
+		return false;
+	}
 	
 	var obt_name = $(obt).attr("name").toLowerCase();
-	var obt_val = $(obt).val().toLowerCase();
-	
+	var obt_val = $(obt).val();
+	if (obt_val == null) {
+		fpbxToast(_('ERROR: Value is Null!'), 'error');
+		return false;
+	}
+	obt_val = obt_val.toLowerCase();
+
 	$.ajax({
 		type: 'POST',
 		url: window.FreePBX.ajaxurl,
@@ -835,7 +843,7 @@ function epm_advanced_tab_setting_input_change(obt)
 		dataType: 'json',
 		timeout: 60000,
 		error: function(xhr, ajaxOptions, thrownError) {
-			fpbxToast('ERROR AJAX 1:' + thrownError,'ERROR (' + xhr.status + ')!','error');
+			fpbxToast( sprintf(_('ERROR AJAX: %s'), thrownError),sprintf('ERROR (%s)!', xhr.status), 'error');
 			$("#" + obt_name + "_no").attr("disabled", true).prop( "checked", false);
 			$("#" + obt_name + "_yes").attr("disabled", true).prop( "checked", false);
 			return false;
