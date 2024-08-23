@@ -97,112 +97,285 @@ class epm_system {
         }
     }
 
-    /**
-    * Downloads a file and places it in the destination defined
-    * @version 2.11
-    * @param string $url_file URL of File
-    * @param string $destination_file Destination of file
-    * @package epm_system
-    */
-    function download_file($url_file, $destination_file, &$error = array()) {
-			$dir = dirname($destination_file);
-			if(!file_exists($dir)) {
-				mkdir($dir);
-			}
-        //Determine if file_get_contents_url exists which is the default FreePBX Standard for downloading straight files
-        if(function_exists('file_get_contents_url')) {
-            $contents = file_get_contents_url($url_file);
-        } else {
-            //I really hope we NEVER get here.
-            $contents = file_get_contents($url_file);
-            if (!preg_match('/200/', $http_response_header[0])) {
-                $error['download_file'] = "Unknown Error in Download_file";
-                return false;
-            }
+
+
+
+    //TODO: Remove this function, it is not used. Only retrocompatibility.
+    public function download_file_old($url_file, $destination_file, &$error = array())
+    {
+        try {
+            $this->download_file($url_file, $destination_file);
+            
         }
-        //If contents are emtpy then we failed. Or something is wrong
-        if(!empty($contents)) {
-            $dirname = dirname($destination_file);
-            if (!file_exists($dirname)) {
-                mkdir($dirname);
-            }
-            if (!is_writable($dirname)) {
-                $error['download_file'] = "Directory '" . $dirname . "' is not writable! Unable to download files";
-                return false;
-            }
-            file_put_contents($destination_file, $contents);
-            //check file placement
-            if (!file_exists($destination_file)) {
-                $error['download_file'] = "File Doesn't Exist in '" . $dirname . "'. Unable to download files";
-                return false;
-            }
-            return true;
-        } else {
-            $error['download_file'] = "Contents of Remote file are blank! URL:".$url_file;
+        catch (\Exception $e)
+        {
+            $error['download_file'] = $e->getMessage();
             return false;
         }
+        return true;
     }
+
 
     /**
-    * Downloads a file and places it in the destination defined with progress
-    * @version 2.11
-    * @param string $url_file URL of File
-    * @param string $destination_file Destination of file
-    * @package epm_system
-    */
-    function download_file_with_progress_bar($url_file, $destination_file, &$error = array()) {
-	    set_time_limit(0);
-	    $headers = get_headers($url_file, 1);
-	    $size = $headers['Content-Length'] ?? 0;
-	    $randnumid = sprintf("%08d", mt_rand(1,99999999));
+     * Downloads a file from a given URL and saves it to a specified destination.
+     *
+     * @param string $url_file The URL of the file to be downloaded.
+     * @param string $destination_file The destination path where the file will be saved.
+     * @return bool Returns true if the file was downloaded successfully, false otherwise.
+     * @throws \Exception If an error occurs during the download process and $error is null.
+     * @package epm_system
+     */
+    public function download_file($url_file, $destination_file)
+    {
+        $msg_error = null;
+		$dir       = dirname($destination_file);
 
-	    $dir = dirname($destination_file);
-	    if(!file_exists($dir)) {
-		    mkdir($dir);
-	    }
+		if(!file_exists($dir))
+        {
+			if (!mkdir($dir, 0777, true))
+            {
+                $msg_error = sprintf(_("Directory could not be created: %s"), $dir);
+            }
+		}
+        if (is_null($msg_error))
+        {
+            if (!is_writable($dir))
+            {
+                $msg_error = sprintf(_("Directory '%s' is not writable! Unable to download files"), $dir);
+            }
+            else
+            {
+                $fp = fopen($destination_file, 'w');
+                if ($fp === false)
+                {
+                    $msg_error = sprintf(_("Could not open target file: %s"), $destination_file);
+                }
+                else
+                {
+                    $ch = curl_init($url_file);
 
-	    if (preg_match('/200/', $headers[0])) {
-		    dbug("wget --no-cache " . $url_file . " -O " . $destination_file);
-		    $pid = $this->run_in_background("wget --no-cache " . $url_file . " -O " . $destination_file);
+                    curl_setopt($ch, CURLOPT_FILE, $fp);
+                    curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
+        
+                    $response = curl_exec($ch);
+                    $httpCode  = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+                    $httpError = $response === false ? curl_error($ch) : null;
+       
+                    if ($response === false)
+                    {
+                        $msg_error = sprintf(_("Error Downloading file '%s' (%s): %s"), $url_file, $httpCode, $httpError);
+                    }
+                    curl_close($ch);
+                    fclose($fp);
+                }
+            }
+        }
 
-		    echo sprintf("<div>"._("Downloading %s ...")."</div>", basename($destination_file));
-		    echo sprintf("<div id='DivProgressBar_%d' class='progress' style='width:100%%'>", $randnumid);
-		    echo "<div class='progress-bar progress-bar-striped' role='progressbar' aria-valuenow='0' aria-valuemin='0' aria-valuemax='100' style='width:0%'>0% ("._("Complete").")</div>";
-		    echo "</div>";
-		    usleep('300');
-		    while ($this->is_process_running($pid)) {
-			    $out = 100 * round(filesize($destination_file) / $size, 2);
-?>
-			    <script type="text/javascript">
-			    $('#DivProgressBar_<?php echo $randnumid; ?> .progress-bar')
-				    .css('width', <?php echo $out ?>+'%')
-				    .attr('aria-valuenow', <?php echo $out ?>)
-				    .text("<?php echo $out ?>% (<?php echo _("Complete") ?>)");
-			    </script>
-<?php
-			    usleep('500');
-			    ob_end_flush();
-			    //ob_flush();
-			    flush();
-			    ob_start();
-			    clearstatcache(); // make sure PHP actually checks dest. file size
-		    }
-?>
-		    <script type="text/javascript">
-		    $('#DivProgressBar_<?php echo $randnumid; ?> .progress-bar').css('width', '100%').attr('aria-valuenow', '100').text("100% (<?php echo _("Success") ?>)");
-		    </script>
-<?php
-		    return true;
-	    } else {
-
-		    echo sprintf("<div>"._("Downloading %s ...")."</div>", basename($destination_file));
-		    echo "<div class='progress' style='width:100%'>";
-		    echo "<div class='progress-bar progress-bar-danger progress-bar-striped' role='progressbar' aria-valuenow='100' aria-valuemin='0' aria-valuemax='100' style='width:100%'>0% ("._("Error: ").$headers[0]."!)</div>";
-		    echo "</div>";
-
-		    return false;
-	    }
+        if (! empty($msg_error))
+        {
+            throw new \Exception($msg_error);
+        }
+        return true;
     }
+
+    
+
+    // TODO: Remove this function, it is not used. Only retrocompatibility.
+    public function download_file_with_progress_bar_old($url_file, $destination_file, &$error = array())
+    {
+        try {
+            $this->download_file_with_progress_bar($url_file, $destination_file);
+        }
+        catch (\Exception $e)
+        {
+            $error['download_file'] = $e->getMessage();
+            return false;
+        }
+        return true;
+    }
+
+    
+    /**
+     * Downloads a file with a progress bar.
+     *
+     * @param string $url_file The URL of the file to download.
+     * @param string $destination_file The destination file path to save the downloaded file.
+     * @return bool Returns true if the file is downloaded successfully, otherwise throws an exception.
+     * @throws \Exception Throws an exception if there is an error during the download process.
+     */
+    public function download_file_with_progress_bar($url_file, $destination_file)
+    {
+        $msg_error = null;
+		$dir       = dirname($destination_file);
+
+		if(!file_exists($dir))
+        {
+			if (!mkdir($dir, 0777, true))
+            {
+                $msg_error = sprintf(_("Directory could not be created: %s"), $dir);
+            }
+		}
+        if (is_null($msg_error))
+        {
+            if (!is_writable($dir))
+            {
+                $msg_error = sprintf(_("Directory '%s' is not writable! Unable to download files"), $dir);
+            }
+            else
+            {
+                set_time_limit(0);
+                $randnumid  = sprintf("%08d", mt_rand(1, 99999999));
+
+                ?>
+                <div><?= sprintf(_("Downloading %s ..."), basename($destination_file)) ?></div>
+                    <div id='DivProgressBar_<?= $randnumid ?>' class='progress' style='width:100%'>
+                        <div class='progress-bar progress-bar-striped' role='progressbar' aria-valuenow='0' aria-valuemin='0' aria-valuemax='100' style='width:0%'>";
+                            0% <?= _("(Complete)") ?>
+                    </div>
+                </div>
+                <?php
+
+                $fp = fopen($destination_file, 'w');
+                if ($fp === false)
+                {
+                    $msg_error = sprintf(_("Could not open target file: %s"), $destination_file);
+                }
+                else
+                {
+                    $ch = curl_init($url_file);
+            
+                    curl_setopt($ch, CURLOPT_FILE, $fp);
+                    curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
+                    curl_setopt($ch, CURLOPT_NOPROGRESS, false);
+                    curl_setopt($ch, CURLOPT_PROGRESSFUNCTION, function ($resource, $download_size, $downloaded, $upload_size, $uploaded) use ($randnumid)
+                    {
+                        if ($download_size > 0)
+                        {
+                            $progress = ($downloaded / $download_size) * 100;
+                            $progress = round($progress, 2);
+                            ?>
+                            <script type="text/javascript">
+                            $('#DivProgressBar_<?= $randnumid ?> .progress-bar')
+                                .css('width', '<?= $progress ?>%')
+                                .attr('aria-valuenow', '<?= $progress ?>')
+                                .text("<?= $progress ?>% (<?= _("Complete") ?>)");
+                            </script>
+                            <?php
+                            flush();
+                        }
+                    });
+            
+                    $response  = curl_exec($ch);
+                    $httpCode  = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+                    $httpError = $response === false ? curl_error($ch) : null;
+    
+                    curl_close($ch);
+                    fclose($fp);
+            
+                    if ($response && $httpCode === 200)
+                    {
+                        ?>
+                        <script type="text/javascript">
+                            $('#DivProgressBar_<?= $randnumid ?> .progress-bar').css('width', '100%').attr('aria-valuenow', '100').text("100% (<?= _("Success") ?>)");
+                        </script>
+                        <?php
+                    }
+                    else
+                    {
+                        $msg_error = sprintf(_("Error Downloading file '%s' (%s): %s"), $url_file, $httpCode, $httpError);
+                        ?>
+                        <script type="text/javascript">
+                            $('#DivProgressBar_<?= $randnumid ?> .progress-bar').css('width', '100%').attr('aria-valuenow', '100').text("0% (<?= sprintf(_("Error: HTTP %s"), $httpCode) ?>)");
+                        </script>
+                        <?php
+                    }
+
+
+                }
+            }
+        }
+
+        if (!empty($msg_error))
+        {
+            throw new \Exception($msg_error);
+        }
+        return true;
+    }
+
+    function decompressTarGz($tarGzFile, $destinationDir)
+    {
+        $fileInfo  = pathinfo($tarGzFile);
+        $extension = $fileInfo['extension'];
+
+        if ($extension === 'tgz')
+        {
+            $tarFile = str_replace('.tgz', '.tar', $tarGzFile);
+        }
+        elseif ($extension === 'gz' && substr($fileInfo['basename'], -7) === '.tar.gz')
+        {
+            $tarFile = str_replace('.tar.gz', '.tar', $tarGzFile);
+        }
+        else
+        {
+            throw new \Exception(sprintf(_("The file does not have a valid extension (.tgz or .tar.gz): %s"), $fileInfo['basename']));
+        }
+        
+        switch ($extension)
+        {
+            case 'tgz':
+                rename($tarGzFile, $tarFile);
+                break;
+
+            case 'gz':
+                $bufferSize = 4096;
+                $gz         = gzopen($tarGzFile, 'rb');
+                $tar        = fopen($tarFile, 'wb');
+
+                if (!$gz || !$tar)
+                {
+                    if (!$gz)
+                    {
+                        throw new \Exception(sprintf(_("Could not open .gz file: %s"), $tarGzFile));
+                    }
+                    if (!$tar)
+                    {
+                        throw new \Exception(sprintf(_("Could not open .tar file: %s"), $tarFile));
+                    }
+                }
+                while (!gzeof($gz))
+                {
+                    fwrite($tar, gzread($gz, $bufferSize));
+                }
+                fclose($tar);
+                gzclose($gz);
+                break;
+        }
+
+        try
+        {
+            $phar = new \PharData($tarFile);
+            $phar->extractTo($destinationDir);
+        }
+        catch (\UnexpectedValueException $e)
+        {
+            throw new \Exception(sprintf(_("Error Reading .tar File: %s"), $e->getMessage()));
+        }
+        catch (\BadMethodCallException $e)
+        {
+            throw new \Exception( sprintf(_("Unsupported Method in phardata: %s"), $e->getMessage()));
+        }
+        catch (\PharException $e)
+        {
+            throw new \Exception(sprintf(_("Error in phardata: %s"), $e->getMessage()));
+        }
+        catch (\Exception $e)
+        {
+            throw $e;
+        }
+        unlink($tarFile);
+        return true;
+    }
+
 
     /**
      * Taken from http://www.php.net/manual/en/function.array-search.php#69232

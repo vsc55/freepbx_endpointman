@@ -2401,13 +2401,13 @@ if(!defined("LOCAL_PATH")) {
                     echo "Skipping download....<br />";
                 } else {
                     echo "<div style='float: left'>Downloading firmware...</div><div style='float: left' id=\"DivExample\">.</div>";
-                    $this->download_file_with_progress_bar(URL_UPDATE . $row['directory'] . "/" . $firmware_pkg, $temp_directory . $firmware_pkg);
+                    $this->download_file_with_progress_bar_old(URL_UPDATE . $row['directory'] . "/" . $firmware_pkg, $temp_directory . $firmware_pkg);
                     echo "<script type='text/javascript'>document.getElementById('DivExample').innerHTML='Done!';</script><br />";
                     $md5_pkg = md5_file($temp_directory . $firmware_pkg);
                 }
             } else {
                 echo "<div style='float: left'>Downloading firmware...</div><div style='float: left' id=\"DivExample\">.</div>";
-                $this->download_file_with_progress_bar(URL_UPDATE . $row['directory'] . "/" . $firmware_pkg, $temp_directory . $firmware_pkg);
+                $this->download_file_with_progress_bar_old(URL_UPDATE . $row['directory'] . "/" . $firmware_pkg, $temp_directory . $firmware_pkg);
                 echo "<script type='text/javascript'>document.getElementById('DivExample').innerHTML='Done!';</script><br />";
                 $md5_pkg = md5_file($temp_directory . $firmware_pkg);
             }
@@ -2467,7 +2467,7 @@ if(!defined("LOCAL_PATH")) {
         $temp_file = $temp_directory . $directory . '.json';
         file_exists(dirname($temp_file)) ? '' : mkdir(dirname($temp_file));
 
-        if ($this->download_file($location, $temp_file)) {
+        if ($this->download_file_old($location, $temp_file)) {
             $handle = fopen($temp_file, "rb");
             $contents = fread($handle, filesize($temp_file));
             fclose($handle);
@@ -2502,7 +2502,7 @@ if(!defined("LOCAL_PATH")) {
 	    }
             $row = $this->eda->sql('SELECT * FROM  endpointman_brand_list WHERE id =' . $id, 'getAll', \PDO::FETCH_ASSOC);
             echo "Downloading Brand JSON.....";
-            $result = $this->download_file(URL_UPDATE . $row[0]['directory'] . "/" . $row[0]['directory'] . ".json", PHONE_MODULES_PATH . "endpoint/" . $row[0]['directory'] . "/brand_data.json");
+            $result = $this->download_file_old(URL_UPDATE . $row[0]['directory'] . "/" . $row[0]['directory'] . ".json", PHONE_MODULES_PATH . "endpoint/" . $row[0]['directory'] . "/brand_data.json");
 
             if ($result) {
                 echo "Done!<br/>";
@@ -2511,7 +2511,7 @@ if(!defined("LOCAL_PATH")) {
                 $package = $temp['data']['brands']['package'];
 
                 echo "<div style='float: left'>Downloading Brand Package...</div><div style='float: left' id=\"DivExample\">.</div>";
-                $this->download_file_with_progress_bar(URL_UPDATE . $row[0]['directory'] . '/' . $package, $temp_directory . $package);
+                $this->download_file_with_progress_bar_old(URL_UPDATE . $row[0]['directory'] . '/' . $package, $temp_directory . $package);
                 echo "<script type='text/javascript'>document.getElementById('DivExample').innerHTML='Done!';</script><br />";
 
                 if (file_exists($temp_directory . $package)) {
@@ -2977,7 +2977,7 @@ if(!defined("LOCAL_PATH")) {
     * @param string $destination_file Destination of file
     * @package epm_system
     */
-    function download_file_with_progress_bar($url_file, $destination_file) {
+    function download_file_with_progress_bar_old($url_file, $destination_file) {
         set_time_limit(0);
         $headers = get_headers($url_file, 1);
         $size = $headers['Content-Length'];
@@ -3008,7 +3008,7 @@ if(!defined("LOCAL_PATH")) {
     * @param string $destination_file Destination of file
     * @package epm_system
     */
-    function download_file($url_file, $destination_file) {
+    function download_file_old($url_file, $destination_file) {
         //Determine if file_get_contents_url exists which is the default FreePBX Standard for downloading straight files
         if(function_exists('file_get_contents_url')) {
             $contents = file_get_contents_url($url_file);

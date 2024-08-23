@@ -222,7 +222,7 @@ class Endpointman extends FreePBX_Helpers implements BMO {
 		foreach ($operations as $operation)
 		{
 			$path 			= $operation['path'] 				?? '';
-			$permissions	= $operation['permissions'] 		?? 0775;
+			$permissions	= $operation['permissions'] 		?? 0755;
 			$recursive		= $operation['recursive']			?? true;
 			$action			= strtolower($operation['action'])	?? 'check';
 			$action_error	= $operation['action_error'] 		?? '';
@@ -2992,7 +2992,7 @@ $this->error['parse_configs'] = "File not written to hard drive!";
         $temp_file = $temp_directory . $directory . '.json';
         file_exists(dirname($temp_file)) ? '' : mkdir(dirname($temp_file));
 
-        if ($this->system->download_file($location, $temp_file)) {
+        if ($this->system->download_file_old($location, $temp_file)) {
             $handle = fopen($temp_file, "rb");
             $contents = fread($handle, filesize($temp_file));
             fclose($handle);
