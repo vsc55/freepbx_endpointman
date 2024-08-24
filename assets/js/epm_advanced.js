@@ -117,7 +117,7 @@ function epm_advanced_tab_manual_upload_bt_upload(command, formname)
 
 function epm_advanced_tab_manual_upload_list_files_brand_expor()
 {
-	waitingDialog.show();
+	// waitingDialog.show();
 	epm_global_html_find_show_hide("#list-brands-export-item-loading", true, 0, true);
 	if ($("#list-brands-export li.item-list-brand-export").length > 0) {
 		$("#list-brands-export li.item-list-brand-export").hide("slow" , function () {
@@ -218,7 +218,7 @@ function epm_advanced_tab_manual_upload_list_files_brand_expor()
 				}
 			},
 		});
-		setTimeout(function () {waitingDialog.hide();}, 1000);
+		// setTimeout(function () {waitingDialog.hide();}, 500);
 	}
 }
 
@@ -272,7 +272,7 @@ function epm_advanced_tab_poce_update_list_brand_bootnav(forzar=false)
 		);
 	}
 	
-waitingDialog.show();
+	// waitingDialog.show();
 	epm_advanced_tab_poce_clear_select();
 	$.ajax({
 		type: 'POST',
@@ -332,7 +332,7 @@ waitingDialog.show();
 			}
 		},
 	});
-setTimeout(function () {waitingDialog.hide();}, 1000);
+	// setTimeout(function () {waitingDialog.hide();}, 500);
 	
 }
 
@@ -363,7 +363,7 @@ function epm_advanced_tab_poce_select_product(idsel = null, bclear = true)
 	$("div.list-group>a.active").removeClass("active");
 	$("#list_product_"+idsel).addClass("active").blur();
 
-waitingDialog.show();
+	// waitingDialog.show();
 	$.ajax({
 		type: 'POST',
 		url: window.FreePBX.ajaxurl,
@@ -408,7 +408,7 @@ waitingDialog.show();
 			}
 		},
 	});	
-setTimeout(function () {waitingDialog.hide();}, 1000);
+	// setTimeout(function () {waitingDialog.hide();}, 500);
 }
 
 function epm_advanced_tab_poce_create_file_list(idname, data = "", product_select = "", typefile = "") 
@@ -442,7 +442,7 @@ function epm_advanced_tab_poce_create_file_list(idname, data = "", product_selec
 
 function epm_advanced_tab_poce_select_file_edit (idpro_select, txtnamefile, idnamefile, typefile)
 {
-waitingDialog.show();
+	// waitingDialog.show();
 	$.ajax({
 		type: 'POST',
 		url: window.FreePBX.ajaxurl,
@@ -541,7 +541,7 @@ waitingDialog.show();
 			}
 		},
 	});	
-setTimeout(function () {waitingDialog.hide();}, 1000);	
+	// setTimeout(function () {waitingDialog.hide();}, 500);
 }
 
 function epm_advanced_tab_poce_bt_acction (command)

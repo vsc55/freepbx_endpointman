@@ -114,6 +114,12 @@ class Endpointman_Config
 		switch ($command)
 		{
 			case "check_for_updates":
+				// Force flush all output buffers, need for AJAX
+				ob_implicit_flush(true);
+				while (ob_get_level() > 0) {
+					ob_end_flush();
+				}
+
 				$this->epm_config_manager_check_for_updates();
 				echo "<br /><hr><br />";
 				exit;
@@ -132,6 +138,12 @@ class Endpointman_Config
 				break;
 
 			case "brand":
+				// Force flush all output buffers, need for AJAX
+				ob_implicit_flush(true);
+				while (ob_get_level() > 0) {
+					ob_end_flush();
+				}
+
 				$this->epm_config_manager_brand();
 				echo "<br /><hr><br />";
 				exit;
@@ -476,15 +488,16 @@ class Endpointman_Config
 				continue;
 			}
 
-
 			$j = 0;
 			$product_list = $this->epm_config_hardware_get_list_product($row['id'], true);
 			foreach($product_list as $row2) {
 				$row_out[$i]['products'][$j] = $row2;
 				if((array_key_exists('firmware_vers', $row2)) AND ($row2['firmware_vers'] > 0)) {
-					$temp = $this->firmware_update_check($row2['id']);
+					$temp 		  = $this->firmware_update_check($row2['id']);
+					$firmware_ver = $temp['data']['firmware_ver'] ?? '';
+
 					$row_out[$i]['products'][$j]['update_fw'] = 1;
-					$row_out[$i]['products'][$j]['update_vers_fw'] = $temp['data']['firmware_ver'];
+					$row_out[$i]['products'][$j]['update_vers_fw'] = $firmware_ver;
 				} else {
 					$row_out[$i]['products'][$j]['update_fw'] = 0;
 					$row_out[$i]['products'][$j]['update_vers_fw'] = "";
@@ -522,7 +535,6 @@ class Endpointman_Config
 
 			$i++;
 		}
-		//echo "<textarea>".print_r($row_out,true)."</textarea>";
 		return $row_out;
 	}
 	/*** END SEC FUNCTIONS ***/
@@ -1341,81 +1353,137 @@ class Endpointman_Config
     }
 
 
-
-	 /**
-     * Sync the XML files (incuding all template files) from the hard drive with the database
-     * @param int $model Model ID
-     * @return boolean True on sync completed. False on sync failed
-     */
+	/**
+	 * Synchronizes a model with its corresponding brand and product directories.
+	 *
+	 * @param int $model The ID of the model to sync.
+	 * @param array $error (optional) An array to store any error messages encountered during the sync process.
+	 * @return bool Returns true if the sync was successful, false otherwise.
+	 */
     public function sync_model($model, &$error = array()) 
 	{
-        if ((!empty($model)) OR ($model > 0))
+		// Model allow > 0
+		if (empty($model) || !is_numeric($model))
 		{
-            $sql = "SELECT * FROM  endpointman_model_list WHERE id='" . $model . "'";
-            $model_row = sql($sql, 'getrow', \PDO::FETCH_ASSOC);
+			$error['sync_model'] = _("Model ID is empty or not numeric!");
+			return false;
+		}
 
-            $sql = "SELECT * FROM  endpointman_product_list WHERE id='" . $model_row['product_id'] . "'";
-            $product_row = sql($sql, 'getRow', \PDO::FETCH_ASSOC);
+		$sql = sprintf('SELECT eml.product_id, eml.brand, eml.model, epl.cfg_dir, ebl.directory FROM %s as eml
+						JOIN %s as epl ON eml.product_id = epl.id
+    					JOIN %s as ebl ON eml.brand = ebl.id
+    					WHERE eml.id = :id', "endpointman_model_list", "endpointman_product_list", "endpointman_brand_list");
+		$stmt = $this->db->prepare($sql);
+		$stmt->execute([
+			':id' => $model
+		]);
+		if ($stmt->rowCount() === 0)
+		{
+			$error['sync_model'] = _("Model not found!");
+			return false;
+		}
+		$row = $stmt->fetch(\PDO::FETCH_ASSOC);
 
-            $sql = "SELECT * FROM  endpointman_brand_list WHERE id=" . $model_row['brand'];
-            $brand_row = sql($sql, 'getRow', \PDO::FETCH_ASSOC);
+		if (empty($row['directory']) || empty($row['cfg_dir']))
+		{
+			$error['sync_model'] = _("Brand or Product Directory is empty!");
+			return false;
+		}
+
+		$path_brand_dir 		 = $this->epm->buildPath($this->epm->PHONE_MODULES_PATH, 'endpoint', $row['directory']);
+		$path_brand_dir_cfg 	 = $this->epm->buildPath($path_brand_dir, $row['cfg_dir']);
+		$path_brand_dir_cfg_json = $this->epm->buildPath($path_brand_dir_cfg, 'family_data.json');
+
+		if (!file_exists($path_brand_dir))
+		{
+			$error['sync_model'] = sprintf(_("Brand Directory '%s' Doesn't Exist! (%s)"), $row['directory'], $path_brand_dir);
+			return false;
+		}
+		elseif (!file_exists($path_brand_dir_cfg))
+		{
+			$error['sync_model'] = sprintf(_("Product Directory '%s' Doesn't Exist! (%s)"), $row['cfg_dir'], $path_brand_dir_cfg);
+			return false;
+		}
+		elseif (!file_exists($path_brand_dir_cfg_json))
+		{
+			$error['sync_model'] = sprintf(_("File 'family_data.json' Doesn't exist in directory: %s"), $path_brand_dir_cfg);
+			return false;
+		}
+
+		$json_data = null;
+		try
+		{
+			$json_data = $this->epm->file2json($path_brand_dir_cfg_json);
+			if ($json_data === FALSE || !is_array($json_data))
+			{
+				$error['sync_model'] = sprintf(_("Error: Can't read JSON file '%s'!"), $path_brand_dir_cfg_json);
+				return false;
+			}
+		}
+		catch (\Exception $e)
+		{
+			$error['sync_model'] = $e->getMessage();
+			return false;
+		}
+
+		$model_list = $json_data['data']['model_list'] ?? array();
 
 
-            $path_brand_dir 		 = $this->epm->buildPath($this->epm->PHONE_MODULES_PATH, 'endpoint', $brand_row['directory']);
-            $path_brand_dir_cfg 	 = $this->epm->buildPath($path_brand_dir, $product_row['cfg_dir']);
-            $path_brand_dir_cfg_json = $this->epm->buildPath($path_brand_dir_cfg, 'family_data.json');
+		//TODO: Add local file checks to avoid slow reloading on PHP < 5.3
+		$key = $this->system->arraysearchrecursive($row['model'], $model_list, 'model');
+		if ($key === FALSE)
+		{
+			$error['sync_model'] = "Can't locate model in family JSON file";
+			return false;
+		}
+		else
+		{
+			$template_list = $model_list[$key[0]]['template_data'] ?? array();
+		}
+		$maxlines = $model_list[$key[0]]['lines'];
 
-            if (!file_exists($path_brand_dir)){
-            	$error['sync_model'] = sprintf(_("Brand Directory '%s' Doesn't Exist! (%s)"), $brand_row['directory'], $path_brand_dir);
-                return(FALSE);
-            }
-            if (!file_exists($path_brand_dir_cfg)) {
-            	$error['sync_model'] = sprintf(_("Product Directory '%s' Doesn't Exist! (%s)"), $product_row['cfg_dir'], $path_brand_dir_cfg);
-                return(FALSE);
-            }
-            if (!file_exists($path_brand_dir_cfg_json)) {
-                $error['sync_model'] = sprintf(_("File 'family_data.json' Doesn't exist in directory: %s"), $path_brand_dir_cfg);
-                return(FALSE);
-            }
-            $family_line_json = $this->file2json($path_brand_dir_cfg_json);
+		$sql = sprintf("UPDATE %s SET max_lines = :maxlines, template_list = :template_list WHERE id = :model", "endpointman_model_list");
+		$stmt = $this->db->prepare($sql);
+		$stmt->execute([
+			':maxlines' 	 => $maxlines,
+			':template_list' => implode(",", $template_list),
+			':model' 		 => $model
+		]);
 
 
-            //TODO: Add local file checks to avoid slow reloading on PHP < 5.3
-			$key = $this->system->arraysearchrecursive($model_row['model'], $family_line_json['data']['model_list'], 'model');
-            if ($key === FALSE) {
-                $error['sync_model'] = "Can't locate model in family JSON file";
-                return(FALSE);
-            } else {
-                $template_list = implode(",", $family_line_json['data']['model_list'][$key[0]]['template_data']);
-                $template_list_array = $family_line_json['data']['model_list'][$key[0]]['template_data'];
-            }
-            $maxlines = $family_line_json['data']['model_list'][$key[0]]['lines'];
+		$version 	= $json_data['data']['last_modified'] ?? '';
+		$long_name	= $json_data['data']['name'] 		  ?? '';
+		$short_name = preg_replace("/\[(.*?)\]/si", "", $long_name);
+		
 
-            $sql = "UPDATE endpointman_model_list SET max_lines = '" . $maxlines . "', template_list = '" . $template_list . "' WHERE id = '" . $model . "'";
-            sql($sql);
+		$sql = sprintf("UPDATE %s SET long_name = :long_name, short_name = :short_name, cfg_ver = :cfg_ver WHERE id = :id", "endpointman_product_list");
+		$stmt = $this->db->prepare($sql);
+		$stmt->execute([
+			':long_name'  => str_replace("'", "''", $long_name),
+			':short_name' => str_replace("'", "''", $short_name),
+			':cfg_ver' 	  => $version,
+			':id' 		  => $row['product_id']
+		]);
 
-            $version = isset($family_line_json['data']['last_modified']) ? $family_line_json['data']['last_modified'] : '';
-            $long_name = $family_line_json['data']['name'];
-            $short_name = preg_replace("/\[(.*?)\]/si", "", $family_line_json['data']['name']);
-            $configuration_files = $family_line_json['data']['configuration_files'];
+        $template_data_array = $this->merge_data($path_brand_dir_cfg, $template_list, true, true);
 
-            $sql = "UPDATE endpointman_product_list SET long_name = '" . str_replace("'", "''", $long_name) . "', short_name = '" . str_replace("'", "''", $short_name) . "' , cfg_ver = '" . $version . "' WHERE id = '" . $product_row['id'] . "'";
-            sql($sql);
+		$sql = sprintf("UPDATE %s SET template_data = :template_data WHERE id = :id", "endpointman_model_list");
+		$stmt = $this->db->prepare($sql);
+		$stmt->execute([
+			':template_data' => serialize($template_data_array),
+			':id' 			 => $model
+		]);
 
-            $template_data_array = $this->merge_data($this->epm->buildPath($this->epm->PHONE_MODULES_PATH, 'endpoint', $brand_row['directory'], $product_row['cfg_dir']), $template_list_array, true, true);
-
-            $sql = "UPDATE endpointman_model_list SET template_data = '" . serialize($template_data_array) . "' WHERE id = '" . $model . "'";
-            sql($sql);
-            return(TRUE);
-        } else {
-            return(FALSE);
-        }
+		return true;
     }
 
-	 /**
-     * This will download the xml & brand package remotely
-     * @param integer $id Brand ID
-     */
+	
+	/**
+	 * Downloads and installs/updates a brand.
+	 *
+	 * @param string $id The ID of the brand to download.
+	 * @return bool Returns true if the brand was successfully installed/updated, false otherwise.
+	 */
     public function download_brand($id)
 	{
     	out(_("Install/Update Brand..."));
@@ -1431,17 +1499,6 @@ class Endpointman_Config
 			return false;
 		}
 		
-		// $temp_directory = $this->system->sys_get_temp_dir() . "/epm_temp/";
-		// if (!file_exists($temp_directory))
-		// {
-		// 	out(_("Creating EPM temp directory..."));
-		// 	if (! @mkdir($temp_directory, 0775, true))
-		// 	{
-		// 		out(sprintf(_("Error: Failed to create the directory '%s', please Check Permissions!"), $temp_directory));
-		// 		return false;
-		// 	}
-		// }
-
 		$temp_directory = $this->epm->PROVISIONER_PATH;
 
 		outn(_("Downloading Brand JSON....."));
@@ -1627,7 +1684,7 @@ class Endpointman_Config
 		}
 		catch (\Exception $e)
 		{
-			out(sprintf(_("<b>Error read JSON  file: %s</b>"), $e->getMessage()));
+			out(sprintf(_("<b>Error file2json return false for the file '%s'!</b>"), $temp_brand_json));
 			return false;
 		}
 
@@ -1761,11 +1818,12 @@ class Endpointman_Config
 				out(_("Updating Family Lines ..."));
 
 				$last_mod 		  = max($last_mod, $family_list['last_modified'] ?? '');
-				$family_line_json = $this->file2json($this->epm->buildPath($local_brand, $family_list['directory'], 'family_data.json'));
+				$family_line_json = $this->epm->buildPath($local_brand, $family_list['directory'], 'family_data.json');
 				$family_line 	  = null;
 
 				try
 				{
+					dbug($family_line_json);
 					$family_line = $this->epm->file2json($family_line_json);
 					if ($family_line === false)
 					{
@@ -2125,277 +2183,458 @@ class Endpointman_Config
 		}
     }
 
+	
 	/**
-     * Remove the brand
-     * @param int $id Brand ID
-     */
-    function remove_brand($id=NULL, $remove_configs=FALSE, $force=FALSE) {
+	 * Removes a brand from the system.
+	 *
+	 * @param int|null $id The ID of the brand to be removed.
+	 * @param bool $remove_configs Whether to remove the brand configurations or not.
+	 * @param bool $force Whether to force the removal even in repo mode.
+	 * @return bool Returns true if the brand is successfully removed, false otherwise.
+	 */
+    public function remove_brand($id = null, $remove_configs = false, $force = false)
+	{
 		out(_("Uninstalla Brand..."));
 
-        if (!$this->configmod->get('use_repo')) {
-            $sql = "SELECT id, firmware_vers FROM endpointman_product_list WHERE brand = '" . $id . "'";
-            $products = sql($sql, 'getall', \PDO::FETCH_ASSOC);
+		if (is_numeric($id) === false)
+		{
+			out(_("Error: No ID Given!"));
+			return false;
+		}
 
-            foreach ($products as $data) {
-                if ($data['firmware_vers'] != "") {
+		if ($this->configmod->get('use_repo') && !$force)
+		{
+			out(_("Error: Not allowed in repo mode!!"));
+			return false;
+        }
+
+		$sql = sprintf('SELECT directory FROM %s WHERE id = :id', "endpointman_brand_list");
+		$stmt = $this->db->prepare($sql);
+		$stmt->execute([
+			':id' => $id
+		]);
+		$brand_dir = $stmt->rowCount() === 0 ? false : ($stmt->fetchColumn() ?? false);
+
+        if (!$this->configmod->get('use_repo') && !$force)
+		{
+			$sql = sprintf('SELECT id, firmware_vers FROM %s WHERE brand = :id', "endpointman_product_list");
+			$stmt = $this->db->prepare($sql);
+			$stmt->execute([
+				':id' => $id
+			]);
+			$products = $stmt->fetchAll(\PDO::FETCH_ASSOC);
+            foreach ($products as $data)
+			{
+                if ($data['firmware_vers'] != "")
+				{
                     $this->remove_firmware($data['id']);
                 }
-            }
+			}
 
-			$sql = "SELECT directory FROM endpointman_brand_list WHERE id = '" . $id . "'";
-            $brand_dir = sql($sql, 'getOne');
-            $this->system->rmrf($this->epm->buildPath($this->epm->PHONE_MODULES_PATH, 'endpoint', $brand_dir));
+			if (!empty($brand_dir))
+			{
+				$brand_dirs_full = array(
+					$this->epm->buildPath($this->epm->PHONE_MODULES_PATH, 'endpoint', $brand_dir),
+					$this->epm->buildPath($this->epm->PHONE_MODULES_PATH, $brand_dir)
+				);
+				foreach ($brand_dirs_full as $brand_dir_full)
+				{
+					if (file_exists($brand_dir_full))
+					{
+						$this->system->rmrf($brand_dir_full);
+					}
+				}
+			}
+		}
 
-            $sql = "DELETE FROM endpointman_model_list WHERE brand = '" . $id . "'";
-            sql($sql);
+		$tables_clean = [
+			"endpointman_model_list" 	=> 'brand',
+			"endpointman_product_list" 	=> 'brand',
+			"endpointman_oui_list" 		=> 'brand',
+			"endpointman_brand_list"	=> 'id'
+		];
+		foreach ($tables_clean as $table => $where)
+		{
+			$sql = sprintf('DELETE FROM %s WHERE %s = :id', $table, $where);
+			$stmt = $this->db->prepare($sql);
+			$stmt->execute([
+				':id' => $id
+			]);
+		}
 
-            $sql = "DELETE FROM endpointman_product_list WHERE brand = '" . $id . "'";
-            sql($sql);
-
-            $sql = "DELETE FROM endpointman_oui_list WHERE brand = '" . $id . "'";
-            sql($sql);
-
-            $this->system->rmrf($this->epm->buildPath($this->epm->PHONE_MODULES_PATH, $brand_dir));
-            $sql = "DELETE FROM endpointman_brand_list WHERE id = '" . $id . "'";
-            sql($sql);
-
-			out(_("All Done!"));
-        }
-		elseif ($force) {
-			$sql = "SELECT directory FROM endpointman_brand_list WHERE id = '" . $id . "'";
-            $brand_dir = sql($sql, 'getOne');
-
-            $sql = "DELETE FROM endpointman_model_list WHERE brand = '" . $id . "'";
-            sql($sql);
-
-            $sql = "DELETE FROM endpointman_product_list WHERE brand = '" . $id . "'";
-            sql($sql);
-
-            $sql = "DELETE FROM endpointman_oui_list WHERE brand = '" . $id . "'";
-            sql($sql);
-
-            $sql = "DELETE FROM endpointman_brand_list WHERE id = '" . $id . "'";
-            sql($sql);
-
-			out(_("Done!"));
-        }
-		else {
-			out(_("Error: Not allowed in repo mode!!"));
-        }
+		out(_("Done!"));
+		return true;
     }
 
+
 	/**
-     * Install Firmware for the specified Product Line
-     * @param <type> $product_id Product ID
-     */
-    function install_firmware($product_id) {
+	 * Installs firmware for a specific product.
+	 *
+	 * @param int $product_id The ID of the product.
+	 * @return bool Returns true if the firmware is successfully installed, false otherwise.
+	 */
+    public function install_firmware($product_id)
+	{
     	out(_("Installa frimware... "));
+
+		if (is_numeric($product_id) === false)
+		{
+			out(_("Error: No ID Given!"));
+			return false;
+		}
 
 		//TOOD: Review howto create temp directory
         // $temp_directory = $this->epm->buildPath($this->system->sys_get_temp_dir(), "/epm_temp/");
-		$temp_directory = $this->epm->PROVISIONER_PATH;
-        $sql = 'SELECT endpointman_product_list.*, endpointman_brand_list.directory FROM endpointman_product_list, endpointman_brand_list WHERE endpointman_product_list.brand = endpointman_brand_list.id AND endpointman_product_list.id = ' . $product_id;
-        $row = sql($sql, 'getRow', \PDO::FETCH_ASSOC);
-        $json_data = $this->file2json($this->epm->buildPath($this->epm->PHONE_MODULES_PATH, 'endpoint', $row['directory'], $row['cfg_dir'], "family_data.json"));
 
-        if ((! isset($json_data['data']['firmware_ver'])) OR (empty($json_data['data']['firmware_ver']))) {
+		$temp_directory = $this->epm->PROVISIONER_PATH;
+
+		$sql = sprintf('SELECT t_product_list.*, t_brand_list.directory FROM %s as t_product_list, %s as t_brand_list WHERE t_product_list.brand = t_brand_list.id AND t_product_list.id = :product_id', "endpointman_product_list", "endpointman_brand_list");
+		$stmt = $this->db->prepare($sql);
+		$stmt->execute([
+			':product_id' => $product_id
+		]);
+		$row = $stmt->fetch(\PDO::FETCH_ASSOC);
+
+		$path_json_family = $this->epm->buildPath($this->epm->PHONE_MODULES_PATH, 'endpoint', $row['directory'], $row['cfg_dir'], "family_data.json");
+
+		$json_data = null;
+		try
+		{
+			$json_data = $this->epm->file2json($path_json_family);
+			if ($json_data === false)
+			{
+				out(sprintf(_("<b>Error file2json return false for the file '%s'!</b>"), $path_json_family));
+				return false;
+			}
+		}
+		catch (\Exception $e)
+		{
+			out(sprintf(_("<b>Error read JSON  file: %s</b>"), $e->getMessage()));
+			return false;
+		}
+
+		$firmware_ver = $json_data['data']['firmware_ver'] ?? '';
+		$firmware_pkg = $json_data['data']['firmware_pkg'] ?? '';
+
+        if (empty($firmware_ver))
+		{
         	out (_("Error: The version of the firmware package is blank!"));
         	return false;
         }
 
-        if ((! isset($json_data['data']['firmware_pkg'])) OR (empty($json_data['data']['firmware_pkg'])) OR ($json_data['data']['firmware_pkg'] == "NULL")) {
+        if ((empty($firmware_pkg)) OR ($firmware_pkg == "NULL"))
+		{
         	out (_("Error: The package name of the firmware to be downloaded is Null or blank!"));
         	return false;
         }
 
-        if ($json_data['data']['firmware_ver'] > $row['firmware_vers'])
+        if ($firmware_ver > $row['firmware_vers'])
 		{
-            if (!file_exists($temp_directory))
-			{
-                mkdir($temp_directory, 0775, true);
-            }
-            $md5_xml      	   = $json_data['data']['firmware_md5sum'];
-            $firmware_pkg 	   = $json_data['data']['firmware_pkg'];
-			$firmware_pkg_path = $this->epm->buildPath($temp_directory, $firmware_pkg);
-			$firmware_pkg_url  = $this->epm->buildUrl($this->epm->URL_UPDATE, $row['directory'], $firmware_pkg);
+            $md5_json			  = $json_data['data']['firmware_md5sum'];
+			$firmware_pkg_path	  = $this->epm->buildPath($temp_directory, $firmware_pkg);
+			$firmware_pkg_url	  = $this->epm->buildUrl($this->epm->URL_UPDATE, $row['directory'], $firmware_pkg);
+			$go_download_firmware = true;
 
-            if (file_exists($firmware_pkg_path)) {
+            if (file_exists($firmware_pkg_path))
+			{
                 $md5_pkg = md5_file($firmware_pkg_path);
-                if ($md5_xml == $md5_pkg)
+                if ($md5_json == $md5_pkg)
 				{
 					out(_("Skipping download, updated local version..."));
+					$go_download_firmware = false;
                 }
-				else
+            }
+
+			if ($go_download_firmware)
+			{
+				out(_("Downloading firmware..."));
+				try
 				{
-					out(_("Downloading firmware..."));
-                    if (! $this->system->download_file_with_progress_bar_old($firmware_pkg_url, $$firmware_pkg_path)) {
+					if (! $this->system->download_file_with_progress_bar($firmware_pkg_url, $firmware_pkg_path))
+					{
 						out(_("Error download frimware package!"));
 						return false;
 					}
-                    $md5_pkg = md5_file($firmware_pkg_path);
-                }
-            }
-			else
-			{
-				out(_("Downloading firmware..."));
-                if (! $this->system->download_file_with_progress_bar_old($firmware_pkg_url, $firmware_pkg_path))
+				}
+				catch (\Exception $e)
 				{
-					out(_("Error download frimware package!"));
 					return false;
 				}
-                $md5_pkg = md5_file($firmware_pkg_path);
-            }
+				$md5_pkg = md5_file($firmware_pkg_path);
+			}
 
 			outn(_("Checking MD5sum of Package... "));
-            if ($md5_xml == $md5_pkg)
+            if ($md5_json == $md5_pkg)
 			{
 				out(_("Matches!"));
 
+				$path_brand_dir    = $this->epm->buildPath($temp_directory, $row['directory']);
+				$path_cfg_dir 	   = $this->epm->buildPath($temp_directory, $row['directory'], $row['cfg_dir']);
 				$path_firmware_dir = $this->epm->buildPath($temp_directory, $row['directory'], $row['cfg_dir'], "firmware");
+								
                 if (file_exists($path_firmware_dir))
 				{
                     $this->system->rmrf($path_firmware_dir);
                 }
-                mkdir($path_firmware_dir, 0777, TRUE);
+                mkdir($path_firmware_dir, 0777, true);
 
 				out(_("Installing Firmware..."));
-				//TODO: AÑADIR VALIDACION EXTRACCION CORRECTA
-				exec( sprintf("%s -xvf %s -C %s",
-						$this->configmod->get("tar_location"),
-						$firmware_pkg_path,
-						$this->epm->buildPath($temp_directory, $row['directory'], $row['cfg_dir'])
-					)
-				);
-                // exec("tar -xvf " . $temp_directory . $firmware_pkg . " -C " . $temp_directory . $row['directory'] . "/" . $row['cfg_dir']);
-                $i = 0;
-                foreach (glob($this->epm->buildPath($path_firmware_dir, "*")) as $filename)
+				$this->system->decompressTarGz($path_firmware_dir, $path_cfg_dir);
+
+				$firmware_files = array();
+				$copy_error 	= false;
+                foreach (glob($this->epm->buildPath($path_firmware_dir, "*")) as $src_path)
 				{
-                    $file 	  = basename($filename);
-                    $list[$i] = $file;
-                    if (!@copy($filename, $this->epm->buildPath($this->configmod->get('config_location'), $file)))
+                    $file	   		  = basename($src_path);
+                    $firmware_files[] = $file;
+					$dest_path 		  = $this->epm->buildPath($this->configmod->get('config_location'), $file);
+                    if (!@copy($src_path, $dest_path))
 					{
                     	out(sprintf(_("- Failed To Copy %s!"), $file));
-                        $copy_error = TRUE;
+                        $copy_error = true;
                     }
 					elseif ($this->configmod->get('debug'))
 					{
 						out(sprintf(_("- Copied %s to %s."), $file, $this->configmod->get('config_location')));
                     }
-                    $i++;
                 }
 
-                $this->system->rmrf($this->epm->buildPath($temp_directory, $row['directory']));
-                $list = implode(",", $list);
-                $sql = "UPDATE endpointman_product_list SET firmware_vers = '" . $json_data['data']['firmware_ver'] . "', firmware_files = '" . $list . "' WHERE id = " . $row['id'];
-                sql($sql);
+				if (file_exists($path_brand_dir))
+				{
+					$this->system->rmrf($path_brand_dir);
+				}
 
-                if (isset($copy_error)) {
+				$sql = sprintf('UPDATE %s SET firmware_vers = :firmware_ver, firmware_files = :firmware_files WHERE id = :id', "endpointman_product_list");
+				$stmt = $this->db->prepare($sql);
+				$stmt->execute([
+					':firmware_ver'	  => $firmware_ver,
+					':firmware_files' => implode(",", $firmware_files),
+					':id' 			  => $row['id'],
+				]);
+
+                if ($copy_error)
+				{
 					out(_("Copy Error Detected! Aborting Install!"));
                     $this->remove_firmware($product_id);
 					out(_("Info: Please Check Directory/Permissions!"));
                 }
-				else {
+				else
+				{
 					out(_("Done!"));
                 }
             }
-			else {
+			else
+			{
 				out(_("Firmware MD5 didn't match!"));
+				return false;
             }
         }
-		else {
+		else
+		{
 			out(_("Your Firmware is already up to date."));
         }
+		return true;
     }
 
+	
 	/**
-     * Remove firmware from the Hard Drive
-     * @param int $id Product ID
-     */
-    function remove_firmware($id) {
+	 * Removes firmware files associated with a specific ID.
+	 *
+	 * @param int $id The ID of the firmware to be removed.
+	 * @return bool Returns true if the firmware files were successfully removed, false otherwise.
+	 */
+    public function remove_firmware($id)
+	{
 		outn(_("Uninstalla frimware... "));
 
-        $sql = "SELECT firmware_files FROM  endpointman_product_list WHERE  id ='" . $id . "'";
-        $files = sql($sql, 'getOne');
+		if (is_numeric($id) === false)
+		{
+			out(_("Error: No ID Given!"));
+			return false;
+		}
+
+		$sql = sprintf('SELECT firmware_files FROM %s WHERE id = :id', "endpointman_product_list");
+		$stmt = $this->db->prepare($sql);
+		$stmt->execute([
+			':id' => $id
+		]);
+		$files = $stmt->rowCount() === 0 ? false : ($stmt->fetchColumn() ?? false);
+
+		if (empty($files))
+		{
+			out(_("Skip!"));
+			out(_("The brand does not have any firmware files."));
+			return true;
+		}
 
         $file_list = explode(",", $files);
-        $i = 0;
-        foreach ($file_list as $file) {
-			if (trim($file) == "") { continue; }
-            if (! file_exists($this->configmod->get('config_location') . $file)) { continue; }
-			if (! is_file($this->configmod->get('config_location') . $file)) { continue; }
-					unlink($this->configmod->get('config_location') . $file);
+        foreach ($file_list as $file)
+		{
+			if (empty(trim($file)))
+			{
+				continue;
+			}
+			$file_path = $this->epm->brindPath($this->configmod->get('config_location'), $file);
+            if (! file_exists($file_path) || ! is_file($file_path))
+			{
+				continue;
+			}
+			// Remove files from tftp directory
+			unlink($file_path);
         }
-        $sql = "UPDATE endpointman_product_list SET firmware_files = '', firmware_vers = '' WHERE id = '" . $id . "'";
-        sql($sql);
+
+		$sql = sprintf("UPDATE %s SET firmware_files = '', firmware_vers = '' WHERE id = :id", "endpointman_product_list");
+		$stmt = $this->db->prepare($sql);
+		$stmt->execute([
+			':id' => $id
+		]);
 
 		out(_("Done!"));
     }
 
 
+	/**
+	 * Checks if a firmware update is available for a given product ID.
+	 *
+	 * @param int|null $id The ID of the product to check for firmware update. Defaults to NULL.
+	 * @return mixed Returns the firmware update data if an update is available, otherwise returns false.
+	 */
+    public function firmware_update_check($id = null)
+	{
+		if (is_numeric($id) === false)
+		{
+			return false;
+		}
 
-
-		/**
-     * Check for new firmware on the servers
-     * @param int $id Product ID
-     * @return bool True on yes False on no
-     */
-    function firmware_update_check($id=NULL) {
-        $sql = "SELECT * FROM  endpointman_product_list WHERE  id ='" . $id . "'";
-        $row = sql($sql, 'getRow', \PDO::FETCH_ASSOC);
-
-        $sql = "SELECT directory FROM  endpointman_brand_list WHERE id ='" . $row['brand'] . "'";
-        $brand_directory = sql($sql, 'getOne');
+		$sql = sprintf('SELECT * FROM %s WHERE id = :id', "endpointman_product_list");
+		$stmt = $this->db->prepare($sql);
+		$stmt->execute([
+			':id' => $id
+		]);
+		$row = $stmt->fetch(\PDO::FETCH_ASSOC);
 
         //config drive unknown!
-        if ($row['cfg_dir'] == "") {
-            return FALSE;
-        } else {
-            $temp = $this->file2json($this->epm->buildPath($this->epm->PHONE_MODULES_PATH, 'endpoint', $brand_directory, $row['cfg_dir'], "family_data.json"));
-			if (is_array($temp) && ((array_key_exists('data', $temp)) AND (!is_array($temp['data']['firmware_ver'])))) {
-                if ($row['firmware_vers'] < $temp['data']['firmware_ver']) {
-                    return $temp;
-                } else {
-                    return FALSE;
-                }
-            } else {
-                return FALSE;
-            }
+        if ($row['cfg_dir'] == "")
+		{
+            return false;
         }
+
+		$sql = sprintf('SELECT directory FROM %s WHERE id = :id', "endpointman_brand_list");
+		$stmt = $this->db->prepare($sql);
+		$stmt->execute([
+			':id' =>  $row['brand']
+		]);
+		$brand_directory  = $stmt->rowCount() === 0 ? false : ($stmt->fetchColumn() ?? false);
+
+		$path_json_family = $this->epm->buildPath($this->epm->PHONE_MODULES_PATH, 'endpoint', $brand_directory, $row['cfg_dir'], "family_data.json");
+		$json_data = null;
+		try
+		{
+			$json_data = $this->epm->file2json($path_json_family);
+			if ($json_data === false || !is_array($json_data))
+			{
+				return false;
+			}
+		}
+		catch (\Exception $e)
+		{
+			return false;
+		}
+
+		$firmware_ver = $json_data['data']['firmware_ver'] ?? array();
+		
+		if (! array_key_exists('data', $json_data))
+		{
+			return false;
+		}
+		elseif (!is_array($firmware_ver))
+		{
+			return false;
+		}
+		elseif ($row['firmware_vers'] < $firmware_ver)
+		{
+			return $json_data;
+		}
+		else
+		{
+			return FALSE;
+		}
     }
 
+	
 	/**
-     * Check to see the status of the firmware locally (installed or not)
-     * @param int $id
-     * @return string
-     */
-    function firmware_local_check($id=NULL) {
-        $sql = "SELECT * FROM  endpointman_product_list WHERE hidden = 0 AND id ='" . $id . "'";
-        $res = sql($sql, 'getAll', \PDO::FETCH_ASSOC);
+	 * Checks the local firmware for a given ID.
+	 *
+	 * @param int|null $id The ID of the firmware to check.
+	 * @return string Returns "nothing" if the ID is not numeric, the firmware is not found, or the configuration drive is unknown.
+	 *                Returns "install" if the firmware version is not empty and the firmware versions in the database is empty.
+	 *                Returns "remove" if the firmware version is not empty and the firmware versions in the database is not empty.
+	 */
+    public function firmware_local_check($id = null)
+	{
+		if (is_numeric($id) === false)
+		{
+			return "nothing";
+		}
 
-        if (count(array($res)) > 0) {
-            $row = sql($sql, 'getRow', \PDO::FETCH_ASSOC);
+		$sql = sprintf('SELECT * FROM %s WHERE hidden = 0 AND id = :id', "endpointman_product_list");
+		$stmt = $this->db->prepare($sql);
+		$stmt->execute([
+			':id' => $id
+		]);
+		if ($stmt->rowCount() === 0)
+		{
+			return "nothing";
+		}
 
-            $sql = "SELECT directory FROM  endpointman_brand_list WHERE hidden = 0 AND id ='" . $row['brand'] . "'";
-            $brand_directory = sql($sql, 'getOne');
+		$row = $stmt->fetch(\PDO::FETCH_ASSOC);
+		//config drive unknown!
+		if ($row['cfg_dir'] == "")
+		{
+			return "nothing";
+		}
 
-            //config drive unknown!
-            if ($row['cfg_dir'] == "") {
-				return("nothing");
-            } else {
-                $temp = $this->file2json($this->epm->buildPath($this->epm->PHONE_MODULES_PATH, 'endpoint', $brand_directory, $row['cfg_dir'], "family_data.json"));
-                if ( (isset($temp['data']['firmware_ver'])) AND (! empty ($temp['data']['firmware_ver'])) ) {
-                    if ($row['firmware_vers'] == "") {
-                        return("install");
-                    } else {
-                        return("remove");
-                    }
-                } else {
-                    return("nothing");
-                }
-            }
-        } else {
-            return("nothing");
-        }
+		$sql  = sprintf('SELECT directory FROM %s WHERE hidden = 0 AND id = :id', "endpointman_brand_list");
+		$stmt = $this->db->prepare($sql);
+		$stmt->execute([
+			':id' => $row['brand']
+		]);
+		$brand_directory = $stmt->rowCount() === 0 ? false : ($stmt->fetchColumn() ?? false);
+
+		if ($brand_directory === false)
+		{
+			return "nothing";
+		}
+
+		$json_file = $this->epm->buildPath($this->epm->PHONE_MODULES_PATH, 'endpoint', $brand_directory, $row['cfg_dir'], "family_data.json");
+		$json_data = null;
+		try
+		{
+			$json_data = $this->epm->file2json($json_file);
+			if ($json_data === false || !is_array($json_data))
+			{
+				return "nothing";
+			}
+		}
+		catch (\Exception $e)
+		{
+			return "nothing";
+		}
+
+		$firmware_ver = $json_data['data']['firmware_ver'] ?? '';
+		if (!empty($firmware_ver))
+		{
+			if ($row['firmware_vers'] != "")
+			{
+				return "install";
+			}
+			else
+			{
+				return "remove";
+			}
+		}
+
+		return "nothing";
     }
 
 
@@ -2488,7 +2727,7 @@ class Endpointman_Config
 
     	foreach ($template_list as $files_data)
 		{
-    		$full_path = $path . $files_data;
+    		$full_path = $this->epm->buildPath($path, $files_data);
 
 			try
 			{

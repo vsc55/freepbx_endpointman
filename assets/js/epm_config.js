@@ -216,11 +216,11 @@ function epm_config_select_tab_ajax()
 
 	epm_global_html_find_show_hide("#epm_config_manager_list_loading", true, 0, true);
 	
-	waitingDialog.show();
+	// waitingDialog.show();
 	var $tmp = epm_config_LoadContenidoAjax();
 	if ($tmp = "false") {
-		setTimeout(function () {waitingDialog.hide();}, 3000);
-		epm_global_html_find_show_hide("#epm_config_manager_list_loading", false, 3000, true);
+		// setTimeout(function () {waitingDialog.hide();}, 1000);
+		epm_global_html_find_show_hide("#epm_config_manager_list_loading", false, 1000, true);
 	}
 	else {
 		epm_global_html_find_show_hide("#epm_config_manager_list_loading", false, 1000, true);
@@ -249,7 +249,7 @@ function epm_config_LoadContenidoAjax()
 			var tTimer = 20000;
 			epm_config_tab_manager_ajax_get_add_data(data);
 			v_sTimerUpdateAjax = setTimeout(function () { epm_config_LoadContenidoAjax(); }, tTimer);
-			setTimeout(function () {waitingDialog.hide();}, 3000);
+			// setTimeout(function () {waitingDialog.hide();}, 1000);
 		}
 	});
 	return true;
@@ -276,7 +276,7 @@ function epm_config_bt_update_check_click()
 {
 	clearTimeout(v_sTimerUpdateAjax);
 	var urlStr = "config.php?display=epm_config&command=check_for_updates";
-	epm_global_dialog_action("bt_update_chkeck", urlStr, null, "Update Package Info", "", { "Close": function() { $(this).dialog("close"); } });
+	epm_global_dialog_action("bt_update_chkeck", urlStr, null, "Update Package Info", "", { "Close": function() { $(this).dialog("close"); } }, false);
 }
 
 //**** END: FUNCTION GLOBAL SEC ****
@@ -442,8 +442,8 @@ function epm_config_tab_manager_ajax_get_add_data(data)
 				$('#' + iL1.boxappend).append(
 					$('<div/>', { 'class' : 'panel panel-warning' , 'id' : 'info_brand_no_install' + itemData.id })
 					.append(
-						$('<div/>', { 'class' : 'panel-heading' }).append( $('<h3/>', { 'class' : 'panel-title' }).text('Brand not installed') ),
-						$('<div/>', { 'class' : 'panel-body' }).text('This Brand is not installed, click the Install button to install the package.')
+						$('<div/>', { 'class' : 'panel-heading' }).append( $('<h3/>', { 'class' : 'panel-title' }).text(_('Brand not installed')) ),
+						$('<div/>', { 'class' : 'panel-body' }).text(_('This Brand is not installed, click the Install button to install the package.'))
 						.append(
 						
 							$('<button/>', {
@@ -538,8 +538,8 @@ function epm_config_tab_manager_ajax_get_add_data(data)
 				$('#' + iL1.boxappend).append(
 					$('<div/>', { 'class' : 'panel panel-warning' , 'id' : 'info_brand_no_models_' + itemData.id })
 					.append(
-						$('<div/>', { 'class' : 'panel-heading' }).append( $('<h3/>', { 'class' : 'panel-title' }).text('ESTA MARCA NO TIENE MODELOS!') ),
-						$('<div/>', { 'class' : 'panel-body' }).text('Esta marca no tiene ningun modelo.')
+						$('<div/>', { 'class' : 'panel-heading' }).append( $('<h3/>', { 'class' : 'panel-title' }).text(_('This brand has no models!')) ),
+						$('<div/>', { 'class' : 'panel-body' }).text(_('This brand does not have any model.'))
 					)
 				);
 			}
@@ -785,7 +785,7 @@ function epm_config_tab_manager_ajax_get_add_data(data)
 								'id'		: iL3.prefijoid +'_disable',
 								'value'		: 0
 							})
-							.change(function(){ epm_config_tab_manager_bt_enable_disable_change(this, iL3.prefijo, itemDataL3.id, iL2); }),
+							.on('change', function() { epm_config_tab_manager_bt_enable_disable_change(this, iL3.prefijo, itemDataL3.id, iL2); }),
 							$('<label/>', {
 								'for'  		: iL3.prefijoid +'_disable',
 								'data-for'	: iL3.prefijoid
@@ -800,7 +800,7 @@ function epm_config_tab_manager_ajax_get_add_data(data)
 								'id'		: iL3.prefijoid + '_enable',
 								'value'		: 1
 							})
-							.change(function(){ epm_config_tab_manager_bt_enable_disable_change(this, iL3.prefijo, itemDataL3.id, iL2); }),
+							.on('change', function() { epm_config_tab_manager_bt_enable_disable_change(this, iL3.prefijo, itemDataL3.id, iL2); }),
 							$('<label/>', {
 								'for'  	: iL3.prefijoid + '_enable',
 								'data-for'	: iL3.prefijoid
@@ -1008,7 +1008,7 @@ function epm_config_tab_manager_bt(opt, idfw, command)
 	clearTimeout(v_sTimerUpdateAjax);
 	
 	var urlStr = "config.php?display=epm_config&module_tab=manager&command=" + command + "&command_sub=" + opt + "&idfw=" + idfw;
-	epm_global_dialog_action("manager_bt", urlStr, null, "Status", 'epm_config_tab_manager_bt_dialog', { "Close": function() { $(this).dialog("close"); } });
+	epm_global_dialog_action("manager_bt", urlStr, null, "Status", 'epm_config_tab_manager_bt_dialog', { "Close": function() { $(this).dialog("close"); } }, false);
 }
 
 function epm_config_tab_manager_countlist(iL0)
@@ -1056,9 +1056,9 @@ function epm_config_tab_manager_bt_enable_disable_ajustar(iL0, itemData, level)
 	else if (level == "L3") 
 	{
 		//AJUSTAMOS BOTOSNES EN SU STATUS CORRECTO
-		if (itemData.enabled == "") {
-			$("#" + iL0.prefijoid + "_enable").attr("disabled", true).prop( "checked", false);
-			$("#" + iL0.prefijoid + "_disable").attr("disabled", true).prop( "checked", false);
+		if (itemData.enabled === "") {
+			$("#" + iL0.prefijoid + "_enable").prop("disabled", true).prop( "checked", false);
+			$("#" + iL0.prefijoid + "_disable").prop("disabled", true).prop( "checked", false);
 			epm_global_html_find_hide_and_remove('#' + iL0.boxsubite);
 		}
 		else {
@@ -1067,8 +1067,8 @@ function epm_config_tab_manager_bt_enable_disable_ajustar(iL0, itemData, level)
 				temp_input = "-1";
 			}
 			if (itemData.enabled !== temp_input) {
-				$("#" + iL0.prefijoid + "_enable").attr("disabled", false).prop( "checked", ((itemData.enabled == "1") ? true : false));
-				$("#" + iL0.prefijoid + "_disable").attr("disabled", false).prop( "checked", ((itemData.enabled == "0") ? true : false));
+				$("#" + iL0.prefijoid + "_enable").prop("disabled", false).prop( "checked", ((itemData.enabled === 1) ? true : false));
+				$("#" + iL0.prefijoid + "_disable").prop("disabled", false).prop( "checked", ((itemData.enabled === 0) ? true : false));
 			}
 		}
 		return;

@@ -1782,6 +1782,11 @@ class Endpointman extends FreePBX_Helpers implements BMO {
 	 */
     public function file2json($file)
 	{
+		if (empty($file))
+		{
+			throw new \Exception(_('No file specified'));
+		}
+
         if (file_exists($file))
 		{
             $json = file_get_contents($file);
