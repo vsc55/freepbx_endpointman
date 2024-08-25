@@ -21,8 +21,8 @@ class Restore Extends Base\RestoreBase
 		$this->importAdvancedSettings($configs['settings']);
 		foreach ($files as $file)
 		{
-			$path_src  = $epm->buildPath($this->tmpdir, 'files', $file->getPathTo(), $file->getFilename());
-			$path_dest = $epm->buildPath($file->getPathTo(), $file->getFilename());
+			$path_src  = $epm->system->buildPath($this->tmpdir, 'files', $file->getPathTo(), $file->getFilename());
+			$path_dest = $epm->system->buildPath($file->getPathTo(), $file->getFilename());
 			if(file_exists($path_dest))
 			{
 				continue;
@@ -46,15 +46,15 @@ class Restore Extends Base\RestoreBase
 			
 		}
 
-		$path_temp_files = $epm->buildPath($this->tmpdir, $epm->PHONE_MODULES_PATH);
+		$path_temp_files = $epm->system->buildPath($this->tmpdir, $epm->PHONE_MODULES_PATH);
 
 		if(!file_exists($path_temp_files))
 		{
 			return;
 		}
 
-		$endpoint_dir_data = $epm->buildPath($epm->PHONE_MODULES_PATH, 'endpoint');
-		$endpoint_dir_temp = $epm->buildPath($epm->TEMP_PATH);
+		$endpoint_dir_data = $epm->system->buildPath($epm->PHONE_MODULES_PATH, 'endpoint');
+		$endpoint_dir_temp = $epm->system->buildPath($epm->TEMP_PATH);
 
 		$this->deleteDirectory($endpoint_dir_data);
 		$this->deleteDirectory($endpoint_dir_temp);
@@ -63,14 +63,14 @@ class Restore Extends Base\RestoreBase
 		// shell_exec("rm -rf $endpoint_dir_temp 2>&1");
 
 
-		$src_endpoint_dir_data = $epm->buildPath($this->tmpdir, $endpoint_dir_data);
-		$src_endpoint_dir_temp = $epm->buildPath($this->tmpdir, $endpoint_dir_temp);
+		$src_endpoint_dir_data = $epm->system->buildPath($this->tmpdir, $endpoint_dir_data);
+		$src_endpoint_dir_temp = $epm->system->buildPath($this->tmpdir, $endpoint_dir_temp);
 
 		$finder 	= new Finder();
 		$fileSystem = new Filesystem();
 		foreach ($finder->in($src_endpoint_dir_data) as $item)
 		{
-			$path_item = $epm->buildPath($endpoint_dir_data, $item->getRelativePathname());
+			$path_item = $epm->system->buildPath($endpoint_dir_data, $item->getRelativePathname());
 			if($item->isDir())
 			{
 				$fileSystem->mkdir($path_item);
@@ -81,7 +81,7 @@ class Restore Extends Base\RestoreBase
 		
 		foreach ($finder->in($src_endpoint_dir_temp) as $item)
 		{
-			$path_item = $epm->buildPath($endpoint_dir_temp, $item->getRelativePathname());
+			$path_item = $epm->system->buildPath($endpoint_dir_temp, $item->getRelativePathname());
 
 			if($item->isDir())
 			{

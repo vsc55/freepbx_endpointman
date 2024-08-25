@@ -1,5 +1,5 @@
 <?php
-namespace FreePBX\modules;
+namespace FreePBX\modules\Endpointman;
 
 class epm_system {
     /**
@@ -302,7 +302,100 @@ class epm_system {
         return true;
     }
 
-    function decompressTarGz($tarGzFile, $destinationDir)
+    /**
+     * Taken from http://www.php.net/manual/en/function.array-search.php#69232
+     * search haystack for needle and return an array of the key path, FALSE otherwise.
+     * if NeedleKey is given, return only for this key mixed ArraySearchRecursive(mixed Needle,array Haystack[,NeedleKey[,bool Strict[,array Path]]])
+     * @author ob (at) babcom (dot) biz
+     * @param mixed $Needle
+     * @param array $Haystack
+     * @param mixed $NeedleKey
+     * @param bool $Strict
+     * @param array $Path
+     * @return array
+     * @package epm_system
+     */
+    public function arraysearchrecursive($Needle, $Haystack, $NeedleKey="", $Strict=false, $Path=array())
+    {
+        if (!is_array($Haystack))
+            return false;
+        foreach ($Haystack as $Key => $Val) {
+            if (is_array($Val) &&
+                    $SubPath = $this->arraysearchrecursive($Needle, $Val, $NeedleKey, $Strict, $Path)) {
+                $Path = array_merge($Path, Array($Key), $SubPath);
+                return $Path;
+            } elseif ((!$Strict && $Val == $Needle &&
+                    $Key == (strlen($NeedleKey) > 0 ? $NeedleKey : $Key)) ||
+                    ($Strict && $Val === $Needle &&
+                    $Key == (strlen($NeedleKey) > 0 ? $NeedleKey : $Key))) {
+                $Path[] = $Key;
+                return $Path;
+            }
+        }
+        return false;
+    }
+
+    /**
+    * Send process to run in background
+    * @version 2.11
+    * @param string $command the command to run
+    * @param integer $Priority the Priority of the command to run
+    * @return int $PID process id
+    * @package epm_system
+    */
+    function run_in_background($Command, $Priority = 0) {
+        return($Priority ? shell_exec("nohup nice -n $Priority $Command 2> /dev/null & echo $!") : shell_exec("nohup $Command > /dev/null 2> /dev/null & echo $!"));
+    }
+
+    /**
+    * Check if process is running in background
+    * @version 2.11
+    * @param string $PID proccess ID
+    * @return bool true or false
+    * @package epm_system
+    */
+    function is_process_running($PID) {
+        exec("ps $PID", $ProcessState);
+        return(count($ProcessState) >= 2);
+    }
+
+
+
+	function sys_get_temp_dir() {
+        if (!empty($_ENV['TMP'])) {
+            return realpath($_ENV['TMP']);
+        }
+        if (!empty($_ENV['TMPDIR'])) {
+            return realpath($_ENV['TMPDIR']);
+        }
+        if (!empty($_ENV['TEMP'])) {
+            return realpath($_ENV['TEMP']);
+        }
+        $tempfile = tempnam(uniqid(rand(), TRUE), '');
+        if (file_exists($tempfile)) {
+            unlink($tempfile);
+            return realpath(dirname($tempfile));
+        }
+    }
+
+
+
+
+
+
+
+    
+    /**
+     * Decompresses a tar.gz file.
+     *
+     * @param string $tarGzFile The path to the tar.gz file to decompress.
+     * @param string $destinationDir The destination directory where the decompressed files will be placed.
+     * 
+     * @return bool Returns true on success, false on failure.
+     * 
+     * @throws Exception If the tar.gz file cannot be decompressed or if the destination directory cannot be created.
+     */
+    public function decompressTarGz($tarGzFile, $destinationDir)
     {
         $fileInfo  = pathinfo($tarGzFile);
         $extension = $fileInfo['extension'];
@@ -377,78 +470,210 @@ class epm_system {
     }
 
 
-    /**
-     * Taken from http://www.php.net/manual/en/function.array-search.php#69232
-     * search haystack for needle and return an array of the key path, FALSE otherwise.
-     * if NeedleKey is given, return only for this key mixed ArraySearchRecursive(mixed Needle,array Haystack[,NeedleKey[,bool Strict[,array Path]]])
-     * @author ob (at) babcom (dot) biz
-     * @param mixed $Needle
-     * @param array $Haystack
-     * @param mixed $NeedleKey
-     * @param bool $Strict
-     * @param array $Path
-     * @return array
-     * @package epm_system
+	/**
+	 * Builds a URL by concatenating multiple path segments.
+	 *
+	 * @param string ...$paths The path segments to concatenate.
+	 * @return string The concatenated path.
+	 */
+	public function buildUrl(...$paths)
+	{
+        $paths = array_filter($paths, function($path) { return !empty($path); });
+        $paths = array_map(function($path) { return trim($path, "/"); }, $paths);
+		$path  = implode("/", $paths);
+		return $path;
+    }
+
+
+	/**
+     * Builds a path by concatenating multiple path segments.
+     *
+     * @param string ...$paths The path segments to concatenate.
+     * @return string The concatenated path.
      */
-    public function arraysearchrecursive($Needle, $Haystack, $NeedleKey="", $Strict=false, $Path=array()) {
-        if (!is_array($Haystack))
-            return false;
-        foreach ($Haystack as $Key => $Val) {
-            if (is_array($Val) &&
-                    $SubPath = $this->arraysearchrecursive($Needle, $Val, $NeedleKey, $Strict, $Path)) {
-                $Path = array_merge($Path, Array($Key), $SubPath);
-                return $Path;
-            } elseif ((!$Strict && $Val == $Needle &&
-                    $Key == (strlen($NeedleKey) > 0 ? $NeedleKey : $Key)) ||
-                    ($Strict && $Val === $Needle &&
-                    $Key == (strlen($NeedleKey) > 0 ? $NeedleKey : $Key))) {
-                $Path[] = $Key;
-                return $Path;
+	public function buildPath(...$paths)
+	{
+        $flattenedPaths = [];
+        foreach ($paths as $path)
+        {
+            if (is_array($path))
+            {
+                $flattenedPaths = array_merge($flattenedPaths, $path);
+            }
+            else
+            {
+                $flattenedPaths[] = $path;
             }
         }
-        return false;
+
+        $flattenedPaths = array_filter($flattenedPaths, function($path) { return !empty($path); });
+		$initialSeparator = '';
+		if (isset($flattenedPaths[0]) && strpos($flattenedPaths[0], DIRECTORY_SEPARATOR) === 0)
+		{
+			$initialSeparator = DIRECTORY_SEPARATOR;
+		}
+        $flattenedPaths = array_map(function($path) { return trim($path, DIRECTORY_SEPARATOR); }, $flattenedPaths);
+		$path  = implode(DIRECTORY_SEPARATOR, $flattenedPaths);
+		return $initialSeparator . $path;
     }
+
 
     /**
-    * Send process to run in background
-    * @version 2.11
-    * @param string $command the command to run
-    * @param integer $Priority the Priority of the command to run
-    * @return int $PID process id
-    * @package epm_system
-    */
-    function run_in_background($Command, $Priority = 0) {
-        return($Priority ? shell_exec("nohup nice -n $Priority $Command 2> /dev/null & echo $!") : shell_exec("nohup $Command > /dev/null 2> /dev/null & echo $!"));
+	 * Converts a file to JSON format and returns the decoded data.
+	 *
+	 * @param string $file The path to the file.
+	 * @return mixed The decoded data from the file.
+	 * @throws \Exception If there is an error while decoding the JSON or if the file cannot be found.
+	 */
+    public function file2json($file = null)
+	{
+		if (empty($file))
+		{
+			throw new \Exception(_('No file specified'));
+		}
+        if (file_exists($file))
+		{
+            $data_return = false;
+            $json_data   = file_get_contents($file);
+            $deco_data   = json_decode($json_data, true);
+			switch (json_last_error())
+			{
+				case JSON_ERROR_NONE:
+                    if (!is_array($deco_data))
+                    {
+                        throw new \Exception(_('Invalid JSON data'));
+                    }
+					$data_return = $deco_data;
+					break;
+
+				case JSON_ERROR_DEPTH:
+					throw new \Exception(_('Maximum stack depth exceeded'));
+					break;
+
+				case JSON_ERROR_STATE_MISMATCH:
+					throw new \Exception(_('Underflow or the modes mismatch'));
+					break;
+
+				case JSON_ERROR_CTRL_CHAR:
+					throw new \Exception(_('Unexpected control character found'));
+					break;
+
+				case JSON_ERROR_SYNTAX:
+					throw new \Exception(_('Syntax error, malformed JSON'));
+					break;
+
+				case JSON_ERROR_UTF8:
+					throw new \Exception(_('Malformed UTF-8 characters, possibly incorrectly encoded'));
+					break;
+
+				default:
+					throw new \Exception(_('Unknown error'));
+					break;
+			}
+        }
+		else
+		{
+			throw new \Exception(sprintf(_('Cant find file: %s'), $file));
+        }
+		return $data_return;
     }
+
 
     /**
-    * Check if process is running in background
-    * @version 2.11
-    * @param string $PID proccess ID
-    * @return bool true or false
-    * @package epm_system
-    */
-    function is_process_running($PID) {
-        exec("ps $PID", $ProcessState);
-        return(count($ProcessState) >= 2);
-    }
+     * Copies a resource from the source to the destination.
+     *
+     * @param string $src The source path.
+     * @param string $dst The destination path.
+     * @param int $perm The permissions to set on the destination resource.
+     * @param bool $overwrite Whether to overwrite the destination resource if it already exists.
+     * @param bool $ignore_error Whether to ignore errors during the copy process.
+     * @param bool $exception Whether to throw an exception if an error occurs.
+     * @param bool $skip_hidden Whether to skip hidden files and directories.
+     * @return bool Returns true if the resource was copied successfully, false otherwise.
+     * @throws \Exception If an error occurs during the copy process and $exception is true.
+     */
+    public function copyResource($src, $dst, $perm = 0755, $overwrite = false, $ignore_error = true, $exception = false, $skip_hidden = true)
+    {
+        if (empty($src) || empty($dst))
+        {
+            if (!$exception) { return false; }
+            throw new \Exception(_('Source and destination directories must be specified'));
+        }
 
 
+        if (is_dir($src))
+        {
+            if (!is_dir($dst))
+            {
+                if (!mkdir($dst, $perm, true))
+                {
+                    if (!$ignore_error || $exception)
+                    {
+                        throw new \Exception(sprintf(_('Could not create directory: %s'), $dst));    
+                    }
+                    return false;
+                }
+                if (!chmod($dst, $perm))
+                {
+                    if (!$ignore_error || $exception)
+                    {
+                        throw new \Exception(sprintf(_('Could not set permissions on directory: %s'), $dst));
+                    }
+                    return false;
+                }
+            }
 
-	function sys_get_temp_dir() {
-        if (!empty($_ENV['TMP'])) {
-            return realpath($_ENV['TMP']);
-        }
-        if (!empty($_ENV['TMPDIR'])) {
-            return realpath($_ENV['TMPDIR']);
-        }
-        if (!empty($_ENV['TEMP'])) {
-            return realpath($_ENV['TEMP']);
-        }
-        $tempfile = tempnam(uniqid(rand(), TRUE), '');
-        if (file_exists($tempfile)) {
-            unlink($tempfile);
-            return realpath(dirname($tempfile));
+            $status_copy = true;
+            $dir = opendir($src);
+            while (false !== ($file = readdir($dir)))
+            {
+                if ($file != '.' && $file != '..')
+                {
+                    // Skip hidden files and directories if $skip_hidden is true
+                    if ($skip_hidden && substr($file, 0, 1) === '.')
+                    {
+                        continue;
+                    }
+                    
+                    $srcPath = $this->buildPath($src, $file);
+                    $dstPath = $this->buildPath($dst, $file);
+
+                    if (! $this->copyResource($srcPath, $dstPath, $perm, $overwrite, $ignore_error, $exception))
+                    {
+                        $status_copy = false;
+                        if (!$ignore_error || $exception)
+                        {
+                            throw new \Exception(sprintf(_('Could not copy directory: %s'), $srcPath));
+                        }
+                    }
+                }
+            }
+            closedir($dir);
+            return $status_copy;
+        } 
+        else
+        {
+            if (file_exists($dst) && !$overwrite)
+            {
+                return true;
+            }
+            if (!copy($src, $dst))
+            {
+                if (!$ignore_error || $exception)
+                {
+                    throw new \Exception(sprintf(_('Could not copy file: %s'), $src));
+                }
+                return false;
+            }
+            if (!chmod($dst, $perm))
+            {
+                if (!$ignore_error || $exception)
+                {
+                    throw new \Exception(sprintf(_('Could not set permissions on file: %s'), $dst));
+                }
+                return false;
+            }
+            return true;
         }
     }
 }

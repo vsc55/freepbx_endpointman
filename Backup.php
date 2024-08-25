@@ -15,8 +15,8 @@ class Backup Extends Base\BackupBase
 		*/
 		$dirs 				= [];
 		$epm 			 	= $this->FreePBX->Endpointman;
-		$location_endpoint	= $epm->buildPath($epm->PHONE_MODULES_PATH, "endpoint");
-		$location_temp		= $epm->buildPath($epm->PHONE_MODULES_PATH, "temp");
+		$location_endpoint	= $epm->system->buildPath($epm->PHONE_MODULES_PATH, "endpoint");
+		$location_temp		= $epm->system->buildPath($epm->PHONE_MODULES_PATH, "temp");
 
 		$iterator = new RecursiveDirectoryIterator($location_endpoint, RecursiveDirectoryIterator::SKIP_DOTS);
 		foreach (new RecursiveIteratorIterator($iterator) as $file)

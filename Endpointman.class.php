@@ -17,6 +17,7 @@ use Exception;
 require_once('lib/Config.class.php');
 require_once('lib/epm_system.class.php');
 require_once('lib/epm_data_abstraction.class.php');
+require_once('lib/epm_packages.class.php');
 //require_once("lib/RainTPL.class.php");
 
 require_once('Endpointman_Config.class.php');
@@ -41,6 +42,7 @@ class Endpointman extends FreePBX_Helpers implements BMO {
 	public $system    = null;
 	public $eda       = null; //endpoint data abstraction layer
 	public $astman	  = null;
+	public $packages  = null;
 	
 	private $endpoint = null;
 
@@ -71,6 +73,8 @@ class Endpointman extends FreePBX_Helpers implements BMO {
 		'epm_template_list' => 'endpointman_template_list',
 		'epm_product_list'  => 'endpointman_product_list',
 		'epm_mac_list' 		=> 'endpointman_mac_list',
+		'epm_brands_list'	=> 'endpointman_brand_list',
+		'epm_oui_list'		=> 'endpointman_oui_list',
 	);
 
 	
@@ -90,34 +94,35 @@ class Endpointman extends FreePBX_Helpers implements BMO {
 		$this->db 		 = $freepbx->Database;
 		$this->config 	 = $freepbx->Config;
 		$this->astman 	 = $freepbx->astman;
-		$this->configmod = new Endpointman\Config();
-		$this->system 	 = new epm_system();
-		$this->eda 		 = new epm_data_abstraction($this);
+		$this->system 	 = new Endpointman\epm_system();
 
+		$this->configmod = new Endpointman\Config();
 		$this->configmod->set('disable_epm', FALSE);
+		$this->configmod->set('tz', $this->config->get('PHPTIMEZONE'));	// Set TimeZone by config FREEPBX
+		date_default_timezone_set($this->configmod->get('tz'));
+		
+		$this->eda 		 = new epm_data_abstraction($this);
 		$this->eda->global_cfg = $this->configmod->getall();
 
+		
+
+		
         //Generate empty array
         $this->error   = array();
         $this->message = array();
 
-		// Set TimeZone by config FREEPBX
-		$this->configmod->set('tz', $this->config->get('PHPTIMEZONE'));
-		date_default_timezone_set($this->configmod->get('tz'));
-
-
 		$this->URL_UPDATE   = $this->configmod->get('update_server');
-        $this->MODULES_PATH = $this->buildPath($this->config->get('AMPWEBROOT'), 'admin', 'modules');
-		$this->MODULE_PATH 	= $this->buildPath($this->MODULES_PATH, "endpointman");
+        $this->MODULES_PATH = $this->system->buildPath($this->config->get('AMPWEBROOT'), 'admin', 'modules');
+		$this->MODULE_PATH 	= $this->system->buildPath($this->MODULES_PATH, "endpointman");
 
 		// Define the location of phone modules, keeping it outside of the module directory so that when 
 		// the user updates endpointmanager they don't lose all of their phones
 		// TODO: Migrate _ep_phone_modules to spool or other location
-		$this->PHONE_MODULES_PATH = $this->buildPath($this->MODULES_PATH, '_ep_phone_modules');
+		$this->PHONE_MODULES_PATH = $this->system->buildPath($this->MODULES_PATH, '_ep_phone_modules');
 
-		$this->TEMP_PATH 		  = $this->buildPath($this->PHONE_MODULES_PATH, "temp");
-		$this->PROVISIONER_PATH   = $this->buildPath($this->TEMP_PATH, "provisioner");
-		$this->EXPORT_PATH		  = $this->buildPath($this->TEMP_PATH, "export");
+		$this->TEMP_PATH 		  = $this->system->buildPath($this->PHONE_MODULES_PATH, "temp");
+		$this->PROVISIONER_PATH   = $this->system->buildPath($this->TEMP_PATH, "provisioner");
+		$this->EXPORT_PATH		  = $this->system->buildPath($this->TEMP_PATH, "export");
 
         if (! file_exists($this->MODULE_PATH))
 		{
@@ -171,6 +176,7 @@ class Endpointman extends FreePBX_Helpers implements BMO {
         //$this->tpl = new RainTPL(MODULE_PATH . '/_old/templates/freepbx', MODULE_PATH . '/_old/templates/freepbx/compiled', '/admin/assets/endpointman/images');
 		//$this->tpl = new RainTPL('/admin/assets/endpointman/images');
 
+		$this->packages			= new Endpointman\Packages($this);
 		$this->epm_config 		= new Endpointman_Config($this);
 		$this->epm_advanced 	= new Endpointman_Advanced($this);
 		$this->epm_templates 	= new Endpointman_Templates($this);
@@ -184,18 +190,18 @@ class Endpointman extends FreePBX_Helpers implements BMO {
 		$return_data = true;
 		$operations = [
 			[
-				'path'			=> $this->buildPath($this->PHONE_MODULES_PATH),
+				'path'			=> $this->system->buildPath($this->PHONE_MODULES_PATH),
 				'permissions'	=> 0755,
 				'type'			=> 'dir',
 				'action'		=> 'check',
 				'action_error'	=> 'break'
 			],
 			[
-				'path'	 => $this->buildPath($this->PHONE_MODULES_PATH, "setup.php"),
+				'path'	 => $this->system->buildPath($this->PHONE_MODULES_PATH, "setup.php"),
 				'action' => 'del'
 			],
 			[
-				'path' 		  => $this->buildPath($this->PHONE_MODULES_PATH, "endpoint"),
+				'path' 		  => $this->system->buildPath($this->PHONE_MODULES_PATH, "endpoint"),
 				'permissions' => 0755,
 				'type' 		  => 'dir',
 				'action' 	  => 'check'
@@ -302,7 +308,7 @@ class Endpointman extends FreePBX_Helpers implements BMO {
 		);
 		$files[] = array(
 			'type'  => 'file',
-			'path'  => $this->buildPath($this->PHONE_MODULES_PATH, "setup.php"),
+			'path'  => $this->system->buildPath($this->PHONE_MODULES_PATH, "setup.php"),
 			'perms' => 0755
 		);
 		$files[] = array(
@@ -945,7 +951,7 @@ class Endpointman extends FreePBX_Helpers implements BMO {
 			$delete = $request['epm_delete'] ?? null;
 
 
-			$path_funciones_inf = $this->buildPath($this->MODULE_PATH, 'includes/functions.inc');
+			$path_funciones_inf = $this->system->buildPath($this->MODULE_PATH, 'includes/functions.inc');
 
 			if (file_exists($path_funciones_inf))
 			{
@@ -1141,7 +1147,7 @@ class Endpointman extends FreePBX_Helpers implements BMO {
 		{
 			foreach($this->pagedata as &$page) {
 				ob_start();
-				include( $this->buildPath($this->MODULE_PATH, $page['page']));
+				include( $this->system->buildPath($this->MODULE_PATH, $page['page']));
 				$page['content'] = ob_get_contents();
 				ob_end_clean();
 			}
@@ -1293,7 +1299,7 @@ class Endpointman extends FreePBX_Helpers implements BMO {
 							{
 								if ($this->has_git())
 								{
-									if (!file_exists($this->buildPath($this->PHONE_MODULES_PATH, '.git'))) {
+									if (!file_exists($this->system->buildPath($this->PHONE_MODULES_PATH, '.git'))) {
 										$o = getcwd();
 										chdir(dirname($this->PHONE_MODULES_PATH));
 										$this->rmrf($this->PHONE_MODULES_PATH);
@@ -1309,11 +1315,11 @@ class Endpointman extends FreePBX_Helpers implements BMO {
 							}
 							else
 							{
-								if (file_exists($this->buildPath($this->PHONE_MODULES_PATH, '.git')))
+								if (file_exists($this->system->buildPath($this->PHONE_MODULES_PATH, '.git')))
 								{
 									$this->rmrf($this->PHONE_MODULES_PATH);
 
-									$sql = "SELECT * FROM  `endpointman_brand_list` WHERE  `installed` =1";
+									$sql = "SELECT * FROM  `".self::TABLES['epm_brands_list']."` WHERE  `installed` =1";
 									$result = & sql($sql, 'getAll', \PDO::FETCH_ASSOC);
 									foreach ($result as $row)
 									{
@@ -1362,7 +1368,7 @@ class Endpointman extends FreePBX_Helpers implements BMO {
 							break;
 
 						case "oui_manager":
-							$data_tab['config']['brands']   = sql('SELECT * from endpointman_brand_list WHERE id > 0 ORDER BY name ASC', 'getAll', \PDO::FETCH_ASSOC);
+							$data_tab['config']['brands']   = sql('SELECT * from '. self::TABLES['epm_brands_list'] .' WHERE id > 0 ORDER BY name ASC', 'getAll', \PDO::FETCH_ASSOC);
 							$data_tab['config']['url_grid'] = "ajax.php?module=endpointman&amp;module_sec=epm_advanced&amp;module_tab=oui_manager&amp;command=oui";
 							break;
 
@@ -1627,8 +1633,8 @@ class Endpointman extends FreePBX_Helpers implements BMO {
 			case "upload_master_xml":
 
 
-				$file_xml_tmp  = $this->buildPath($this->TEMP_PATH, 'master.xml');
-				$file_xml_dest = $this->buildPath($this->PHONE_MODULES_PATH, 'master.xml');
+				$file_xml_tmp  = $this->system->buildPath($this->TEMP_PATH, 'master.xml');
+				$file_xml_dest = $this->system->buildPath($this->PHONE_MODULES_PATH, 'master.xml');
 
 				if (file_exists($file_xml_tmp)) {
 					$handle = fopen($file_xml_tmp, "rb");
@@ -1773,98 +1779,326 @@ class Endpointman extends FreePBX_Helpers implements BMO {
 	}
 
 
-	/**
-	 * Converts a file to JSON format and returns the decoded data.
-	 *
-	 * @param string $file The path to the file.
-	 * @return mixed The decoded data from the file.
-	 * @throws \Exception If there is an error while decoding the JSON or if the file cannot be found.
-	 */
+	// TODO: Move to system class, only retrocompatibility
     public function file2json($file)
 	{
-		if (empty($file))
+		return $this->system->file2json($file);
+    }
+
+
+	
+
+
+
+
+
+
+
+
+
+	/**
+	 * Retrieves the value of a configuration key.
+	 *
+	 * @param string $key The configuration key to retrieve.
+	 * @param mixed $default The default value to return if the key is not found.
+	 * @return mixed The value of the configuration key, or the default value if not found.
+	 *
+	 * @deprecated This method currently supports retrocompatibility with data saved in the database, but it will be removed in the future.
+	 */
+	public function getConfig($key = null, $default = false)
+	{
+		$data = false;
+		if (! empty($key))
 		{
-			throw new \Exception(_('No file specified'));
+			// TODO: Retrocompatibility data saved in the database 
+			$sql  = sprintf("SELECT value FROM %s WHERE var_name LIKE :find", "endpointman_global_vars");
+			$stmt = $this->db->prepare($sql);
+			$stmt->execute([
+				':find' => "endpoint_vers"
+			]);
+			// TODO: Retrocompatibility data saved in the database 
+
+
+			if (array_key_exists($key, $this->getAllKeys('globalSettings')))
+			{
+				$data = parent::getConfig($key, 'globalSettings');
+			}
+			elseif ($stmt->rowCount() !== 0)
+			{
+				$data = $stmt->fetchColumn() ?? $default;
+			}
+			else
+			{
+				$data = $default;
+			}
+		}
+		return $data;
+	}
+
+	/**
+	 * Sets the value of a configuration key.
+	 *
+	 * @param string $key The configuration key to set.
+	 * @param mixed $value The value to set for the configuration key.
+	 * @param string $id The configuration ID to set the key for (default: "globalSettings").
+	 * @return bool Returns true if the configuration key was set, false otherwise.
+	 *
+	 * @deprecated This method currently supports retrocompatibility with data saved in the database, but it will be removed in the future.
+	 */
+	public function setConfig($key = null, $value = false, $id = "globalSettings")
+	{
+		if (!empty($key))
+		{ 
+			return parent::setConfig($key, $value, $id);
+		}
+		return false;
+	}
+
+
+
+
+
+
+
+
+
+	public function add_brand($id, $name, $directory, $cfg_ver)
+	{
+		if (empty($id) || empty($name) || empty($directory))
+		{
+			return false;
+		}
+		elseif ($this->is_brand_exist($id, "id"))
+		{
+			return false;
 		}
 
-        if (file_exists($file))
+		$sql = sprintf("INSERT INTO %s (id, name, directory, cfg_ver) VALUES (:brand_id, :name, :directory, :version)", self::TABLES['epm_brands_list']);
+		$sth = $this->db->prepare($sql);
+		$sth->execute([
+			':brand_id'  => $id,
+			':name' 	 => $name,
+			':directory' => $directory,
+			':version' 	 => $cfg_ver,
+		]);
+
+		if (! $this->is_brand_exist($id, "id"))
 		{
-            $json = file_get_contents($file);
-            $data = json_decode($json, TRUE);
-			$data_return = false;
+			return false;
+		}
+		return true;
+	}
 
-			switch (json_last_error())
-			{
-				case JSON_ERROR_NONE:
-					$data_return = $data;
-					break;
+	public function update_brand($id, $name, $cfg_ver, $findby = "id")
+	{
+		if (empty($id) || empty($name) || empty($findby))
+		{
+			return false;
+		}
+		elseif (strtolower(trim($findby)) == "id" && !$this->is_brand_exist($id, $findby))
+		{
+			return false;
+		}
+		elseif (strtolower(trim($findby)) == "name" && !$this->is_brand_exist($name, $findby))
+		{
+			return false;
+		}
+		elseif (! in_array(strtolower(trim($findby)), ["id", "name"]))
+		{
+			return false;
+		}
 
-				case JSON_ERROR_DEPTH:
-					throw new \Exception(_('Maximum stack depth exceeded'));
-					break;
+		$sql  = sprintf("UPDATE %s SET local = :local, name = :brand_name, cfg_ver = :cfg_ver, installed = :installed, hidden = :hidden WHERE %s = :brand_id", self::TABLES['epm_brands_list'], $findby);
+		$stmt = $this->db->prepare($sql);
+		$stmt->execute([
+			':brand_id'   => $id,
+			':brand_name' => $name,
+			':cfg_ver'	  => $cfg_ver,
+			':local'	  => 1,
+			':installed'  => 1,
+			':hidden'	  => 0,
+		]);
+		return true;
+	}
+	
+	private function get_brands_db()
+	{
+		$sql  = sprintf('SELECT * FROM %s WHERE id > 0', self::TABLES['epm_brands_list']);
+		$stmt = $this->db->prepare($sql);
+		$stmt->execute();
+		return $stmt;
+	}
 
-				case JSON_ERROR_STATE_MISMATCH:
-					throw new \Exception(_('Underflow or the modes mismatch'));
-					break;
+	public function get_brands_list()
+	{
+		$stmt = $this->get_brands_db();
+		return $stmt->fetchAll(\PDO::FETCH_ASSOC);
+	}
 
-				case JSON_ERROR_CTRL_CHAR:
-					throw new \Exception(_('Unexpected control character found'));
-					break;
+	public function count_brands()
+	{
+		$stmt = $this->get_brands_db();
+		return $stmt->rowCount();
+	}
 
-				case JSON_ERROR_SYNTAX:
-					throw new \Exception(_('Syntax error, malformed JSON'));
-					break;
+	public function is_brand_exist($brand = null, $findby = "directory")
+	{
+		$return_data = false;
+		if (!empty($brand) && !empty($findby))
+		{
+			$sql  = sprintf("SELECT id FROM %s WHERE %s = :findby", self::TABLES['epm_brands_list'], $findby);
+			$stmt = $this->db->prepare($sql);
+			$stmt->execute([
+				':findby' => $brand
+			]);
+			$return_data = $stmt->rowCount() !== 0;
+		}
+		return $return_data;
+	}
 
-				case JSON_ERROR_UTF8:
-					throw new \Exception(_('Malformed UTF-8 characters, possibly incorrectly encoded'));
-					break;
+	public function is_brand_local($brand = null, $findby = "directory")
+	{
+		$return_data = null;
+		if (!empty($brand) && !empty($findby))
+		{
+			$sql  = sprintf("SELECT local FROM %s WHERE %s = :findby", self::TABLES['epm_brands_list'], $findby);
+			$stmt = $this->db->prepare($sql);
+			$stmt->execute([
+				':findby' => $brand
+			]);
+			$return_data = $stmt->rowCount() === 0 ? false : ($stmt->fetchColumn() === "1");
+		}
+		return $return_data;
+	}
 
-				default:
-					throw new \Exception(_('Unknown error'));
-					break;
-			}
-        }
+	public function set_brand_oui($oui, $brand_id)
+	{
+		$sql = sprintf("REPLACE INTO %s (`oui`, `brand`, `custom`) VALUES (:oui, :brand_id, '0')", self::TABLES['epm_oui_list']);
+		$sth = $this->db->prepare($sql);
+		$sth->execute([
+			':oui' 		=> $oui,
+			':brand_id' => $brand_id
+		]);
+	}
+
+
+
+
+	public function is_brand_product_exist($id = null)
+	{
+		$return_data = false;
+		if (!empty($id))
+		{
+			$sql  = sprintf("SELECT id FROM %s WHERE id = :id", self::TABLES['epm_product_list']);
+			$stmt = $this->db->prepare($sql);
+			$stmt->execute([
+				':id' => $id
+			]);
+			$return_data = $stmt->rowCount() !== 0;
+		}
+		return $return_data;
+	}
+
+	public function add_brand_product($id, $brand_id, $short_name, $long_name, $directory, $cfg_ver, $config_files)
+	{
+		if (empty($id) || empty($brand_id) || empty($short_name) || empty($long_name) || empty($directory) || empty($config_files))
+		{
+			return false;
+		}
+		elseif ($this->is_brand_product_exist($id))
+		{
+			return false;
+		}
+
+		// if (is_array($config_files))
+		// {
+		// 	$config_files = implode(",", $config_files);
+		// }
+		$sql = sprintf("INSERT INTO %s (id, brand, short_name, long_name, cfg_dir, cfg_ver, config_files, hidden) VALUES (:id, :brand_id, :short_name, :long_name, :directory, :cfg_ver, :config_files, :hidden)", self::TABLES['epm_product_list']);
+		$sth = $this->db->prepare($sql);
+		$sth->execute([
+			':id' 			=> $id,
+			':brand_id' 	=> $brand_id,
+			':short_name' 	=> $short_name,
+			':long_name' 	=> $long_name,
+			':directory' 	=> $directory,
+			':cfg_ver' 		=> $cfg_ver,
+			':config_files' => $config_files,
+			':hidden' 		=> 0
+		]);
+
+		if (! $this->is_brand_product_exist($id))
+		{
+			return false;
+		}
+		return true;
+	}
+
+	public function update_brand_product($id, $short_name, $long_name, $cfg_ver, $config_files)
+	{
+		if (empty($id) || empty($short_name) || empty($long_name) || empty($config_files))
+		{
+			return false;
+		}
+		elseif (!$this->is_brand_product_exist($id))
+		{
+			return false;
+		}
+
+		// if (is_array($config_files))
+		// {
+		// 	$config_files = implode(",", $config_files);
+		// }
+		$sql  = sprintf("UPDATE %s SET short_name = :short_name, long_name = :long_name, cfg_ver = :cfg_ver, config_files = :config_files WHERE id = :id", self::TABLES['epm_product_list']);
+		$stmt = $this->db->prepare($sql);
+		$stmt->execute([
+			':id' 			=> $id,
+			':short_name' 	=> $short_name,
+			':long_name' 	=> $long_name,
+			':cfg_ver' 		=> $cfg_ver,
+			':config_files' => $config_files
+		]);
+		return true;
+	}
+	
+
+
+
+
+
+
+	public function sync_mac_brand_by_model($model, $model_id)
+	{
+		if (empty($model) || empty($model_id))
+		{
+			return false;
+		}
+
+		$sql  = sprintf("SELECT id FROM %s WHERE model LIKE :model", self::TABLES['epm_model_list']);
+		$stmt = $this->db->prepare($sql);
+		$stmt->execute([
+			':model' => $model,
+		]);
+		$new_model_id = $stmt->rowCount() === 0 ? false : ($stmt->fetchColumn() ?? false);
+	
+		if ($new_model_id)
+		{
+			$sql  = sprintf("UPDATE %s SET  model = :new_model_id WHERE  model = :model", "endpointman_mac_list");
+			$stmt = $this->db->prepare($sql);
+			$stmt->execute([
+				':new_model_id' => $new_model_id,
+				':model' 		=> $model_id,
+			]);
+		}
 		else
 		{
-			throw new \Exception(sprintf(_('Cant find file: %s'), $file));
-        }
-		return $data_return;
-    }
-
-
-	/**
-	 * Builds a URL by concatenating multiple path segments.
-	 *
-	 * @param string ...$paths The path segments to concatenate.
-	 * @return string The concatenated path.
-	 */
-	public function buildUrl(...$paths)
-	{
-		$paths = array_filter($paths, fn($path) => !empty($path));
-		$paths = array_map(fn($path) => trim($path, "/"), $paths);
-		$path = implode("/", $paths);
-		return $path;
-    }
-
-
-	/**
-	 * Builds a path by concatenating multiple path segments.
-	 *
-	 * @param string ...$paths The path segments to concatenate.
-	 * @return string The concatenated path.
-	 */
-	public function buildPath(...$paths)
-	{
-		$paths = array_filter($paths, fn($path) => !empty($path));
-		$initialSeparator = '';
-		if (isset($paths[0]) && strpos($paths[0], DIRECTORY_SEPARATOR) === 0)
-		{
-			$initialSeparator = DIRECTORY_SEPARATOR;
+			$sql  = sprintf("UPDATE %s SET  model = '0' WHERE model = :model", self::TABLES["epm_mac_list"]);
+			$stmt = $this->db->prepare($sql);
+			$stmt->execute([
+				':model' => $model_id,
+			]);
 		}
-		$paths = array_map(fn($path) => trim($path, DIRECTORY_SEPARATOR), $paths);
-		$path  = implode(DIRECTORY_SEPARATOR, $paths);
-		return $initialSeparator.$path;
-    }
+	}
 
 
 
@@ -1875,6 +2109,106 @@ class Endpointman extends FreePBX_Helpers implements BMO {
 
 
 
+	public function get_brand_product_models_list($id)
+	{
+		if (empty($id))
+		{
+			return array();
+		}
+		$sql  = sprintf("SELECT * FROM %s WHERE product_id = :id", self::TABLES['epm_model_list']);
+		$stmt = $this->db->prepare($sql);
+		$stmt->execute([
+			':id' => $id,
+		]);
+		return $stmt->fetchAll(\PDO::FETCH_ASSOC);
+	}
+
+	public function is_brand_product_model_exist($id = null)
+	{
+		$return_data = false;
+		if (!empty($id))
+		{
+			$sql  = sprintf("SELECT id FROM %s WHERE id = :id", self::TABLES['epm_model_list']);
+			$stmt = $this->db->prepare($sql);
+			$stmt->execute([
+				':id' => $id
+			]);
+			$return_data = $stmt->rowCount() !== 0;
+		}
+		return $return_data;
+	}
+
+	public function add_brand_product_model($id, $brand_id, $product_id, $model, $max_lines, $template_list)
+	{
+		if (empty($id) || empty($brand_id) || empty($product_id) || empty($model) || empty($template_list))
+		{
+			return false;
+		}
+		elseif ($this->is_brand_product_model_exist($id))
+		{
+			return false;
+		}
+
+		$sql = sprintf("INSERT INTO %s (id, brand, product_id, model, max_lines, template_list, enabled, hidden) VALUES (:id, :brand_id, :product_id, :model, :max_lines, :template_list, :enabled, :hidden)", self::TABLES['epm_model_list']);
+		$sth = $this->db->prepare($sql);
+		$sth->execute([
+			':id' 			=> $id,
+			':brand_id' 	=> $brand_id,
+			':product_id' 	=> $product_id,
+			':model' 		=> $model,
+			':max_lines' 	=> $max_lines,
+			':template_list'=> $template_list,
+			':enabled' 		=> 0,
+			':hidden' 		=> 0
+		]);
+
+		if (! $this->is_brand_product_model_exist($id))
+		{
+			return false;
+		}
+		return true;
+	}
+
+	public function update_brand_product_model($id, $model, $max_lines, $template_list)
+	{
+		if (empty($id) || empty($model) || empty($template_list))
+		{
+			return false;
+		}
+		elseif (!$this->is_brand_product_model_exist($id))
+		{
+			return false;
+		}
+
+		$sql  = sprintf("UPDATE %s SET model = :model, max_lines = :max_lines, template_list = :template_list WHERE id = :id", self::TABLES['epm_model_list']);
+		$stmt = $this->db->prepare($sql);
+		$stmt->execute([
+			':id' 			=> $id,
+			':model' 		=> $model,
+			':max_lines' 	=> $max_lines,
+			':template_list'=> $template_list
+		]);
+		return true;
+	}
+
+	public function del_brand_product_model($id)
+	{
+		if (empty($id))
+		{
+			return false;
+		}
+		elseif (!$this->is_brand_product_model_exist($id))
+		{
+			return false;
+		}
+
+		$sql  = sprintf("DELETE FROM %s WHERE id = :id", self::TABLES['epm_model_list']);
+		$stmt = $this->db->prepare($sql);
+		$stmt->execute([
+			':id' => $id
+		]);
+		return true;
+	}
 
 
 
@@ -2015,7 +2349,7 @@ echo $this->error['tftp_check'];
     function submit_config($brand, $product, $orig_name, $data) {
     	$posturl = 'http://www.provisioner.net/submit_config.php';
 
-		$file_name_with_full_path = $this->buildPath($this->MODULE_PATH, 'data.txt');
+		$file_name_with_full_path = $this->system->buildPath($this->MODULE_PATH, 'data.txt');
 
     	$fp = fopen( $file_name_with_full_path, 'w');
     	fwrite($fp, $data);
