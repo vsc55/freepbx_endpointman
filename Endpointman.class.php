@@ -40,7 +40,7 @@ class Endpointman extends FreePBX_Helpers implements BMO {
 	public $config 	  = null;
 	public $configmod = null;
 	public $system    = null;
-	public $eda       = null; //endpoint data abstraction layer
+	public $eda		  = null; //endpoint data abstraction layer
 	public $astman	  = null;
 	public $packages  = null;
 	
@@ -2062,17 +2062,19 @@ class Endpointman extends FreePBX_Helpers implements BMO {
 	 * @param string $table The name of the table to count records from.
 	 * @param mixed $find The value to search for in the specified column.
 	 * @param string $filter The column name to filter the search by.
+	 * @param array $where An associative array of conditions to filter the data. The keys represent the column names, and the values are arrays with the following keys:
 	 * @return bool Returns true if there are records matching the search criteria, false otherwise.
 	 */
-	public function count_database_data($table, $find = null, $filter = null)
+	public function count_database_data($table, $find = null, $filter = null, $where = array())
 	{
 		$return_data = false;
-		$where 		 = [];
+		if (!is_array($where))
+		{
+			$where = [];
+		}
 		if (!empty($find) && !empty($filter))
 		{
-			$where = array(
-				$filter => array( 'operator' => '=', 'value' => $find)
-			);
+			$where[$filter] = array( 'operator' => '=', 'value' => $find);
 		}
 		$result = $this->get_database_data($table, $where, 'COUNT(*) as total');
 		$return_data = ($result[0]['total'] ?? 0) > 0;
@@ -2134,19 +2136,47 @@ class Endpointman extends FreePBX_Helpers implements BMO {
 		return $this->get_database_data(self::TABLES['epm_brands_list'], $where, '*', $order_by, $order_dir);
 	}
 	
+
+	public function get_hw_brand($name = null)
+	{
+		if (empty($name))
+		{
+			return [];
+		}
+		$sql = sprintf("SELECT * FROM %s WHERE directory = :directory", self::TABLES['epm_brands_list']);
+		$stmt = $this->db->prepare($sql);
+		$stmt->execute([
+			':directory' => $name
+		]);
+		return $stmt->fetch(\PDO::FETCH_ASSOC);
+	}
+
+
 	/**
 	 * Check if a hardware brand exists.
 	 *
 	 * @param string|null $id The hardware brand to check.
-	 * @param string $where The method to find the brand (default: "directory").
+	 * @param string $where The column to search for the hardware brand (default: "directory").
+	 * @param bool $find_all Whether to find all brands or only the visible ones (default: false).
 	 * @return bool Returns true if the brand exists, false otherwise.
 	 */
-	public function is_exist_hw_brand($id = null, $where = "directory")
+	public function is_exist_hw_brand($id = null, $where = "directory", $find_all = false)
 	{
 		$return_data = false;
-		if (!empty($id) && !empty($where))
+		if (empty($where))
 		{
-			$count = $this->count_database_data(self::TABLES['epm_brands_list'], $id, $where);
+			$where = "directory";
+		}
+		if (!empty($id))
+		{
+			$final_where = array(
+				$where => array( 'operator' => '=', 'value' => $id)
+			);
+			if (!$find_all)
+			{
+				$final_where['hidden'] = array( 'operator' => '=', 'value' => "0");
+			}
+			$count = $this->count_database_data(self::TABLES['epm_brands_list'], null, null, $final_where);
 			$return_data = $count > 0;
 		}
 		return $return_data;
@@ -2188,15 +2218,27 @@ class Endpointman extends FreePBX_Helpers implements BMO {
 	 * Check if a hardware product exists in the database.
 	 *
 	 * @param int|null $id The ID of the hardware product.
-	 * @param string $where The column to search for the hardware product.
+	 * @param string $where The column to search for the hardware product. (default: "id")
+	 * @param bool $find_all Whether to find all products or only the visible ones.
 	 * @return bool Returns true if the hardware product exists, false otherwise.
 	 */
-	public function is_exist_hw_product($id = null, $where = "id")
+	public function is_exist_hw_product($id = null, $where = "id", $find_all = false)
 	{
 		$return_data = false;
-		if (!empty($id) && !empty($where))
+		if (empty($where))
 		{
-			$count = $this->count_database_data(self::TABLES['epm_product_list'], $id, $where);
+			$where = "id";
+		}
+		if (!empty($id))
+		{
+			$final_where = array(
+				$where => array( 'operator' => '=', 'value' => $id)
+			);
+			if (!$find_all)
+			{
+				$final_where['hidden'] = array( 'operator' => '=', 'value' => "0");
+			}
+			$count = $this->count_database_data(self::TABLES['epm_product_list'], null, null, $final_where);
 			$return_data = $count > 0;
 		}
 		return $return_data;
@@ -2229,6 +2271,15 @@ class Endpointman extends FreePBX_Helpers implements BMO {
 		return $this->set_database_data(self::TABLES['epm_product_list'], $find, $data, $where, $data_insert, $data_update);
 	}
 
+	/**
+	 * Retrieves the hardware product list based on the provided ID.
+	 *
+	 * @param int $id The ID of the brand.
+	 * @param bool $show_all (Optional) Whether to show all products or not. Default is false.
+	 * @param string|null $order_by (Optional) The column to order the results by. Default is null.
+	 * @param string|null $order_dir (Optional) The direction to order the results in. Default is null.
+	 * @return array The hardware product list.
+	 */
 	public function get_hw_product_list($id, $show_all = false, $order_by = null, $order_dir = null)
 	{
 		if (empty($id))
@@ -2250,6 +2301,13 @@ class Endpointman extends FreePBX_Helpers implements BMO {
 
 
 
+	/**
+	 * Synchronizes the MAC brand by model.
+	 *
+	 * @param string $model The model name.
+	 * @param int $model_id The model ID.
+	 * @return bool Returns true if the synchronization is successful, false otherwise.
+	 */
 	public function sync_mac_brand_by_model($model, $model_id)
 	{
 		if (empty($model) || empty($model_id))
@@ -2264,23 +2322,28 @@ class Endpointman extends FreePBX_Helpers implements BMO {
 		]);
 		$new_model_id = $stmt->rowCount() === 0 ? false : ($stmt->fetchColumn() ?? false);
 	
-		if ($new_model_id)
-		{
-			$sql  = sprintf("UPDATE %s SET  model = :new_model_id WHERE  model = :model", "endpointman_mac_list");
-			$stmt = $this->db->prepare($sql);
-			$stmt->execute([
-				':new_model_id' => $new_model_id,
-				':model' 		=> $model_id,
-			]);
-		}
-		else
-		{
-			$sql  = sprintf("UPDATE %s SET  model = '0' WHERE model = :model", self::TABLES["epm_mac_list"]);
-			$stmt = $this->db->prepare($sql);
-			$stmt->execute([
-				':model' => $model_id,
-			]);
-		}
+		// if ($new_model_id)
+		// {
+		// 	$sql  = sprintf("UPDATE %s SET  model = :new_model_id WHERE  model = :model", "endpointman_mac_list");
+		// 	$stmt = $this->db->prepare($sql);
+		// 	$stmt->execute([
+		// 		':new_model_id' => $new_model_id,
+		// 		':model' 		=> $model_id,
+		// 	]);
+		// }
+		// else
+		// {
+		// 	$sql  = sprintf("UPDATE %s SET  model = '0' WHERE model = :model", self::TABLES["epm_mac_list"]);
+		// 	$stmt = $this->db->prepare($sql);
+		// 	$stmt->execute([
+		// 		':model' => $model_id,
+		// 	]);
+		// }
+
+		$data_oid = array(
+			':model' => $new_model_id ? $new_model_id : 0
+		);
+		$this->set_database_data(self::TABLES['epm_mac_list'], $model_id, $data_oid, 'model');
 	}
 
 
@@ -2290,6 +2353,16 @@ class Endpointman extends FreePBX_Helpers implements BMO {
 
 
 
+	/**
+	 * Sets the hardware model data in the database.
+	 *
+	 * @param mixed $find The value to search for in the database.
+	 * @param array $data An array of data to be set.
+	 * @param string $where The column to search for the value.
+	 * @param array $data_insert An array of data to be inserted.
+	 * @param array $data_update An array of data to be updated.
+	 * @return mixed The result of setting the database data.
+	 */
 	public function set_hw_model($find = null, $data = array(), $where = "id", $data_insert = array(), $data_update = array())
 	{
 		$data 				  = is_array($data)			? $data 		: [];
@@ -2307,6 +2380,15 @@ class Endpointman extends FreePBX_Helpers implements BMO {
 		return $this->set_database_data(self::TABLES['epm_model_list'], $find, $data, $where, $data_insert, $data_update);
 	}
 
+	/**
+	 * Retrieves the hardware model list based on the given ID.
+	 *
+	 * @param int $id The ID of the product.
+	 * @param bool $show_all (Optional) Whether to show all models or not. Default is false.
+	 * @param string|null $order_by (Optional) The column to order the results by. Default is null.
+	 * @param string|null $order_dir (Optional) The direction to order the results in. Default is null.
+	 * @return array The array of hardware models matching the given ID and conditions.
+	 */
 	public function get_hw_model_list($id, $show_all = false, $order_by = null, $order_dir = null)
 	{
 		if (empty($id))
@@ -2323,17 +2405,43 @@ class Endpointman extends FreePBX_Helpers implements BMO {
 		return $this->get_database_data(self::TABLES['epm_model_list'], $where, '*', $order_by, $order_dir);
 	}
 
-	public function is_exist_hw_model($id = null, $where = "id")
+	/**
+	 * Checks if a hardware model exists in the database.
+	 *
+	 * @param int|null $id The ID of the hardware model to check. Defaults to null.
+	 * @param string $where The column to search for the hardware model. (Default: "id")
+	 * @param bool $find_all Determines whether to find all matching hardware models or just one. Defaults to false.
+	 *
+	 * @return bool Returns true if the hardware model exists, false otherwise.
+	 */
+	public function is_exist_hw_model($id = null, $where = "id", $find_all = false)
 	{
 		$return_data = false;
-		if (!empty($id) && !empty($where))
+		if (empty($where))
 		{
-			$count = $this->count_database_data(self::TABLES['epm_model_list'], $id, $where);
+			$where = "id";
+		}
+		if (!empty($id))
+		{
+			$final_where = array(
+				$where => array( 'operator' => '=', 'value' => $id)
+			);
+			if (!$find_all)
+			{
+				$final_where['hidden'] = array( 'operator' => '=', 'value' => "0");
+			}
+			$count = $this->count_database_data(self::TABLES['epm_model_list'], null, null, $final_where);
 			$return_data = $count > 0;
 		}
 		return $return_data;
 	}
 
+	/**
+	 * Deletes a hardware model from the database.
+	 *
+	 * @param int|null $id The ID of the hardware model to delete. Defaults to null.
+	 * @return bool Returns true if the hardware model was deleted, false otherwise.
+	 */
 	public function del_hw_model($id = null)
 	{
 		if (!$this->is_exist_hw_model($id))

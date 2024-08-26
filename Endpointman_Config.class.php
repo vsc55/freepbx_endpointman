@@ -10,6 +10,7 @@
 namespace FreePBX\modules;
 
 require_once('lib/epm_system.class.php');
+require_once('lib/epm_packages.class.php');
 
 
 #[\AllowDynamicProperties]
@@ -150,47 +151,6 @@ class Endpointman_Config
 	public function getActionBar($request) {
 		return "";
 	}
-
-
-	/**** FUNCIONES SEC MODULO "epm_config\editor" ****/
-	/**
-     * Get info all brdans, prodics, models.
-     * @return array
-     */
-	 /*
-	 SE DESACTIVA A VERS SI NO SE USA EN NINGUN SITIO.
-	public function epm_config_editor_hardware_get_list_all ()
-	{
-		$row_out = array();
-		$i = 0;
-		foreach ($this->epm->get_hw_brand_list(true, "name") as $row)
-		{
-			$row_out[$i] = $row;
-			$row_out[$i]['count'] = $i;
-			if ($row['installed'])
-			{
-				$j = 0;
-				foreach ($this->epm->get_hw_product_list($row['id'], true) as $row2)
-				{
-					$row_out[$i]['products'][$j] = $row2;
-					$k = 0;
-					foreach ($this->epm->get_hw_model_list($row2['id'], true) as $row3) {
-						$row_out[$i]['products'][$j]['models'][$k] = $row3;
-						$k++;
-					}
-					$j++;
-				}
-			}
-			$i++;
-		}
-		return $row_out;
-	}
-	*/
-	/*** END SEC FUNCTIONS ***/
-
-
-
-
 
 
 	/**** FUNCIONES SEC MODULO "epm_config\manager" ****/
@@ -422,82 +382,100 @@ class Endpointman_Config
 	//http://pbx.cerebelum.lan/admin/ajax.php?module=endpointman&module_sec=epm_config&module_tab=manager&command=list_all_brand
 	public function epm_config_manager_hardware_get_list_all()
 	{
-		$row_out = array();
-		$i = 0;
+		$row_out 	= [];
 		$brand_list = $this->epm->get_hw_brand_list(true, "name");
 		//FIX: https://github.com/FreePBX-ContributedModules/endpointman/commit/2ad929d0b38f05c9da1b847426a4094c3314be3b
+	
 
-		foreach ($brand_list as $row)
+		
+		
+		// try
+		// {
+		// 	$master_json = $this->epm->packages->readMasterJSON(true);
+		// }
+		// catch (\Exception $e)
+		// {
+		// 	return [];
+		// }
+		// $master_json = $this->epm->packages->readMasterJSON(true);
+
+		// $version = $master_json->getLastModifiedMaxBrands();
+		// debug($version);
+
+		// $version = array();
+		// foreach ($master_json->getBrands() as &$brand)
+		// {
+		// 	$directory 			  = $brand->getDirectory();
+		// 	$version[$directory] = $brand->getLastModifiedMax();
+		// }
+		// dbug($version);
+
+		
+		
+
+
+
+
+
+		foreach ($brand_list as $i => $brand)
 		{
-			$row_out[$i] = $row;
-			$row_out[$i]['count'] = $i;
-			$row_out[$i]['cfg_ver_datetime'] = $row['cfg_ver'];
-			$row_out[$i]['cfg_ver_datetime_txt'] = date("c",$row['cfg_ver']);
-
-			$row_mod = $this->brand_update_check($row['directory']);
-			$row_out[$i]['update'] = $row_mod['update'];
-			if(isset($row_mod['update_vers'])) {
-				$row_out[$i]['update_vers'] = $row_mod['update_vers'];
-				$row_out[$i]['update_vers_txt'] = date("c",$row_mod['update_vers']);
-			}
-
-			if (! isset($row_out[$i]['update'])) 			{ $row_out[$i]['update'] = ""; }
-			if (! isset($row_out[$i]['update_vers'])) 		{ $row_out[$i]['update_vers'] = $row_out[$i]['cfg_ver_datetime']; }
-			if (! isset($row_out[$i]['update_vers_txt'])) 	{ $row_out[$i]['update_vers_txt'] = $row_out[$i]['cfg_ver_datetime_txt']; }
-
-			if ($row['hidden'] == 1)
+			if ($brand['hidden'] == 1)
 			{
-				$i++;
 				continue;
 			}
 
-			$j = 0;
-			$product_list = $this->epm->get_hw_product_list($row['id'], true);
-			foreach($product_list as $row2) {
-				$row_out[$i]['products'][$j] = $row2;
-				if((array_key_exists('firmware_vers', $row2)) AND ($row2['firmware_vers'] > 0)) {
-					$temp 		  = $this->firmware_update_check($row2['id']);
-					$firmware_ver = $temp['data']['firmware_ver'] ?? '';
+			$brand['count'] 			   = count($row_out);
+			$brand['cfg_ver_datetime']	   = $brand['cfg_ver'];
+			$brand['cfg_ver_datetime_txt'] = date("c", $brand['cfg_ver']);
+	
+			$row_mod = $this->brand_update_check($brand['directory']);
+			
+			$brand['update_vers']	  = $row_mod['update_vers']		?? $brand['cfg_ver_datetime'];
+			$brand['update_vers_txt'] = $row_mod['update_vers_txt'] ?? $brand['cfg_ver_datetime_txt'];
+			$brand['update'] 		  = $row_mod['update']			?? false;
+			$brand['products'] 		  = [];
 
-					$row_out[$i]['products'][$j]['update_fw'] = 1;
-					$row_out[$i]['products'][$j]['update_vers_fw'] = $firmware_ver;
-				} else {
-					$row_out[$i]['products'][$j]['update_fw'] = 0;
-					$row_out[$i]['products'][$j]['update_vers_fw'] = "";
-				}
-				if (! isset($row_out[$i]['products'][$j]['update_fw'])) 		{ $row_out[$i]['products'][$j]['update_fw'] = 0; }
-				if (! isset($row_out[$i]['products'][$j]['update_vers_fw'])) 	{ $row_out[$i]['products'][$j]['update_vers_fw'] = ""; }
-
-
-				$row_out[$i]['products'][$j]['fw_type'] = $this->firmware_local_check($row2['id']);
-				$row_out[$i]['products'][$j]['count'] = $j;
-				if ($row2['hidden'] == 1)
+			$product_list = $this->epm->get_hw_product_list($brand['id'], true);
+			foreach ($product_list as $j => $product)
+			{
+				if ($product['hidden'] == 1)
 				{
-					$j++;
 					continue;
 				}
 
-				$k = 0;
-				$model_list = $this->epm->get_hw_model_list($row2['id'], true);
-				foreach($model_list as $row3)
+				$product['count'] 		  = count($brand['products']);
+				$product['firmware_vers'] = $product['firmware_vers'] ?? 0;
+
+				if ($product['firmware_vers'] > 0)
 				{
-					$row_out[$i]['products'][$j]['models'][$k] = $row3;
-
-					unset ($row_out[$i]['products'][$j]['models'][$k]['template_list']);
-					unset ($row_out[$i]['products'][$j]['models'][$k]['template_data']);
-
-					if($row_out[$i]['products'][$j]['models'][$k]['enabled']){
-						$row_out[$i]['products'][$j]['models'][$k]['enabled_checked'] = 'checked';
-					}
-					$row_out[$i]['products'][$j]['models'][$k]['count'] = $k;
-					$k++;
+					$temp = $this->firmware_update_check($product['id']);
+					$product['update_fw'] = 1;
+					$product['update_vers_fw'] = $temp['data']['firmware_ver'] ?? '';
 				}
-				$j++;
+				else
+				{
+					$product['update_fw'] = 0;
+					$product['update_vers_fw'] = "";
+				}
+	
+				$product['fw_type'] = $this->firmware_local_check($product['id']);
+				$product['models']  = [];
+					
+				$model_list = $this->epm->get_hw_model_list($product['id'], true);
+				foreach ($model_list as $k => $model)
+				{
+					$model['count'] 		  = count($product['models']);
+					$model['enabled_checked'] = $model['enabled'] ? 'checked' : '';
+	
+					unset($model['template_list'], $model['template_data']);
+	
+					$product['models'][] = $model;
+				}
+				$brand['products'][] = $product;
 			}
-
-
-			$i++;
+			$row_out[] = $brand;
 		}
+	
 		return $row_out;
 	}
 	/*** END SEC FUNCTIONS ***/
@@ -523,66 +501,89 @@ class Endpointman_Config
 	 *              - If the brand is up to date, the 'update' key will be set to null.
 	 *              - If the brand needs to be updated, the 'update' key will be set to 1 and the 'update_vers' key will contain the version number.
 	 */
+
+
+	
 	public function brand_update_check($brand_name_find = NULL)
 	{
-		if ($brand_name_find == NULL)
+		if (empty($brand_name_find))
 		{
 			return $this->brand_update_check_all();
 		}
+	
+		$version = 0;
+		$out 	 = array(
+			'update' 		  => false,
+			'update_vers' 	  => null,
+			'update_vers_txt' => _("Error: No Version Found"),
+		);
 
-		$sql = sprintf("SELECT * FROM %s WHERE directory = '%s'", "endpointman_brand_list", $brand_name_find);
-		$row = sql($sql, 'getRow', \PDO::FETCH_ASSOC);
-
-		$out = array();
-		if  (! isset($row['directory']))
+		$row 		 = $this->epm->get_hw_brand($brand_name_find);
+		$directory 	 = $row['directory'] ?? NULL;
+		$version_db  = $row['cfg_ver'] ?? 0;
+		$json_master = $this->epm->packages->master_json;
+		// $json_master = $this->epm->packages->readMasterJSON(true);
+		
+		if  (empty($directory))
 		{
 			$out['update'] = -2;
 		}
 		else
 		{
-			$file_brand_data = $this->system->buildPath($this->epm->PHONE_MODULES_PATH, 'endpoint', $row['directory'], 'brand_data.json');
-			if (file_exists($file_brand_data))
+			if (! $json_master->isBrandExist($directory, true))
 			{
-				$temp = null;
-				try
-				{
-					$temp = $this->epm->file2json($file_brand_data);
-				}
-				catch (\Exception $e)
-				{
-					$this->error['file2json'] = $e->getMessage();
-				}
-
-				if (is_null($temp))
-				{
-					$out['update'] = -3;
-				}
-				else 
-				{
-					$temp = $temp['data']['brands'];
-
-					$version = $temp['last_modified'];
-					$last_mod = "";
-					foreach ($temp['family_list'] as $list) {
-						$last_mod = max($last_mod, $list['last_modified']);
-					}
-					$last_mod = max($last_mod, $version);
-					$version = $last_mod;
-	
-					if ($row['cfg_ver'] < $version) {
-						$out['update'] = 1;
-						$out['update_vers'] = $version;
-					} else {
-						$out['update'] = NULL;
-						$out['update_vers'] = $version;
-					}
-				}				
+				$out['update'] = -3;
 			}
 			else
 			{
-				$out['update'] = -1;
+				$brand = $json_master->getBrand($directory, true);
+				if (! $brand->isJSONExist())
+				{
+					$out['update'] = -1;
+				}
+				else
+				{
+					$version = $brand->getLastModifiedMax();
+					if ($version_db < $version)
+					{
+						$out['update'] 		= 1;
+						$out['update_vers'] = $version;
+					}
+					else
+					{
+						$out['update'] 		= 0;
+						$out['update_vers'] = $version;
+					}
+				}
 			}
 		}
+	
+		// TODO: Test Data
+		// $out['update'] 		= 1;
+		// $out['update_vers'] = '1724705560';
+
+		switch($out['update'])
+		{
+			case -3:
+				$out['update_vers_txt'] = _("Error: Brand Data File Missing or Cannot Be Parsed");
+				break;
+
+			case -2:
+				$out['update_vers_txt'] = _("Error: Brand Not Found");
+				break;
+
+			case -1:
+				$out['update_vers_txt'] = _("Error: Brand Data File Missing");
+				break;
+
+			case 0:
+				// $out['update_vers_txt'] = _("Brand Up to Date");
+			case 1:
+				// $out['update_vers_txt'] = _("Brand Needs Update");
+				$out['update_vers_txt'] = date("c", $out['update_vers']);
+				break;
+		}
+
 		return $out;
 	}
 
@@ -599,100 +600,46 @@ class Endpointman_Config
 	 */
 	public function brand_update_check_all()
 	{
-		$temp = null;
-		$out  = array();
-
-		$file_master = $this->system->buildPath($this->epm->PHONE_MODULES_PATH, 'endpoint', 'master.json');
-
 		try
 		{
-			$temp = $this->epm->file2json($file_master);
+			$master_json = $this->epm->packages->readMasterJSON(true);
 		}
 		catch (\Exception $e)
 		{
-			$this->error['file2json'] = $e->getMessage();
+			dbug($e->getMessage());
+			return [];
 		}
 
-		if (!empty($temp))
+		$out  = array();
+
+		$version = $master_json->getLastModifiedMaxBrands();
+		
+		foreach ($this->epm->get_hw_brand_list(true) as $ava_brands)
 		{
-			// TODO: Code Obsolete???
-			// $endpoint_package = $temp['data']['package'];
-			// $endpoint_last_mod = $temp['data']['last_modified'];
-
-			$version = array();
-			$out 	 = $temp['data']['brands'];
-
-			foreach ($out as $data)
+			$raw_name = $ava_brands['directory'];
+			if (!$master_json->isBrandExists($raw_name))
 			{
-				$file_brand_data = $this->system->buildPath($this->epm->PHONE_MODULES_PATH, 'endpoint', $data['directory'], 'brand_data.json');
-				
-				try
-				{
-					$temp = $this->epm->file2json($file_brand_data);
-				}
-				catch (\Exception $e)
-				{
-					$this->error['file2json'] = $e->getMessage();
-					continue;
-				}
-
-				/**
-				 * Check if the 'brands' key exists in the 'data' array and assign its value to the $temp variable.
-				 * If the 'directory' key exists in the $temp array, assign its value to the $brand_name variable.
-				 * If $temp or $brand_name is empty, continue to the next iteration.
-				 */
-				$temp 		= $temp['data']['brands'] ?? array();
-				$brand_name = $temp['directory'] ?? '';
-				if (empty($temp) || empty($brand_name))
-				{
-					continue;
-				}
-
-				$version[$brand_name] = $temp['last_modified'] ?? "-1";
-				$last_mod = "";
-				foreach ($temp['family_list'] ?? array() as $list)
-				{
-					$last_mod = max($last_mod, $list['last_modified'] ?? '0' );
-				}
-				$last_mod = max($last_mod, $version[$brand_name]);
-				$version[$brand_name] = $last_mod;
+				$out[$raw_name] = array(
+					'update' 		  => -1,
+					'update_vers' 	  => 0,
+				);
+				continue;
 			}
 
-			$sql = sprintf('SELECT * FROM %s WHERE id > 0', "endpointman_brand_list");
-			$stmt = $this->db->prepare($sql);
-			$stmt->execute();
-			$row = $stmt->fetchAll(\PDO::FETCH_ASSOC);
-
-			foreach ($row as $ava_brands)
+			if (! isset($version[$raw_name]))
 			{
-				$key = $this->system->arraysearchrecursive($ava_brands['directory'], $out, 'directory');
-
-				if ($key === FALSE)
-				{
-					$tmp 		   = $ava_brands;
-					$tmp['update'] = -1;
-					$out[] = $tmp;
-				}
-				else
-				{
-					$key 		= $key[0];
-					$brand_name = $ava_brands['directory'];
-					if (! isset($version[$brand_name]))
-					{
-						$version[$brand_name] = 0;
-					}
-
-					if ($ava_brands['cfg_ver'] < $version[$brand_name])
-					{
-						$out[$key]['update'] 	  = 1;
-						$out[$key]['update_vers'] = $version[$brand_name];
-					}
-					else
-					{
-						$out[$key]['update'] = NULL;
-					}
-				}
+				$version[$raw_name] = 0;
 			}
+
+			if ($ava_brands['cfg_ver'] < $version[$raw_name])
+			{
+				$out[$raw_name]['update'] 	  = 1;
+			}
+			else
+			{
+				$out[$raw_name]['update'] = 0;
+			}
+			$out[$raw_name]['update_vers'] = $version[$raw_name];
 		}
 		return $out;
 	}
@@ -2357,6 +2304,11 @@ class Endpointman_Config
     public function firmware_local_check($id = null)
 	{
 		if (is_numeric($id) === false)
+		{
+			return "nothing";
+		}
+
+		if (! $this->epm->is_exist_hw_product($id, 'id', true))
 		{
 			return "nothing";
 		}

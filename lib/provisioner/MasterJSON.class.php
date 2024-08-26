@@ -134,6 +134,20 @@ class MasterJSON
         return count($this->brands);
     }
     
+    /**
+     * Retrieves the last modified maximum for each brand.
+     *
+     * @return array An associative array where the keys are the brand directories and the values are the last modified maximum values.
+     */
+    public function getLastModifiedMaxBrands()
+    {
+        $data_return = array();
+        foreach ($this->brands as $brand)
+        {
+            $data_return[$brand->getDirectory()] = $brand->getLastModifiedMax() ?? '';
+        }
+        return $data_return;
+    }
 
     /**
      * Checks if a brand exists.
@@ -158,10 +172,42 @@ class MasterJSON
         }
         return false;
     }
-    
+
+    /**
+     * Retrieves a brand.
+     *
+     * @param string $brandName The name of the brand to retrieve.
+     * @param bool $findByDirectory (Optional) Whether to search by brand directory instead of brand name. Default is false.
+     * @return ProvisionerBrand|null The brand if found, null otherwise.
+     */
+    public function getBrand($brandName, $findByDirectory = false)
+    {
+        foreach ($this->brands as &$brand)
+        {
+            if ($findByDirectory == true && $brand->getDirectory() == $brandName)
+            {
+                return $brand;
+            }
+            elseif ($brand->getName() == $brandName)
+            {
+                return $brand;
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Sets the update status for a brand.
+     *
+     * @param string $brandName The name of the brand to update.
+     * @param bool $newStatus The new update status.
+     * @param string $version (Optional) The version to update to. Default is null.
+     * @param bool $findByDirectory (Optional) Whether to search by brand directory instead of brand name. Default is false.
+     * @return bool Returns true if the brand was updated, false otherwise.
+     */
     public function setBrandUpdate($brandName, $newStatus, $version = null, $findByDirectory = false)
     {
-        foreach ($this->brands as $brand)
+        foreach ($this->brands as &$brand)
         {
             if ($findByDirectory == true && $brand->getDirectory() == $brandName)
             {

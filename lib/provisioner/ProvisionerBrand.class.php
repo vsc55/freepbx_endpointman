@@ -19,6 +19,7 @@ class ProvisionerBrand
     private $update         = false;
     private $update_version = '';
 
+    private $json_file      = null;
     private $debug          = false;
     private $system         = null;
 
@@ -43,14 +44,60 @@ class ProvisionerBrand
     }
 
     /**
+     * Retrieves the JSON file.
+     *
+     * @return string The JSON file.
+     */
+    public function isJSONExist()
+    {
+        return file_exists($this->json_file);
+    }
+
+    /**
+     * Retrieves the JSON file.
+     *
+     * @return string The JSON file.
+     */
+    public function getJSONFile()
+    {
+        return $this->json_file;
+    }
+
+    /**
+     * Sets the JSON file.
+     *
+     * @param string $json_file The JSON file.
+     */
+    public function setJSONFile($json_file)
+    {
+        $this->json_file = $json_file;
+    }
+
+    /**
      * Imports the JSON data into the brand.
      *
      * @param array|string $jsonData The JSON data to import.
      * @param bool $noException Whether to throw an exception if the JSON data is invalid.
      * @throws \Exception If the JSON data is invalid.
      */
-    public function importJSON($jsonData, $noException = false)
+    public function importJSON($jsonData = null, $noException = false)
     {
+
+        if (empty($jsonData) && empty($this->json_file))
+        {
+            if ($noException) { return false; }
+            throw new \Exception(_("Empty JSON data and JSON file!"));
+        }
+        elseif (empty($jsonData) && !empty($this->json_file) && !file_exists($this->json_file))
+        {
+            if ($noException) { return false; }
+            throw new \Exception(sprintf(_("JSON file '%s' does not exist!"), $this->json_file));
+        }
+        elseif (empty($jsonData) && !empty($this->json_file))
+        {
+            $jsonData = $this->json_file;
+        }
+
         if (empty($jsonData))
         {
             if ($noException) { return false; }

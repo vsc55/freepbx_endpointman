@@ -13,6 +13,8 @@ class Packages
     public $config    = null;
     public $configepm = null;
 
+    public $master_json = null;
+
     public function __construct($epm = null)
     {
         if (empty($epm))
@@ -34,9 +36,14 @@ class Packages
 		$this->config    = $epm->config;    // Config object configurate in the Endpoint Manager object
         $this->configepm = $epm->configmod; // Config Endpoint Manager
         $this->system    = new epm_system();
+
+        $this->reload_master_json();
     }
 
-    
+    public function reload_master_json()
+    {
+        $this->master_json = $this->readMasterJSON(true);
+    }
 
     /**
      * Retrieves the endpoint URL by concatenating the given URLs.
@@ -62,7 +69,7 @@ class Packages
      * @param mixed $option The option to retrieve the path for. (optional)
      * @return string The path for the given option.
      */
-    public function getPath($option = null)
+    public function getPath($option = null, $directory = null)
     {
         if (empty($option))
         {
@@ -88,6 +95,15 @@ class Packages
                 $data_return = $this->system->buildPath($this->getPath("phone_endpoint"), "master.json");
                 break;
 
+            case "json_brand_data":
+                if (empty($directory))
+                {
+                    throw new \Exception(_("Directory is required"));
+                }
+
+                $data_return = $this->system->buildPath($this->getPath("phone_endpoint"), $directory, "brand_data.json");
+                break;
+
             case "root_phone_module":
             default:
                 $data_return = $this->epm->PHONE_MODULES_PATH;
@@ -97,12 +113,44 @@ class Packages
 
 
 
-    public function readMasterJSON()
+    public function readMasterJSON($load = false)
     {
-        $json = $this->getPath('json_master');
         try
         {
-            $master_json = new Provisioner\MasterJSON($json);
+            $master_json = new Provisioner\MasterJSON($this->getPath('json_master'));
+            foreach ($master_json->getBrands() as &$brand)
+            {
+                $brand_path = $this->getPath("json_brand_data", $brand->getDirectory());
+                $brand->setJSONFile($brand_path);
+                if ($load)
+                {
+                    // Check if the brand file exists and is not exist then skip the brand
+                    if (! $brand->isJSONExist())
+                    {
+                        continue;
+                    }
+
+                    //If is necessary return more info in the exception (set the second parameter to false)
+                    if (! $brand->importJSON(null, true))
+                    {
+                        continue;
+                    }
+
+                    foreach ($brand->getFamilyList() as &$family)
+                    {
+                        $family_dir  = $family->getDirectory();
+                        $family_path = $this->system->buildPath($brand_path, $family_dir, "family_data.json");
+                        
+                        $family->setJSONFile($family_path);
+
+                        //If is necessary return more info in the exception (set the second parameter to false)
+                        if (! $family->importJSON(null, true))
+                        {
+                            continue;
+                        }
+                    }
+                }
+            }
         }
         catch (\Exception $e)
         {
@@ -127,6 +175,7 @@ class Packages
         }
         return $data_json;
     }
+
 
 
 }
