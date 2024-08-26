@@ -1860,103 +1860,299 @@ class Endpointman extends FreePBX_Helpers implements BMO {
 
 
 
-
-
-	public function add_brand($id, $name, $directory, $cfg_ver)
+	/**
+	 * set_database_data
+	 *
+	 * Inserts or updates data in a specified database table based on the presence of a record matching a given condition.
+	 *
+	 * This function performs an `INSERT` or `UPDATE` operation on a database table depending on whether a record
+	 * already exists that matches the specified `where` condition with the given `find` value.
+	 *
+	 * @param string $table The name of the database table where the operation will be performed. This is a required parameter.
+	 * @param mixed $find The value to be searched for in the specified column (`$where`). If a record with this value exists, an `UPDATE` operation is performed; otherwise, an `INSERT` operation is executed.
+	 * @param array $data The associative array of data to be inserted or updated. Keys represent the column names, and values represent the corresponding data. This array is required and must not be empty.
+	 * @param string $where The column name used for searching the record in the table. Defaults to `id`. This is a required parameter.
+	 * @param array $data_insert Optional. An additional associative array of data to be merged with `$data` for the `INSERT` operation. If not provided, only `$data` is used for insertion.
+	 * @param array $data_update Optional. An additional associative array of data to be merged with `$data` for the `UPDATE` operation. If not provided, only `$data` is used for updating.
+	 *
+	 * @return mixed Returns the ID of the newly inserted record if an `INSERT` operation is performed, or `true` if an `UPDATE` operation is performed successfully.
+	 *               Returns `false` if any of the required parameters (`$data`, `$where`, `$table`) are missing or invalid.
+	 *
+	 * @throws PDOException If the database operation fails, an exception is thrown by the PDO layer.
+	 *
+	 * @version 1.0.0
+ 	 * @author Javier Pastor
+ 	 *
+	 * @example
+	 * // Example usage for updating an existing record
+	 * $table = 'users';
+	 * $find = 5; // Assuming this is the ID of the user
+	 * $data = ['username' => 'new_username'];
+	 * $data_update = ['email' => 'new_email@example.com'];
+	 * $result = $this->set_database_data($table, $find, $data, 'id', [], $data_update);
+	 * // Updates the 'username' and 'email' for the user with ID 5.
+	 *
+	 * @example
+	 * // Example usage for inserting a new record
+	 * $table = 'users';
+	 * $data = ['username' => 'new_user', 'email' => 'new_user@example.com'];
+	 * $data_insert = ['created_at' => date('Y-m-d H:i:s')];
+	 * $result = $this->set_database_data($table, null, $data, 'id', $data_insert, []);
+	 * // Inserts a new user with the provided data.
+	 */
+	public function set_database_data($table = null, $find = null, $data = array(), $where = "id", $data_insert = array(), $data_update = array())
 	{
-		if (empty($id) || empty($name) || empty($directory))
+		if (empty($table) || !is_string($table) || !preg_match('/^[a-zA-Z0-9_]+$/', $table))
 		{
 			return false;
 		}
-		elseif ($this->is_brand_exist($id, "id"))
+		if (!is_array($data) || empty($data) || empty($where))
 		{
 			return false;
 		}
+		$isUpdate = !empty($find) && function() use ($find, $where, $table) {
+			$sql  = sprintf("SELECT %s FROM %s WHERE %s = :id", $where, $table, $where);
+			$stmt = $this->db->prepare($sql);
+			$stmt->execute([
+				':id' => $find
+			]);
+			return $stmt->rowCount() !== 0;
+		};
 
-		$sql = sprintf("INSERT INTO %s (id, name, directory, cfg_ver) VALUES (:brand_id, :name, :directory, :version)", self::TABLES['epm_brands_list']);
-		$sth = $this->db->prepare($sql);
-		$sth->execute([
-			':brand_id'  => $id,
-			':name' 	 => $name,
-			':directory' => $directory,
-			':version' 	 => $cfg_ver,
-		]);
+		$params    = [];
+		if ($isUpdate)
+		{
+			// Generate a random key to avoid conflicts with the data array
+			$key_where 							= sprintf("%s_%s", "where_filter_value", rand(1000, 9999));
+			$params[sprintf(":%s", $key_where)] = $find;
 
-		if (! $this->is_brand_exist($id, "id"))
-		{
-			return false;
+			// Combine the data arrays and generate the SQL query for updating the data in the database
+			$data 	   = array_merge($data, $data_update);
+			$setPart   = [];
+			foreach ($data as $column => $value)
+			{
+				$setPart[] = sprintf("%s = :%s", $column, $column);
+			}
+			$setPart = implode(", ", $setPart);
+			$sql 	 = sprintf("UPDATE %s SET %s WHERE %s = :%s", $table, $setPart, $where, $key_where);
 		}
-		return true;
-	}
-
-	public function update_brand($id, $name, $cfg_ver, $findby = "id")
-	{
-		if (empty($id) || empty($name) || empty($findby))
+		else
 		{
-			return false;
+			// Combine the data arrays and generate the SQL query for inserting the data into the database
+			$data 		  = array_merge($data, $data_insert);
+			$columns 	  = implode(", ", array_keys($data));
+			$placeholders = implode(", ", array_map(function($column) { return sprintf(":%s",$column); }, array_keys($data)));
+			$sql 		  = sprintf("INSERT INTO %s (%s) VALUES (%s)", $table, $columns, $placeholders);
 		}
-		elseif (strtolower(trim($findby)) == "id" && !$this->is_brand_exist($id, $findby))
-		{
-			return false;
-		}
-		elseif (strtolower(trim($findby)) == "name" && !$this->is_brand_exist($name, $findby))
-		{
-			return false;
-		}
-		elseif (! in_array(strtolower(trim($findby)), ["id", "name"]))
-		{
-			return false;
-		}
-
-		$sql  = sprintf("UPDATE %s SET local = :local, name = :brand_name, cfg_ver = :cfg_ver, installed = :installed, hidden = :hidden WHERE %s = :brand_id", self::TABLES['epm_brands_list'], $findby);
 		$stmt = $this->db->prepare($sql);
-		$stmt->execute([
-			':brand_id'   => $id,
-			':brand_name' => $name,
-			':cfg_ver'	  => $cfg_ver,
-			':local'	  => 1,
-			':installed'  => 1,
-			':hidden'	  => 0,
-		]);
-		return true;
+
+		// Bind the parameters to the query and execute it
+		foreach ($data as $key => $value)
+		{
+			$params[sprintf(":%s", $key)] = $value;
+		}
+		$stmt->execute($params);
+		return $isUpdate ? true : $this->db->insert_id();
 	}
 	
-	private function get_brands_db()
-	{
-		$sql  = sprintf('SELECT * FROM %s WHERE id > 0', self::TABLES['epm_brands_list']);
-		$stmt = $this->db->prepare($sql);
-		$stmt->execute();
-		return $stmt;
-	}
 
-	public function get_brands_list()
+	/**
+	 * Retrieves data from a database table based on the specified conditions.
+	 *
+	 * This function retrieves data from a database table based on the specified conditions.
+	 * The data is returned as an associative array of rows, where each row is an associative array of columns.
+	 *
+	 * @param string $table The name of the database table to retrieve data from. This is a required parameter.
+	 * @param array $where An associative array of conditions to filter the data. The keys represent the column names, and the values are arrays with the following keys:
+	 *                     - `operator`: The comparison operator to use in the condition (e.g., '=', '>', '<', 'LIKE', 'IN', 'NOT IN').
+	 *                     - `value`: The value to compare against in the condition.
+	 * @param string $select The columns to select from the table. Defaults to `*` (all columns).
+	 * @param string $order_by The column to use for sorting the results. Defaults to `null` (no sorting).
+	 * @param string $order_dir The direction to use for sorting the results. Defaults to `null` (no sorting).
+	 * @param bool $return_bool Whether to return a boolean value instead of an empty array when no data is found. Defaults to `false`.
+	 * @param bool $return_stml Whether to return the PDO statement object instead of the data array. Defaults to `false`.
+	 * @param bool $debug Whether to output the generated SQL query and parameters for debugging purposes. Defaults to `false`.
+	 * @return array The data retrieved from the database as an associative array of rows, where each row is an associative array of columns.
+	 *
+	 * @throws PDOException If the database operation fails, an exception is thrown by the PDO layer.
+	 *
+	 * @version 1.0.0
+ 	 * @author Javier Pastor
+ 	 *
+	 * @example
+	 * // Example usage for retrieving data from a database table
+	 * $table = 'users';
+	 * $where = [
+	 *     'id' => ['operator' => '>', 'value' => 0],
+	 *     'status' => ['operator' => '=', 'value' => 'active']
+	 * ];
+	 * $select = 'id, username, email';
+	 * $order_by = 'created_at';
+	 * $order_dir = 'DESC';
+	 * $result = $this->get_database_data($table, $where, $select, $order_by, $order_dir);
+	 * // Retrieves the 'id', 'username', and 'email' columns from the 'users' table where 'id' is greater than 0 and 'status' is 'active', ordered by 'created_at' in descending order.
+	 */
+	
+	public function get_database_data($table, $where = array(), $select = null, $order_by = null, $order_dir = null, $return_bool = false, $return_stml = false, $debug = false)
 	{
-		$stmt = $this->get_brands_db();
+		if (empty($select))
+		{
+			$select = "*";
+		}
+		if (empty($table) || !is_string($table) || !preg_match('/^[a-zA-Z0-9_]+$/', $table) || !is_string($select) || !preg_match('/^[a-zA-Z0-9_.*,\\s()]+$/', $select))
+		{
+			if ($return_bool)
+			{
+				return false;
+			}
+			return [];
+		}
+
+		$params = [];
+		$sql = sprintf('SELECT %s FROM %s', $select, $table);
+
+		if (!empty($where) && is_array($where))
+		{
+			$where_sql = [];
+			foreach ($where as $key => $value)
+			{
+				$operator  = strtoupper($value['operator'] ?? "");
+				$where_val = $value['value'] ?? null;
+
+				if (empty($where_val) ||empty($operator) || !in_array($operator, ['=', '>', '<', '>=', '<=', '!=', 'LIKE', 'IN', 'NOT IN']))
+				{
+					continue;
+				}
+				$where_sql[] = sprintf('%1$s %2$s :%1$s', $key, $operator);
+				$params[sprintf(":%s", $key)] = $where_val;
+			}
+			if (count($where_sql) > 0)
+			{
+				$sql .= sprintf(' WHERE %s', implode(" AND ", $where_sql));
+			}
+		}
+
+		if (!empty($order_by))
+		{
+			// Sanitize the order by column name
+			$order_by  = preg_replace('/[^a-zA-Z0-9_]/', '', $order_by);
+			$order_dir = strtoupper($order_dir ?? 'ASC') == 'DESC' ? 'DESC' : 'ASC';
+			$sql 	  .= sprintf(' ORDER BY %s %s', $order_by, $order_dir);
+		}
+		
+		if ($debug)
+		{
+			dbug($sql);
+			dbug($params);
+		}
+
+		$stmt = $this->db->prepare($sql);
+		$stmt->execute($params);
+	
+		if ($return_stml)
+		{
+			return $stmt;
+		}
 		return $stmt->fetchAll(\PDO::FETCH_ASSOC);
 	}
 
-	public function count_brands()
-	{
-		$stmt = $this->get_brands_db();
-		return $stmt->rowCount();
-	}
-
-	public function is_brand_exist($brand = null, $findby = "directory")
+	/**
+	 * Counts the number of database records in a specified table.
+	 *
+	 * @param string $table The name of the table to count records from.
+	 * @param mixed $find The value to search for in the specified column.
+	 * @param string $filter The column name to filter the search by.
+	 * @return bool Returns true if there are records matching the search criteria, false otherwise.
+	 */
+	public function count_database_data($table, $find = null, $filter = null)
 	{
 		$return_data = false;
-		if (!empty($brand) && !empty($findby))
+		$where 		 = [];
+		if (!empty($find) && !empty($filter))
 		{
-			$sql  = sprintf("SELECT id FROM %s WHERE %s = :findby", self::TABLES['epm_brands_list'], $findby);
-			$stmt = $this->db->prepare($sql);
-			$stmt->execute([
-				':findby' => $brand
-			]);
-			$return_data = $stmt->rowCount() !== 0;
+			$where = array(
+				$filter => array( 'operator' => '=', 'value' => $find)
+			);
+		}
+		$result = $this->get_database_data($table, $where, 'COUNT(*) as total');
+		$return_data = ($result[0]['total'] ?? 0) > 0;
+		return $return_data;
+	}
+
+
+	
+
+
+	/**
+	 * Sets the database data for a brand.
+	 *
+	 * @param mixed $find The value to search for in the database.
+	 * @param array $data An array of data to be set for the brand.
+	 * @param string $where The column name to use for the search.
+	 * @param array $data_insert An array of data to be inserted into the database.
+	 * @param array $data_update An array of data to be updated in the database.
+	 * @return mixed The result of the set_database_data method.
+	 */
+	public function set_hw_brand($find = null, $data = array(), $where = "id", $data_insert = array(), $data_update = array())
+	{
+		$data 				  = is_array($data)			? $data 		: [];
+		$data_insert  		  = is_array($data_insert)	? $data_insert	: [];
+		$data_update  		  = is_array($data_update)	? $data_update	: [];
+		$data_default 		  = [];
+		$data_insert_defaults = [];
+		$data_update_defaults = [
+			// 'local' 	=> $data['local'] 	  ?? 1,
+			// 'installed' => $data['installed'] ?? 1,
+			// 'hidden' 	=> $data['hidden'] 	  ?? 0,
+		];
+		$data 		 = array_merge($data_default, $data);
+		$data_insert = array_merge($data_insert_defaults, $data_insert);
+		$data_update = array_merge($data_update_defaults, $data_update);
+
+		return $this->set_database_data(self::TABLES['epm_brands_list'], $find, $data, $where, $data_insert, $data_update);
+	}
+
+	/**
+	 * Retrieves the brand data from the database.
+	 *
+	 * @param mixed $find The value to search for in the database.
+	 * @param string $where The column name to use for the search.
+	 * @param string $select The columns to select from the database.
+	 * @param string $order_by The column to use for sorting the results.
+	 * @param string $order_dir The direction to use for sorting the results.
+	 * @return array The result of the get_database_data method.
+	 */
+	public function get_hw_brand_list($show_all = false, $order_by = null, $order_dir = null)
+	{
+		$where = array(
+			'id' => array( 'operator' => '>', 'value' => "0")
+		);
+		if (!$show_all)
+		{
+			$where['hidden'] = array('operator' => '=', 'value' => "0");
+		}
+		return $this->get_database_data(self::TABLES['epm_brands_list'], $where, '*', $order_by, $order_dir);
+	}
+	
+	/**
+	 * Check if a hardware brand exists.
+	 *
+	 * @param string|null $id The hardware brand to check.
+	 * @param string $where The method to find the brand (default: "directory").
+	 * @return bool Returns true if the brand exists, false otherwise.
+	 */
+	public function is_exist_hw_brand($id = null, $where = "directory")
+	{
+		$return_data = false;
+		if (!empty($id) && !empty($where))
+		{
+			$count = $this->count_database_data(self::TABLES['epm_brands_list'], $id, $where);
+			$return_data = $count > 0;
 		}
 		return $return_data;
 	}
 
-	public function is_brand_local($brand = null, $findby = "directory")
+	public function is_local_hw_brand($brand = null, $findby = "directory")
 	{
 		$return_data = null;
 		if (!empty($brand) && !empty($findby))
@@ -1971,7 +2167,7 @@ class Endpointman extends FreePBX_Helpers implements BMO {
 		return $return_data;
 	}
 
-	public function set_brand_oui($oui, $brand_id)
+	public function set_hw_brand_oui($oui, $brand_id)
 	{
 		$sql = sprintf("REPLACE INTO %s (`oui`, `brand`, `custom`) VALUES (:oui, :brand_id, '0')", self::TABLES['epm_oui_list']);
 		$sth = $this->db->prepare($sql);
@@ -1984,83 +2180,70 @@ class Endpointman extends FreePBX_Helpers implements BMO {
 
 
 
-	public function is_brand_product_exist($id = null)
+
+
+
+
+	/**
+	 * Check if a hardware product exists in the database.
+	 *
+	 * @param int|null $id The ID of the hardware product.
+	 * @param string $where The column to search for the hardware product.
+	 * @return bool Returns true if the hardware product exists, false otherwise.
+	 */
+	public function is_exist_hw_product($id = null, $where = "id")
 	{
 		$return_data = false;
-		if (!empty($id))
+		if (!empty($id) && !empty($where))
 		{
-			$sql  = sprintf("SELECT id FROM %s WHERE id = :id", self::TABLES['epm_product_list']);
-			$stmt = $this->db->prepare($sql);
-			$stmt->execute([
-				':id' => $id
-			]);
-			$return_data = $stmt->rowCount() !== 0;
+			$count = $this->count_database_data(self::TABLES['epm_product_list'], $id, $where);
+			$return_data = $count > 0;
 		}
 		return $return_data;
 	}
 
-	public function add_brand_product($id, $brand_id, $short_name, $long_name, $directory, $cfg_ver, $config_files)
+	/**
+	 * Sets the brand and product information in the database.
+	 *
+	 * @param mixed $find The value to search for in the "where" column.
+	 * @param array $data An array containing the brand and product data.
+	 * @param string $where The column name to use in the WHERE clause (Only INSERT).
+	 * @param array $data_insert An optional array of additional data to insert.
+	 * @param array $data_update An optional array of additional data to update.
+	 * @return bool|int Returns true if the update was successful, or the inserted row ID if a new record was inserted. Returns false if the data is invalid or the "where" column is empty.
+	 */
+	public function set_hw_product($find = null, $data = array(), $where = "id", $data_insert = array(), $data_update = array())
 	{
-		if (empty($id) || empty($brand_id) || empty($short_name) || empty($long_name) || empty($directory) || empty($config_files))
-		{
-			return false;
-		}
-		elseif ($this->is_brand_product_exist($id))
-		{
-			return false;
-		}
-
-		// if (is_array($config_files))
-		// {
-		// 	$config_files = implode(",", $config_files);
-		// }
-		$sql = sprintf("INSERT INTO %s (id, brand, short_name, long_name, cfg_dir, cfg_ver, config_files, hidden) VALUES (:id, :brand_id, :short_name, :long_name, :directory, :cfg_ver, :config_files, :hidden)", self::TABLES['epm_product_list']);
-		$sth = $this->db->prepare($sql);
-		$sth->execute([
-			':id' 			=> $id,
-			':brand_id' 	=> $brand_id,
-			':short_name' 	=> $short_name,
-			':long_name' 	=> $long_name,
-			':directory' 	=> $directory,
-			':cfg_ver' 		=> $cfg_ver,
-			':config_files' => $config_files,
-			':hidden' 		=> 0
-		]);
-
-		if (! $this->is_brand_product_exist($id))
-		{
-			return false;
-		}
-		return true;
+		$data 				  = is_array($data)			? $data 		: [];
+		$data_insert  		  = is_array($data_insert)	? $data_insert	: [];
+		$data_update  		  = is_array($data_update)	? $data_update	: [];
+		$data_default 		  = [];
+		$data_insert_defaults = [
+			// 'hidden' => $data['hidden'] ?? 0,
+		];
+		$data_update_defaults = [];
+		$data 		 = array_merge($data_default, $data);
+		$data_insert = array_merge($data_insert_defaults, $data_insert);
+		$data_update = array_merge($data_update_defaults, $data_update);
+		
+		return $this->set_database_data(self::TABLES['epm_product_list'], $find, $data, $where, $data_insert, $data_update);
 	}
 
-	public function update_brand_product($id, $short_name, $long_name, $cfg_ver, $config_files)
+	public function get_hw_product_list($id, $show_all = false, $order_by = null, $order_dir = null)
 	{
-		if (empty($id) || empty($short_name) || empty($long_name) || empty($config_files))
+		if (empty($id))
 		{
-			return false;
+			return array();
 		}
-		elseif (!$this->is_brand_product_exist($id))
+		$where = array(
+			'brand' => array( 'operator' => '=', 'value' => $id)
+		);
+		if (!$show_all)
 		{
-			return false;
+			$where['hidden'] = array('operator' => '=', 'value' => "0");
 		}
-
-		// if (is_array($config_files))
-		// {
-		// 	$config_files = implode(",", $config_files);
-		// }
-		$sql  = sprintf("UPDATE %s SET short_name = :short_name, long_name = :long_name, cfg_ver = :cfg_ver, config_files = :config_files WHERE id = :id", self::TABLES['epm_product_list']);
-		$stmt = $this->db->prepare($sql);
-		$stmt->execute([
-			':id' 			=> $id,
-			':short_name' 	=> $short_name,
-			':long_name' 	=> $long_name,
-			':cfg_ver' 		=> $cfg_ver,
-			':config_files' => $config_files
-		]);
-		return true;
+		return $this->get_database_data(self::TABLES['epm_product_list'], $where, '*', $order_by, $order_dir);
 	}
-	
 
 
 
@@ -2107,97 +2290,53 @@ class Endpointman extends FreePBX_Helpers implements BMO {
 
 
 
+	public function set_hw_model($find = null, $data = array(), $where = "id", $data_insert = array(), $data_update = array())
+	{
+		$data 				  = is_array($data)			? $data 		: [];
+		$data_insert  		  = is_array($data_insert)	? $data_insert	: [];
+		$data_update  		  = is_array($data_update)	? $data_update	: [];
+		$data_default 		  = [];
+		$data_insert_defaults = [
+			// 'hidden' => $data['hidden'] ?? 0,
+		];
+		$data_update_defaults = [];
+		$data 		 = array_merge($data_default, $data);
+		$data_insert = array_merge($data_insert_defaults, $data_insert);
+		$data_update = array_merge($data_update_defaults, $data_update);
+		
+		return $this->set_database_data(self::TABLES['epm_model_list'], $find, $data, $where, $data_insert, $data_update);
+	}
 
-
-	public function get_brand_product_models_list($id)
+	public function get_hw_model_list($id, $show_all = false, $order_by = null, $order_dir = null)
 	{
 		if (empty($id))
 		{
 			return array();
 		}
-		$sql  = sprintf("SELECT * FROM %s WHERE product_id = :id", self::TABLES['epm_model_list']);
-		$stmt = $this->db->prepare($sql);
-		$stmt->execute([
-			':id' => $id,
-		]);
-		return $stmt->fetchAll(\PDO::FETCH_ASSOC);
+		$where = array(
+			'product_id' => array( 'operator' => '=', 'value' => $id)
+		);
+		if (!$show_all)
+		{
+			$where['hidden'] = array('operator' => '=', 'value' => "0");
+		}
+		return $this->get_database_data(self::TABLES['epm_model_list'], $where, '*', $order_by, $order_dir);
 	}
 
-	public function is_brand_product_model_exist($id = null)
+	public function is_exist_hw_model($id = null, $where = "id")
 	{
 		$return_data = false;
-		if (!empty($id))
+		if (!empty($id) && !empty($where))
 		{
-			$sql  = sprintf("SELECT id FROM %s WHERE id = :id", self::TABLES['epm_model_list']);
-			$stmt = $this->db->prepare($sql);
-			$stmt->execute([
-				':id' => $id
-			]);
-			$return_data = $stmt->rowCount() !== 0;
+			$count = $this->count_database_data(self::TABLES['epm_model_list'], $id, $where);
+			$return_data = $count > 0;
 		}
 		return $return_data;
 	}
 
-	public function add_brand_product_model($id, $brand_id, $product_id, $model, $max_lines, $template_list)
+	public function del_hw_model($id = null)
 	{
-		if (empty($id) || empty($brand_id) || empty($product_id) || empty($model) || empty($template_list))
-		{
-			return false;
-		}
-		elseif ($this->is_brand_product_model_exist($id))
-		{
-			return false;
-		}
-
-		$sql = sprintf("INSERT INTO %s (id, brand, product_id, model, max_lines, template_list, enabled, hidden) VALUES (:id, :brand_id, :product_id, :model, :max_lines, :template_list, :enabled, :hidden)", self::TABLES['epm_model_list']);
-		$sth = $this->db->prepare($sql);
-		$sth->execute([
-			':id' 			=> $id,
-			':brand_id' 	=> $brand_id,
-			':product_id' 	=> $product_id,
-			':model' 		=> $model,
-			':max_lines' 	=> $max_lines,
-			':template_list'=> $template_list,
-			':enabled' 		=> 0,
-			':hidden' 		=> 0
-		]);
-
-		if (! $this->is_brand_product_model_exist($id))
-		{
-			return false;
-		}
-		return true;
-	}
-
-	public function update_brand_product_model($id, $model, $max_lines, $template_list)
-	{
-		if (empty($id) || empty($model) || empty($template_list))
-		{
-			return false;
-		}
-		elseif (!$this->is_brand_product_model_exist($id))
-		{
-			return false;
-		}
-
-		$sql  = sprintf("UPDATE %s SET model = :model, max_lines = :max_lines, template_list = :template_list WHERE id = :id", self::TABLES['epm_model_list']);
-		$stmt = $this->db->prepare($sql);
-		$stmt->execute([
-			':id' 			=> $id,
-			':model' 		=> $model,
-			':max_lines' 	=> $max_lines,
-			':template_list'=> $template_list
-		]);
-		return true;
-	}
-
-	public function del_brand_product_model($id)
-	{
-		if (empty($id))
-		{
-			return false;
-		}
-		elseif (!$this->is_brand_product_model_exist($id))
+		if (!$this->is_exist_hw_model($id))
 		{
 			return false;
 		}

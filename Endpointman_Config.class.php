@@ -118,11 +118,6 @@ class Endpointman_Config
 		{
 			case "check_for_updates":
 				// Force flush all output buffers, need for AJAX
-				ob_implicit_flush(true);
-				while (ob_get_level() > 0) {
-					ob_end_flush();
-				}
-
 				$this->epm_config_manager_check_for_updates();
 				echo "<br /><hr><br />";
 				exit;
@@ -141,12 +136,6 @@ class Endpointman_Config
 				break;
 
 			case "brand":
-				// Force flush all output buffers, need for AJAX
-				ob_implicit_flush(true);
-				while (ob_get_level() > 0) {
-					ob_end_flush();
-				}
-
 				$this->epm_config_manager_brand();
 				echo "<br /><hr><br />";
 				exit;
@@ -163,49 +152,6 @@ class Endpointman_Config
 	}
 
 
-	/**
-     * Get info models by product id selected.
-     * @param int $id_product product ID
-	 * @param bool $show_all True return all, False return hidden = 0
-     * @return array
-     */
-	public function epm_config_hardware_get_list_models($id_product=NULL, $show_all = true, $byorder = "model")
-	{
-		if(! is_numeric($id_product)) { throw new \Exception( _("ID Producto not is number")." (".$id_product.")"); }
-		if($show_all == true) 	{ $sql = 'SELECT * FROM endpointman_model_list WHERE product_id = '.$id_product.' ORDER BY '.$byorder.' ASC'; }
-		else 					{ $sql = 'SELECT * FROM endpointman_model_list WHERE hidden = 0 AND product_id = '.$id_product.' ORDER BY '.$byorder.' ASC'; }
-		$result = sql($sql, 'getAll', \PDO::FETCH_ASSOC);
-		return $result;
-	}
-
-	/**
-     * Get info product by brand id selected.
-     * @param int $id_brand brand ID
-	 * @param bool $show_all True return all, FAlse return hidde = 0
-     * @return array
-     */
-	public function epm_config_hardware_get_list_product($id_brand=NULL, $show_all = true, $byorder = "long_name")
-	{
-		if(! is_numeric($id_brand)) { throw new \Exception(_("ID Brand not is numbre")." (".$id_brand.")"); }
-		if ($show_all == true) 	{ $sql = 'SELECT * FROM endpointman_product_list WHERE brand = '.$id_brand.' ORDER BY '.$byorder.' ASC'; }
-		else 					{ $sql = 'SELECT * FROM endpointman_product_list WHERE hidden = 0 AND brand = '.$id_brand.' ORDER BY '.$byorder.' ASC'; }
-		$result = sql($sql, 'getAll', \PDO::FETCH_ASSOC);
-		return $result;
-	}
-
-	/**
-     * Get info all brands.
-	 * @param bool $show_all True return all, False return hidde = 0
-     * @return array
-     */
-	public function epm_config_hardware_get_list_brand($show_all = true, $byorder = "id") {
-		if ($show_all == true) 	{ $sql = "SELECT * from endpointman_brand_list WHERE id > 0 ORDER BY " . $byorder . " ASC "; }
-		else 					{ $sql = "SELECT * from endpointman_brand_list WHERE id > 0 AND hidden = 0 ORDER BY " . $byorder . " ASC "; }
-		$result = sql($sql, 'getAll', \PDO::FETCH_ASSOC);
-		return $result;
-	}
-
-
 	/**** FUNCIONES SEC MODULO "epm_config\editor" ****/
 	/**
      * Get info all brdans, prodics, models.
@@ -217,18 +163,18 @@ class Endpointman_Config
 	{
 		$row_out = array();
 		$i = 0;
-		foreach ($this->epm_config_hardware_get_list_brand(true, "name") as $row)
+		foreach ($this->epm->get_hw_brand_list(true, "name") as $row)
 		{
 			$row_out[$i] = $row;
 			$row_out[$i]['count'] = $i;
 			if ($row['installed'])
 			{
 				$j = 0;
-				foreach ($this->epm_config_hardware_get_list_product($row['id'], true) as $row2)
+				foreach ($this->epm->get_hw_product_list($row['id'], true) as $row2)
 				{
 					$row_out[$i]['products'][$j] = $row2;
 					$k = 0;
-					foreach ($this->epm_config_hardware_get_list_models($row2['id'], true) as $row3) {
+					foreach ($this->epm->get_hw_model_list($row2['id'], true) as $row3) {
 						$row_out[$i]['products'][$j]['models'][$k] = $row3;
 						$k++;
 					}
@@ -250,13 +196,31 @@ class Endpointman_Config
 	/**** FUNCIONES SEC MODULO "epm_config\manager" ****/
 	private function epm_config_manager_check_for_updates ()
 	{
+		// Force flush all output buffers, need for AJAX
+		ob_implicit_flush(true);
+		while (ob_get_level() > 0) {
+			ob_end_flush();
+		}
+
 		out("<h3>"._("Update data...")."</h3>");
-		$this->update_check(true);
-		out (_("All Done!"));
+		if ($this->update_check(true) === false)
+		{
+			out ("<br>"._("Something Went Wrong!").' <i class="fa fa-thumbs-o-down fa-lg" aria-hidden="true"></i>');
+		}
+		else
+		{
+			out ('<br>'._("All Done!").' <i class="fa  fa-thumbs-o-up fa-lg" aria-hidden="true"></i>');
+		}
 	}
 
 	private function epm_config_manager_brand()
 	{
+		// Force flush all output buffers, need for AJAX
+		ob_implicit_flush(true);
+		while (ob_get_level() > 0) {
+			ob_end_flush();
+		}
+						
 		$request = freepbxGetSanitizedRequest();
 
 		$id 	 	 = $request['idfw'] ?? '';
@@ -398,62 +362,58 @@ class Endpointman_Config
 
 	public function epm_config_manager_hardware_get_list_all_hide_show()
 	{
-		$row_out = array();
-
-		$i = 0;
-		$brand_list = $this->epm_config_hardware_get_list_brand(true, "name");
-		foreach ($brand_list as $row)
+		$row_out	= [];
+		$brand_list = $this->epm->get_hw_brand_list(true, "name");
+		foreach ($brand_list as $brand)
 		{
-			//$row_out[$i] = $row;
-			$row_out[$i]['id'] = $row['id'];
-			$row_out[$i]['name'] = $row['name'];
-			$row_out[$i]['directory'] = $row['directory'];
-			$row_out[$i]['installed'] = $row['installed'];
-			$row_out[$i]['hidden'] = $row['hidden'];
-			$row_out[$i]['count'] = $i;
-			$row_out[$i]['products'] = array();
-			if ($row['hidden'] == 1)
+			if ($brand['hidden'] == 1) { continue; }
+
+			$brand_item = [
+				'id' 		=> $brand['id'],
+				'name' 		=> $brand['name'],
+				'directory' => $brand['directory'],
+				'installed' => $brand['installed'],
+				'hidden' 	=> $brand['hidden'],
+				'count' 	=> count($row_out),
+				'products' 	=> []
+			];
+	
+			$product_list = $this->epm->get_hw_product_list($brand['id'], true);
+			foreach ($product_list as $product)
 			{
-				$i++;
-				continue;
-			}
+				if ($product['hidden'] == 1) { continue; }
 
-			$j = 0;
-			$product_list = $this->epm_config_hardware_get_list_product($row['id'], true);
-			foreach($product_list as $row2) {
-				//$row_out[$i]['products'][$j] = $row2;
-				$row_out[$i]['products'][$j]['id'] = $row2['id'];
-				$row_out[$i]['products'][$j]['brand'] = $row2['brand'];
-				$row_out[$i]['products'][$j]['long_name'] = $row2['long_name'];
-				$row_out[$i]['products'][$j]['short_name'] = $row2['short_name'];
-				$row_out[$i]['products'][$j]['hidden'] = $row2['hidden'];
-				$row_out[$i]['products'][$j]['count'] = $j;
-				$row_out[$i]['products'][$j]['models'] = array();
-				if ($row2['hidden'] == 1)
+				$product_item = [
+					'id' 		 => $product['id'],
+					'brand'		 => $product['brand'],
+					'long_name'  => $product['long_name'],
+					'short_name' => $product['short_name'],
+					'hidden'	 => $product['hidden'],
+					'count'		 => count($brand_item['products']),
+					'models'	 => []
+				];
+	
+				$model_list = $this->epm->get_hw_model_list($product['id'], true);
+				foreach ($model_list as $model)
 				{
-					$j++;
-					continue;
+					$model_item = [
+						'id' 		 => $model['id'],
+						'brand' 	 => $model['brand'],
+						'model' 	 => $model['model'],
+						'product_id' => $model['product_id'],
+						'enabled' 	 => $model['enabled'],
+						'hidden' 	 => $model['hidden'],
+						'count' 	 => count($product_item['models']),
+					];
+					$product_item['models'][] = $model_item;
 				}
-
-				$k = 0;
-				$model_list = $this->epm_config_hardware_get_list_models($row2['id'], true);
-				foreach($model_list as $row3)
-				{
-					//$row_out[$i]['products'][$j]['models'][$k] = $row3;
-					$row_out[$i]['products'][$j]['models'][$k]['id'] = $row3['id'];
-					$row_out[$i]['products'][$j]['models'][$k]['brand'] = $row3['brand'];
-					$row_out[$i]['products'][$j]['models'][$k]['model'] = $row3['model'];
-					$row_out[$i]['products'][$j]['models'][$k]['product_id'] = $row3['product_id'];
-					$row_out[$i]['products'][$j]['models'][$k]['enabled'] = $row3['enabled'];
-					$row_out[$i]['products'][$j]['models'][$k]['hidden'] = $row3['hidden'];
-					$row_out[$i]['products'][$j]['models'][$k]['count'] = $k;
-					$k++;
-				}
-				$j++;
+	
+				$brand_item['products'][] = $product_item;
 			}
-			$i++;
+	
+			$row_out[] = $brand_item;
 		}
-		//echo "<textarea>" . print_r($row_out, true)  . "</textarea>";
+	
 		return $row_out;
 	}
 
@@ -464,7 +424,7 @@ class Endpointman_Config
 	{
 		$row_out = array();
 		$i = 0;
-		$brand_list = $this->epm_config_hardware_get_list_brand(true, "name");
+		$brand_list = $this->epm->get_hw_brand_list(true, "name");
 		//FIX: https://github.com/FreePBX-ContributedModules/endpointman/commit/2ad929d0b38f05c9da1b847426a4094c3314be3b
 
 		foreach ($brand_list as $row)
@@ -492,7 +452,7 @@ class Endpointman_Config
 			}
 
 			$j = 0;
-			$product_list = $this->epm_config_hardware_get_list_product($row['id'], true);
+			$product_list = $this->epm->get_hw_product_list($row['id'], true);
 			foreach($product_list as $row2) {
 				$row_out[$i]['products'][$j] = $row2;
 				if((array_key_exists('firmware_vers', $row2)) AND ($row2['firmware_vers'] > 0)) {
@@ -518,7 +478,7 @@ class Endpointman_Config
 				}
 
 				$k = 0;
-				$model_list = $this->epm_config_hardware_get_list_models($row2['id'], true);
+				$model_list = $this->epm->get_hw_model_list($row2['id'], true);
 				foreach($model_list as $row3)
 				{
 					$row_out[$i]['products'][$j]['models'][$k] = $row3;
@@ -880,7 +840,7 @@ class Endpointman_Config
 			else
 			{
 				$version 	  = array();
-				$local_brands = $this->epm->get_brands_list();
+				$local_brands = $this->epm->get_hw_brand_list(true);
 
 				foreach ($json_brands as &$brand)
 				{
@@ -891,7 +851,7 @@ class Endpointman_Config
 					$brand_file_json_path = $this->system->buildPath($local_endpoint, $brand_dir, 'brand_data.json');
 
 					// Check if the brand is local and if not download the brand file
-					if (! $this->epm->is_brand_local($brand_dir))
+					if (! $this->epm->is_local_hw_brand($brand_dir))
 					{
 						if ($echomsg)
 						{
@@ -928,7 +888,7 @@ class Endpointman_Config
 					{
 						foreach ($brand->getOUI() as $oui)
 						{
-							$this->epm->set_brand_oui($oui, $brand->getBrandID());
+							$this->epm->set_hw_brand_oui($oui, $brand->getBrandID());
 						}
 					}
 					
@@ -938,15 +898,20 @@ class Endpointman_Config
 					// Check if the brand is local and if not add the brand to the database
 					if (!($this->system->arraysearchrecursive($brand_dir, $local_brands, 'directory')))
 					{
-						if ($this->epm->is_brand_exist($brand->getBrandID(), 'id'))
+						if ($this->epm->is_exist_hw_brand($brand->getBrandID(), 'id'))
 						{
 							$error['brand_update_id_exist_other_brand'] = sprintf(_("You can not add the mark (%s) as the ID (%d) already exists in the database!"), $brand->getName(), $brand->getBrandID());
 							continue;
 						}
-
-						if (! $this->epm->add_brand($brand->getBrandID(), $brand->getName(), $brand->getDirectory(), $version[$brand_rawname]))
+						$data_new = array(
+							'id'		=> $brand->getBrandID(),
+							'name'		=> $brand->getName(),
+							'directory'	=> $brand->getDirectory(),
+							'cfg_ver'	=> $version[$brand_rawname]
+						);
+						if ($this->epm->set_hw_brand($brand->getBrandID(), $data_new) === false)
 						{
-							$outputError('brand_update_check_add_brand', sprintf(_("Error: Unable to add brand %s to the database"), $brand->getName()));
+							$outputError('brand_update_check_add_brand', sprintf(_("Error: Unable to add brand '%s' to the database"), $brand->getName()));
 						}
 					}
 					else
@@ -1017,7 +982,7 @@ class Endpointman_Config
 			$this->epm->setConfig('endpoint_vers', $master_json->getLastModified());
 
 
-			// $local_brands = $this->epm->get_brands_list(); //$row
+			// $local_brands = $this->epm->get_hw_brand_list(true); //$row
 
 			$json_brands = $master_json->getBrands();	// $out
 			foreach ($json_brands as &$brand) //data
@@ -1039,25 +1004,26 @@ class Endpointman_Config
 				// $directory 		= $brand->getDirectory();
 				// $brand_name		= $brand->getName();
 				
-				$brand_version 	= $brand->getLastModified();
-
-
-				// Check if the brand is local and if not add the brand to the database
-				if ($this->epm->is_brand_exist($brand->getBrandID(), 'id'))
-				{
-					$this->epm->update_brand($brand->getBrandID(), $brand->getName(), $brand_version);
-				}
-				else
-				{
-					$this->epm->add_brand($brand->getBrandID(), $brand->getName(), $brand->getDirectory(), $brand_version);
-				}
+				$data_new = array(
+					'id'		=> $brand->getBrandID(),
+					'name'		=> $brand->getName(),
+					'cfg_ver'	=> $brand->getLastModified(),
+					'local' 	=> 1,
+					'installed' => 1,
+				);
+				$data_new_insert = array(
+					'directory'	=> $brand->getDirectory(),
+				);
+				$this->epm->set_hw_brand($brand->getBrandID(), $data_new, 'id', $data_new_insert);
+				unset($data_new);
+				unset($data_new_insert);
 
 				// Update the OUIs for the brand
 				if ($brand->countOUI() > 0 && $brand->isSetBrandID())
 				{
 					foreach ($brand->getOUI() as $oui)
 					{
-						$this->epm->set_brand_oui($oui, $brand->getBrandID());
+						$this->epm->set_hw_brand_oui($oui, $brand->getBrandID());
 					}
 				}
 
@@ -1093,43 +1059,36 @@ class Endpointman_Config
 					*
 					*/
 					
-					if (! $this->epm->is_brand_product_exist($family_id))
-					{
-						$this->epm->add_brand_product(
-							$family_id,
-							$brand_id,
-							$family_short_name,
-							$family->getName(),
-							$family->getDirectory(),
-							$family->getLastModified(),
-							$family->getConfigurationFiles()
-						);
-					}
-					else
-					{
-						$this->epm->update_brand_product(
-							$family_id,
-							$family_short_name,
-							$family->getName(),
-							$family->getLastModified(),
-							$family->getConfigurationFiles()
-						);
-					}
-
+					$data_product = array(
+						':short_name' 	=> $family_short_name,
+						':long_name' 	=> $family->getName(),
+						':cfg_ver' 		=> $family->getLastModified(),
+						':config_files' => $family->getConfigurationFiles()
+					);
+					$data_product_insert = array(
+						':brand_id' 	=> $brand_id,
+						':directory' 	=> $family->getDirectory(),
+					);
+					$this->epm->set_hw_product($family_id, $data_product, 'id', $data_product_insert);
+					
 					$models = $family->getModelList();
 					foreach ($models as &$model)
 					{
 						$model_id = $model->getModelId();
 
 						// $model->getConfigurationFiles() > old system implode(",", $model->getConfigurationFiles());
-						if (! $this->epm->is_brand_product_model_exist($model_id))
-						{
-							$this->epm->add_brand_product_model( $model_id, $family_id, $brand_id, $model->getModel(), $model->getMaxLines(), $model->getConfigurationFiles() );
-						}
-						else
-						{
-							$this->epm->update_brand_product_model( $model_id, $model->getModel(), $model->getMaxLines(), $model->getConfigurationFiles() );
-						}
+						$data_model = array(
+							':model' 		=> $model->getModel(),
+							':max_lines' 	=> $model->getMaxLines(),
+							':template_list'=> $model->getConfigurationFiles()
+						);
+						$data_model_insert = array(
+							':brand' 	=> $brand_id,
+							':product_id' 	=> $family_id,
+							':enabled' 		=> 0,
+							':hidden' 		=> 0
+						);
+						$this->epm->set_hw_model($model_id, $data_model, 'id', $data_model_insert);
 
 						$errsync_modal = array();
 						if (!$this->sync_model($model_id, $errsync_modal))
@@ -1144,7 +1103,7 @@ class Endpointman_Config
 					}
 
 					//Phone Models Move Here
-					foreach ($this->epm->get_brand_product_models_list($family_id) as $model)
+					foreach ($this->epm->get_hw_model_list($family_id, true) as $model)
 					{
 						if (! $family->isModelExist($model['model']))
 						{
@@ -1154,10 +1113,10 @@ class Endpointman_Config
 							}
 
 							// Remove Brand Product Model
-							if (! $this->epm->del_brand_product_model($model['id']) )
+							if (! $this->epm->del_hw_model($model['id']) )
 							{
 								if ($echomsg == true ) { out(_("Error!")); }
-								$outputError('del_brand_product_model', sprintf(_("Error: System Error in Delete Brand Product Model [%s] Function, Load Failure!"), $model['model']));
+								$outputError('del_hw_model', sprintf(_("Error: System Error in Delete Brand Product Model [%s] Function, Load Failure!"), $model['model']));
 							}
 
 							// Sync MAC Brand By Model
@@ -1194,7 +1153,7 @@ class Endpointman_Config
 			return false;
 		}
 
-		$sql = sprintf('SELECT eml.product_id, eml.brand, eml.model, epl.cfg_dir, ebl.directory FROM %s as eml
+		$sql = sprintf('SELECT eml.id, eml.product_id, eml.brand, eml.model, epl.cfg_dir, ebl.directory FROM %s as eml
 						JOIN %s as epl ON eml.product_id = epl.id
     					JOIN %s as ebl ON eml.brand = ebl.id
     					WHERE eml.id = :id', "endpointman_model_list", "endpointman_product_list", "endpointman_brand_list");
@@ -1211,7 +1170,8 @@ class Endpointman_Config
 
 		if (empty($row['directory']) || empty($row['cfg_dir']))
 		{
-			$error['sync_model'] = _("Brand or Product Directory is empty!");
+			
+			$error['sync_model'] = sprintf(_("Brand or Product Directory is empty from the model '%s'!"), $model);
 			return false;
 		}
 
@@ -1235,15 +1195,10 @@ class Endpointman_Config
 			return false;
 		}
 
-		$json_data = null;
+		$family = null;
 		try
 		{
-			$json_data = $this->epm->file2json($path_brand_dir_cfg_json);
-			if ($json_data === FALSE || !is_array($json_data))
-			{
-				$error['sync_model'] = sprintf(_("Error: Can't read JSON file '%s'!"), $path_brand_dir_cfg_json);
-				return false;
-			}
+			$family = $this->epm->packages->readFamilyJSON($path_brand_dir_cfg_json);
 		}
 		catch (\Exception $e)
 		{
@@ -1251,44 +1206,49 @@ class Endpointman_Config
 			return false;
 		}
 
-		$model_list = $json_data['data']['model_list'] ?? array();
-
-
-		//TODO: Add local file checks to avoid slow reloading on PHP < 5.3
-		$key = $this->system->arraysearchrecursive($row['model'], $model_list, 'model');
-		if ($key === FALSE)
+		if (! $family->isModelExist($row['model']))
 		{
 			$error['sync_model'] = "Can't locate model in family JSON file";
 			return false;
 		}
-		else
-		{
-			$template_list = $model_list[$key[0]]['template_data'] ?? array();
-		}
-		$maxlines = $model_list[$key[0]]['lines'];
 
-		$sql = sprintf("UPDATE %s SET max_lines = :maxlines, template_list = :template_list WHERE id = :model", "endpointman_model_list");
-		$stmt = $this->db->prepare($sql);
-		$stmt->execute([
-			':maxlines' 	 => $maxlines,
-			':template_list' => implode(",", $template_list),
-			':model' 		 => $model
-		]);
+		$model_data    = $family->getModel($row['model']);
+		$max_lines 	   = $model_data->getMaxLines();
+		$template_list = $model_data->getTemplateList();
+
+		$data_model = array(
+			':model' 		=> $row['model'],
+			':max_lines' 	=> $max_lines,
+			':template_list'=> $template_list
+		);
+		$this->epm->set_hw_model($row['id'], $data_model);
 
 
-		$version 	= $json_data['data']['last_modified'] ?? '';
-		$long_name	= $json_data['data']['name'] 		  ?? '';
-		$short_name = preg_replace("/\[(.*?)\]/si", "", $long_name);
-		
 
-		$sql = sprintf("UPDATE %s SET long_name = :long_name, short_name = :short_name, cfg_ver = :cfg_ver WHERE id = :id", "endpointman_product_list");
-		$stmt = $this->db->prepare($sql);
-		$stmt->execute([
-			':long_name'  => str_replace("'", "''", $long_name),
-			':short_name' => str_replace("'", "''", $short_name),
-			':cfg_ver' 	  => $version,
-			':id' 		  => $row['product_id']
-		]);
+
+
+		// $sql = sprintf("UPDATE %s SET max_lines = :maxlines, template_list = :template_list WHERE id = :model", "endpointman_model_list");
+		// $stmt = $this->db->prepare($sql);
+		// $stmt->execute([
+		// 	':maxlines' 	 => $max_lines,
+		// 	':template_list' => implode(",", $template_list),
+		// 	':model' 		 => $model
+		// ]);
+
+		$this->epm->set_hw_product($row['product_id'], array(
+			':short_name' => $family->getShortName(),
+			':long_name'  => $family->getName(),
+			':cfg_ver'	  => $family->getLastModified(),
+		));
+
+		// $sql = sprintf("UPDATE %s SET long_name = :long_name, short_name = :short_name, cfg_ver = :cfg_ver WHERE id = :id", "endpointman_product_list");
+		// $stmt = $this->db->prepare($sql);
+		// $stmt->execute([
+		// 	':long_name'  => str_replace("'", "''", $family->getName()),
+		// 	':short_name' => str_replace("'", "''", $family->getShortName()),
+		// 	':cfg_ver' 	  => $family->getLastModified(),
+		// 	':id' 		  => $row['product_id']
+		// ]);
 
         $template_data_array = $this->merge_data($path_brand_dir_cfg, $template_list, true, true);
 

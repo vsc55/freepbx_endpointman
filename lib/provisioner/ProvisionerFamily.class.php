@@ -24,20 +24,24 @@ class ProvisionerFamily
     private $debug               = false;
     private $system              = null;
 
-    public function __construct($id, $name, $directory, $last_modified, $brand_id, $jsonData = null, $debug = true)
-    {
-        $this->debug         = $debug;
-        $this->id            = $id;
-        $this->name          = $name;
-        $this->directory     = $directory;
-        $this->last_modified = $last_modified;
-        $this->brand_id      = $brand_id;
 
+    public function __construct($id = null, $name = null, $directory = null, $last_modified = null, $brand_id = null, $jsonData = null, $debug = true)
+    {
+        $this->debug  = $debug;
         $this->system = new \FreePBX\modules\Endpointman\epm_system();
-        if (! empty($jsonData))
+
+        if (!empty($jsonData))
         {
             $this->importJSON($jsonData);
         }
+        else
+        {
+            $this->id            = $id;
+            $this->name          = $name;
+            $this->directory     = $directory;
+            $this->last_modified = $last_modified;
+            $this->brand_id      = $brand_id;
+        }        
     }
 
     public function importJSON($jsonData, $noException = false)
@@ -200,6 +204,35 @@ class ProvisionerFamily
         return false;
     }
 
+    public function getModel($modelName)
+    {
+        if (! empty($modelName))
+        {
+            foreach ($this->model_list as $model)
+            {
+                if ($model->getModel() == $modelName)
+                {
+                    return $model;
+                }
+            }
+        }
+        return null;
+    }
+
+    public function getModelTemplate($modelName)
+    {
+        if (! empty($modelName))
+        {
+            foreach ($this->model_list as $model)
+            {
+                if ($model->getModel() == $modelName)
+                {
+                    return $model->getTemplate();
+                }
+            }
+        }
+        return [];
+    }
 
     /**
      * Retrieves the debug flag.

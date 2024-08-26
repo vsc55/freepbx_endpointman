@@ -111,5 +111,22 @@ class Packages
         return $master_json;
     }
 
+    public function readFamilyJSON($json_file = null)
+    {
+        if (empty($json_file))
+        {
+            throw new \Exception(_("Family JSON file is required"));
+        }
+        try
+        {
+            $data_json = new Provisioner\ProvisionerFamily(null, null, null, null, null, $json_file);
+        }
+        catch (\Exception $e)
+        {
+            throw $e;
+        }
+        return $data_json;
+    }
+
 
 }
