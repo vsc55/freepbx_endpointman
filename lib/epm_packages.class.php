@@ -42,7 +42,12 @@ class Packages
 
     public function reload_master_json()
     {
-        $this->master_json = $this->readMasterJSON(true);
+        $this->master_json = $this->readMasterJSON(true, true);
+        if ($this->master_json != false)
+        {
+
+        }
+        return $this->master_json;
     }
 
     /**
@@ -69,7 +74,7 @@ class Packages
      * @param mixed $option The option to retrieve the path for. (optional)
      * @return string The path for the given option.
      */
-    public function getPath($option = null, $directory = null)
+    public function getPath($option = null)
     {
         if (empty($option))
         {
@@ -95,15 +100,6 @@ class Packages
                 $data_return = $this->system->buildPath($this->getPath("phone_endpoint"), "master.json");
                 break;
 
-            case "json_brand_data":
-                if (empty($directory))
-                {
-                    throw new \Exception(_("Directory is required"));
-                }
-
-                $data_return = $this->system->buildPath($this->getPath("phone_endpoint"), $directory, "brand_data.json");
-                break;
-
             case "root_phone_module":
             default:
                 $data_return = $this->epm->PHONE_MODULES_PATH;
@@ -113,14 +109,25 @@ class Packages
 
 
 
-    public function readMasterJSON($load = false)
+    public function readMasterJSON($load = false, $noException = false)
     {
         try
         {
-            $master_json = new Provisioner\MasterJSON($this->getPath('json_master'));
+            $master_path = $this->system->buildPath($this->getPath("phone_endpoint"), "master.json");
+            if (! file_exists($master_path))
+            {
+                $load = false;
+            }
+            $master_json = new Provisioner\MasterJSON(null, $noException);
+
+            $master_json->setPathBase($this->getPath("root_phone_module"));
+            $master_json->setJSONFile($master_path);
+            $master_json->setURLBase($this->epm->URL_UPDATE);
+            $master_json->importJSON(null, $noException);
+
             foreach ($master_json->getBrands() as &$brand)
             {
-                $brand_path = $this->getPath("json_brand_data", $brand->getDirectory());
+                $brand_path = $this->system->buildPath($this->getPath("phone_endpoint"), $brand->getDirectory(), "brand_data.json");
                 $brand->setJSONFile($brand_path);
                 if ($load)
                 {
@@ -159,7 +166,7 @@ class Packages
         return $master_json;
     }
 
-    public function readFamilyJSON($json_file = null)
+    public function readFamilyJSON($json_file = null, $brand_id = null)
     {
         if (empty($json_file))
         {
@@ -167,7 +174,7 @@ class Packages
         }
         try
         {
-            $data_json = new Provisioner\ProvisionerFamily(null, null, null, null, null, $json_file);
+            $data_json = new Provisioner\ProvisionerFamily(null, null, null, null, $brand_id, $json_file);
         }
         catch (\Exception $e)
         {

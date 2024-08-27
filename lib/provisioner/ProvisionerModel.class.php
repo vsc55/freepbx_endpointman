@@ -47,12 +47,12 @@ class ProvisionerModel
         return $this->model;
     }
 
-    public function getLines()
+    public function getMaxLines()
     {
         return $this->lines;
     }
 
-    public function getTemplate()
+    public function getTemplateList()
     {
         return $this->template;
     }

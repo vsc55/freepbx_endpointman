@@ -25,23 +25,21 @@ class ProvisionerFamily
     private $system              = null;
 
 
-    public function __construct($id = null, $name = null, $directory = null, $last_modified = null, $brand_id = null, $jsonData = null, $debug = true)
+    public function __construct($id = null, $name = null, $directory = '', $last_modified = '', $brand_id = null, $jsonData = null, $debug = true)
     {
         $this->debug  = $debug;
         $this->system = new \FreePBX\modules\Endpointman\epm_system();
+
+        $this->id            = $id;
+        $this->name          = $name;
+        $this->directory     = $directory;
+        $this->last_modified = $last_modified;
+        $this->brand_id      = $brand_id;
 
         if (!empty($jsonData))
         {
             $this->importJSON($jsonData);
         }
-        else
-        {
-            $this->id            = $id;
-            $this->name          = $name;
-            $this->directory     = $directory;
-            $this->last_modified = $last_modified;
-            $this->brand_id      = $brand_id;
-        }        
     }
 
     /**
@@ -115,6 +113,7 @@ class ProvisionerFamily
         }
         
         $this->id                  = $jsonData['data']['id']                  ?? $this->id            ?? null;
+        $this->brand_id            = $jsonData['data']['brand_id']            ?? $this->brand_id      ?? null;
         $this->name                = $jsonData['data']['name']                ?? $this->name          ?? '';
         $this->directory           = $jsonData['data']['directory']           ?? $this->directory     ?? '';
         $this->changelog           = $jsonData['data']['changelog']           ?? '';
@@ -140,16 +139,17 @@ class ProvisionerFamily
         {
             $id        = $modelData['id']            ?? null;
             $model     = $modelData['model']         ?? '';
-            $lines     = $modelData['lines']         ?? '0';
+            $lines     = $modelData['lines']         ?? '1';
             $template  = $modelData['template_data'] ?? [];
             $brand_id  = $this->brand_id;
             $family_id = $this->id;
 
-            if (empty($id) || empty($model) || empty($template) || empty($brand_id) || empty($family_id))
+            if (empty($id) || empty($model) || empty($brand_id) || empty($family_id))
             {
                 if ($this->debug)
                 {
-                    dbug(sprintf(_("Invalid model data, id '%s', model '%s'"), $id, $model));
+                    dbug(sprintf(_("Invalid model data, id '%s', model '%s', brandid '%s', family_id '%s'!"), $id, $model, $brand_id, $family_id));
+                    
                 }
                 continue;
             }
@@ -264,7 +264,7 @@ class ProvisionerFamily
         return null;
     }
 
-    public function getModelTemplate($modelName)
+    public function getModelTemplateList($modelName)
     {
         if (! empty($modelName))
         {
@@ -272,7 +272,7 @@ class ProvisionerFamily
             {
                 if ($model->getModel() == $modelName)
                 {
-                    return $model->getTemplate();
+                    return $model->getTemplateList();
                 }
             }
         }

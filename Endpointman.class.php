@@ -1874,6 +1874,7 @@ class Endpointman extends FreePBX_Helpers implements BMO {
 	 * @param string $where The column name used for searching the record in the table. Defaults to `id`. This is a required parameter.
 	 * @param array $data_insert Optional. An additional associative array of data to be merged with `$data` for the `INSERT` operation. If not provided, only `$data` is used for insertion.
 	 * @param array $data_update Optional. An additional associative array of data to be merged with `$data` for the `UPDATE` operation. If not provided, only `$data` is used for updating.
+	 * @param bool $debug Optional. If set to `true`, the function will return the generated SQL query instead of executing it. Defaults to `false`.
 	 *
 	 * @return mixed Returns the ID of the newly inserted record if an `INSERT` operation is performed, or `true` if an `UPDATE` operation is performed successfully.
 	 *               Returns `false` if any of the required parameters (`$data`, `$where`, `$table`) are missing or invalid.
@@ -1900,24 +1901,25 @@ class Endpointman extends FreePBX_Helpers implements BMO {
 	 * $result = $this->set_database_data($table, null, $data, 'id', $data_insert, []);
 	 * // Inserts a new user with the provided data.
 	 */
-	public function set_database_data($table = null, $find = null, $data = array(), $where = "id", $data_insert = array(), $data_update = array())
+	public function set_database_data($table = null, $find = null, $data = array(), $where = "id", $data_insert = array(), $data_update = array(), $debug = false)
 	{
 		if (empty($table) || !is_string($table) || !preg_match('/^[a-zA-Z0-9_]+$/', $table))
 		{
+			if ($debug)
+			{
+				dbug("Invalid table name: $table");
+			}
 			return false;
 		}
 		if (!is_array($data) || empty($data) || empty($where))
 		{
+			if ($debug)
+			{
+				dbug("Invalid data or where condition");
+			}
 			return false;
 		}
-		$isUpdate = !empty($find) && function() use ($find, $where, $table) {
-			$sql  = sprintf("SELECT %s FROM %s WHERE %s = :id", $where, $table, $where);
-			$stmt = $this->db->prepare($sql);
-			$stmt->execute([
-				':id' => $find
-			]);
-			return $stmt->rowCount() !== 0;
-		};
+		$isUpdate = !empty($find) && ($this->count_database_data($table, $where, $find) > 0);
 
 		$params    = [];
 		if ($isUpdate)
@@ -1944,6 +1946,11 @@ class Endpointman extends FreePBX_Helpers implements BMO {
 			$placeholders = implode(", ", array_map(function($column) { return sprintf(":%s",$column); }, array_keys($data)));
 			$sql 		  = sprintf("INSERT INTO %s (%s) VALUES (%s)", $table, $columns, $placeholders);
 		}
+		if ($debug)
+		{
+			dbug("SQL Query: $sql");
+			dbug("Data: ", $data);
+		}
 		$stmt = $this->db->prepare($sql);
 
 		// Bind the parameters to the query and execute it
@@ -1952,7 +1959,7 @@ class Endpointman extends FreePBX_Helpers implements BMO {
 			$params[sprintf(":%s", $key)] = $value;
 		}
 		$stmt->execute($params);
-		return $isUpdate ? true : $this->db->insert_id();
+		return $isUpdate ? true : $this->db->lastInsertId();
 	}
 	
 
@@ -2137,16 +2144,21 @@ class Endpointman extends FreePBX_Helpers implements BMO {
 	}
 	
 
-	public function get_hw_brand($name = null)
+	public function get_hw_brand($find = null, $where = "directory")
 	{
-		if (empty($name))
+		if (empty($find))
 		{
 			return [];
 		}
-		$sql = sprintf("SELECT * FROM %s WHERE directory = :directory", self::TABLES['epm_brands_list']);
+		if (empty($where))
+		{
+			$where = "directory";
+		}
+
+		$sql = sprintf("SELECT * FROM %s WHERE %s = :where_id", self::TABLES['epm_brands_list'], $where);
 		$stmt = $this->db->prepare($sql);
 		$stmt->execute([
-			':directory' => $name
+			':where_id' => $find
 		]);
 		return $stmt->fetch(\PDO::FETCH_ASSOC);
 	}

@@ -11,6 +11,10 @@ class MasterJSON
     private $version      = '';
     private $brands       = [];
 
+    private $json_file    = null;
+    private $path_base     = null;
+    private $url_base     = null;
+
     private $debug        = false;
     private $system       = null;
 
@@ -20,15 +24,46 @@ class MasterJSON
      * @param array|string $jsonData The JSON data to import.
      * @param bool $debug Whether to enable debugging.
      */
-    public function __construct($jsonData = null, $debug = true)
+    public function __construct($jsonData = null, $noException = false, $debug = true)
     {
         $this->debug  = $debug;
         $this->system = new \FreePBX\modules\Endpointman\epm_system();
         if (! empty($jsonData))
         {
-            $this->importJSON($jsonData);
+            $this->importJSON($jsonData, $noException);
         }
     }
+
+    /**
+     * Retrieves the JSON file.
+     *
+     * @return string The JSON file.
+     */
+    public function getJSONFile()
+    {
+        return $this->json_file;
+    }
+
+    /**
+     * Sets the JSON file.
+     *
+     * @param string $json_file The JSON file.
+     */
+    public function setJSONFile($json_file)
+    {
+        $this->json_file = $json_file;
+    }
+
+    /**
+     * Checks if the JSON file exists.
+     *
+     * @return bool Returns true if the JSON file exists, false otherwise.
+     */
+    public function isJSONFileExist()
+    {
+        return file_exists($this->json_file);
+    }
+
 
     /**
      * Imports the JSON data into the master JSON.
@@ -37,8 +72,23 @@ class MasterJSON
      * @param bool $noException Whether to throw an exception if the JSON data is invalid.
      * @throws \Exception If the JSON data is invalid.
      */
-    public function importJSON($jsonData, $noException = false)
+    public function importJSON($jsonData = null, $noException = false)
     {
+        if (empty($jsonData) && empty($this->json_file))
+        {
+            if ($noException) { return false; }
+            throw new \Exception(_("Empty JSON data and JSON file!"));
+        }
+        elseif (empty($jsonData) && !empty($this->json_file) && !file_exists($this->json_file))
+        {
+            if ($noException) { return false; }
+            throw new \Exception(sprintf(_("JSON file '%s' does not exist!"), $this->json_file));
+        }
+        elseif (empty($jsonData) && !empty($this->json_file))
+        {
+            $jsonData = $this->json_file;
+        }
+
         if (empty($jsonData))
         {
             if ($noException) { return false; }
@@ -79,7 +129,12 @@ class MasterJSON
                 }
                 continue;
             }
-            $this->brands[] = new ProvisionerBrand($name, $dir);
+            $new_brand = new ProvisionerBrand($name, $dir);
+            $new_brand->setMasterJSON($this);
+            $new_brand->setPathBase($this->getPathBase());
+            $new_brand->setURLBase($this->getURLBase());
+            $new_brand->setJSONFile($this->system->buildPath($this->getPathEndPoint(), $dir, "brand_data.json"));
+            $this->brands[] = $new_brand;
         }
         return true;
     }
@@ -242,4 +297,173 @@ class MasterJSON
     {
         $this->debug = $debug;
     }
+
+
+
+
+
+    public function getPathBase()
+    {
+        return $this->path_base;
+    }
+
+    public function setPathBase($path_base)
+    {
+        $this->path_base = $path_base;
+    }
+
+    public function isPathBaseExist()
+    {
+        return file_exists($this->path_base);
+    }
+
+    public function isPathBaseWritable()
+    {
+        return is_writable($this->path_base);
+    }
+
+    public function getPathEndPoint()
+    {
+        return $this->system->buildPath($this->path_base, "endpoint");
+    }
+
+    public function getPathTemp()
+    {
+        return $this->system->buildPath($this->path_base, "temp");
+    }
+
+    public function getPathTempProvider()
+    {
+        return $this->system->buildPath($this->getPathTemp(), "provisioner");
+    }
+
+
+    public function getPathPackage()
+    {
+        return $this->system->buildPath($this->getPathTempProvider(), $this->getPackage());
+    }
+
+    public function isFilePackageExist()
+    {
+        return file_exists($this->getPathPackage());
+    }
+
+
+
+
+
+
+
+
+    public function getURLBase()
+    {
+        return $this->url_base;
+    }
+
+    public function setURLBase($url_base)
+    {
+        $this->url_base = $url_base;
+    }
+
+    public function isURLBaseExist()
+    {
+        return ! empty($this->url_base);
+    }
+
+    public function getURLMaster()
+    {
+        return $this->system->buildUrl($this->url_base, "master.json");
+    }
+
+    public function getURLPackage()
+    {
+        return $this->system->buildUrl($this->url_base, $this->package);
+    }
+    
+
+    public function downloadMaster($showmsg = true, $noException = true)
+    {
+        $url  = $this->getURLMaster();
+        $file = $this->getJSONFile();
+
+        if (empty($url) || empty($file))
+        {
+            $msg_err = _("Empty URL or file!");
+            if ($showmsg)
+            {
+                out($msg_err);
+            }
+            if ($noException) { return false; }
+            throw new \Exception($msg_err);
+        }
+        $result = false;
+        if ($showmsg)
+        {
+            try
+            {
+                $result = $this->system->download_file_with_progress_bar($url, $file);
+            }
+            catch (\Exception $e)
+            {
+                $msg_err = "❌ ". $e->getMessage();
+                if ($noException) { return false; }
+                throw new \Exception($msg_err);
+            }
+        }
+        else
+        {
+            $result = $this->system->download_file($url, $file);
+        }
+        return $result;
+    }
+
+
+    public function downloadPackage($local_version = null, $force = false, $noException = true)
+    {
+        $url                  = $this->getURLPackage();
+        $file                 = $this->getJSONFile();
+        $path_package         = $this->getPathPackage();
+        $path_package_extract = $this->system->buildPath($this->getPathTempProvider(), "provisioner_net");
+
+        if (empty($url) || empty($file) || empty($path_package) || empty($path_package_extract))
+        {
+            $msg_err = _("Empty URL, file, package or extract path!");
+            if ($noException) { return false; }
+            throw new \Exception($msg_err);
+        }
+        $data_return = false;
+
+        if ($force == true OR (empty($local_version)) OR ($local_version <= $this->getLastModified()))
+        {
+            //TODO: ERROR Pakage file not exist in repository GitHub.
+            $result = $this->system->download_file($url, $path_package);
+            try
+            {
+                $this->system->rmrf($path_package_extract);
+                if ($this->system->decompressTarGz($path_package, $path_package_extract))
+                {
+                    if ($this->system->copyResource($path_package_extract, $this->getPathBase(), 0755, true))
+                    {
+                        $data_return = $this->getLastModified();
+                    }
+                }
+            }
+            catch (\Exception $e)
+            {
+                $msg_err = _("❌ ". $e->getMessage());
+                dbug($msg_err);
+                if ($noException) { return false; }
+                throw new \Exception($msg_err);
+            }
+            finally
+            {
+                $this->system->rmrf($path_package_extract);
+            }
+        }
+        return $data_return;
+    }
+
+
+
+
 }

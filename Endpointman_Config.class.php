@@ -165,11 +165,11 @@ class Endpointman_Config
 		out("<h3>"._("Update data...")."</h3>");
 		if ($this->update_check(true) === false)
 		{
-			out ("<br>"._("Something Went Wrong!").' <i class="fa fa-thumbs-o-down fa-lg" aria-hidden="true"></i>');
+			out (_("❌Something Went Wrong!"));
 		}
 		else
 		{
-			out ('<br>'._("All Done!").' <i class="fa  fa-thumbs-o-up fa-lg" aria-hidden="true"></i>');
+			out (_("🔳 Process Completed!"));
 		}
 	}
 
@@ -326,7 +326,7 @@ class Endpointman_Config
 		$brand_list = $this->epm->get_hw_brand_list(true, "name");
 		foreach ($brand_list as $brand)
 		{
-			if ($brand['hidden'] == 1) { continue; }
+			// if ($brand['hidden'] == 1) { continue; }
 
 			$brand_item = [
 				'id' 		=> $brand['id'],
@@ -341,7 +341,7 @@ class Endpointman_Config
 			$product_list = $this->epm->get_hw_product_list($brand['id'], true);
 			foreach ($product_list as $product)
 			{
-				if ($product['hidden'] == 1) { continue; }
+				// if ($product['hidden'] == 1) { continue; }
 
 				$product_item = [
 					'id' 		 => $product['id'],
@@ -600,15 +600,7 @@ class Endpointman_Config
 	 */
 	public function brand_update_check_all()
 	{
-		try
-		{
-			$master_json = $this->epm->packages->readMasterJSON(true);
-		}
-		catch (\Exception $e)
-		{
-			dbug($e->getMessage());
-			return [];
-		}
+		$master_json = $this->epm->packages->master_json;
 
 		$out  = array();
 
@@ -662,12 +654,18 @@ class Endpointman_Config
 				out($errorMessage);
 			}
 		};
+		$out = function($msg, $end_newline = true) use ($echomsg)
+		{
+			if ($echomsg)
+			{
+				if ($end_newline) { out($msg); }
+				else 		      { outn($msg); }
+			}
+		};
 
-		$url_master     = $this->system->buildUrl($this->epm->URL_UPDATE, "master.json");
 		$url_status	    = $this->system->buildUrl($this->epm->URL_UPDATE, "update_status");
 		$local_endpoint = $this->system->buildPath($this->epm->PHONE_MODULES_PATH, "endpoint");
 		$temp_location  = $this->system->buildPath($this->epm->PHONE_MODULES_PATH, "temp", "provisioner");
-		$local_master   = $this->system->buildPath($local_endpoint, "master.json");
 		
 		if (!file_exists($local_endpoint))
 		{
@@ -681,108 +679,86 @@ class Endpointman_Config
 
         if (!$this->configmod->get('use_repo'))
 		{
-        	if ($echomsg == true)
-			{
-        		$master_result = $this->system->download_file_with_progress_bar_old($url_master, $local_master);
-        	}
-			else
-			{
-        		$master_result = $this->system->download_file_old($url_master, $local_master);
-        	}
-
-            if (!$master_result || !file_exists($local_master))
-			{
-				$outputError('brand_update_check_master', _("Error: Not able to connect to repository. Using local master file instead."));
-            }
-
-			try
-			{
-				$master_json = $this->epm->packages->readMasterJSON();
-				if (empty($master_json->getPackage()))
-				{
-					$outputError('brand_update_check_package', _("Error: No package found in master.json"));
-					return false;
-				}
-			}
-			catch (\Exception $e)
-			{
-				$outputError('read_json_master', $e->getMessage());
-				return false;
-			}
+			$out("⚡ Checking status server...", false);
 			try
 			{
 				if (($contents = file_get_contents($url_status)) === false)
 				{
-					$outputError('check_status_server', _("The stream could not be opened: the requested url was not found or there was a problem with the request."));
+					$outputError('check_status_server', _("❌ The stream could not be opened: the requested url was not found or there was a problem with the request."));
 					$contents = -2;
 				}
 			}
 			catch (\Exception $e)
 			{
-				$outputError('check_status_server', $e->getMessage());
+				$outputError('check_status_server', "❌ ".$e->getMessage());
 				$contents = -1;
 			}
 			
 			if ($contents != '0')
 			{
+				$out ("❌");
 				if (in_array($contents, [-1, -2]))
 				{
-					$outputError('remote_server', _("Error: The Remote server did not return any status information, Please try again later"));
+					$outputError('remote_server', _("❌ The Remote server did not return any status information, Please try again later!"));
 				}
 				else
 				{
-					$outputError('remote_server', _("Error: The Remote Server Is Currently Syncing With the Master Server, Please try again later"));
+					$outputError('remote_server', _("❌ The Remote Server Is Currently Syncing With the Master Server, Please try again later!"));
 				}
+				$out(" ");
+				return false;
+			}
+			$out(" ✔");
+			$out(" ");
+
+
+			$master_json = $this->epm->packages->master_json;
+			$out(_("Downloading master JSON file..."));
+			$master_result = $master_json->downloadMaster($echomsg);
+			if ($master_result !== false)
+			{
+				$this->epm->packages->reload_master_json();
+				// Is needed to redefine the $master_json variable because the master_json object is not the same as the 
+				// one we have in the $this->epm->packages->master_json after the reload_master_json() call
+				$master_json = $this->epm->packages->master_json;
+			}
+			elseif (!file_exists($master_json->getJSONFile()))
+			{
+				$outputError('brand_update_check_master', _("❌ Not able to connect to repository and no local master file found!<br>"));
+				return false;
+			}
+			else
+			{
+				$outputError('brand_update_check_master', _("💥 Not able to connect to repository. Using local master file instead.<br>"));
+			}
+
+			if (empty($master_json->getPackage()))
+			{
+				$outputError('brand_update_check_package', _("❌ No package found in master.json<br>"));
 				return false;
 			}
 
-
+			//TODO: Ver el motivo por el que $local_endpoint_version es simpre 0!
 			$local_endpoint_version = $this->epm->getConfig('endpoint_vers', null);
-
-			// Check if the local endpoint version is empty or if it is less than or equal to the master.json last modified date
-			if ((empty($local_endpoint_version)) OR ($local_endpoint_version <= $master_json->getLastModified()))
+			$new_endpoint_version   = !$master_result ? false : $master_json->downloadPackage($local_endpoint_version);
+			if ($new_endpoint_version !== false)
 			{
-				$endpoint_package = $master_json->getPackage();
-
-				$url_package  		  = $this->system->buildUrl($this->epm->URL_UPDATE, $endpoint_package);
-				$path_package 		  = $this->system->buildPath($temp_location, $endpoint_package);
-				$path_package_extract = $this->system->buildPath($temp_location, "provisioner_net");
-
-				//TODO: ERROR Pakage file not exist in repository GitHub.
-				if ((!$master_result) OR (!$this->system->download_file_old($url_package, $path_package)))
-				{
-					$outputError('brand_update_check_json', _("Not able to connect to repository. Using local Provisioner.net Package"));
-				}
-				else
-				{
-					try
-					{
-						$this->system->rmrf($path_package_extract);
-						if ($this->epm->system->decompressTarGz($path_package, $path_package_extract))
-						{
-							if ($this->epm->system->copyResource($path_package_extract, $this->epm->PHONE_MODULES_PATH, 0755, true))
-							{
-								$this->epm->setConfig('endpoint_vers', $master_json->getLastModified());
-							}
-						}
-					}
-					catch (\Exception $e)
-					{
-						$outputError('descompact_package', $e->getMessage());
-					}
-					finally
-					{
-						$this->system->rmrf($path_package_extract);
-					}
-				}
+				$this->epm->setConfig('endpoint_vers', $new_endpoint_version);
+				$out( sprintf(_("✔ Package updated from version %s to %s <br>"), $local_endpoint_version, $new_endpoint_version) );
+			}
+			else
+			{
+				$outputError('brand_update_check_package', _("💥 Not able to connect to repository. Using local Provisioner.net Package<br>"));
 			}
 
 			$json_brands = $master_json->getBrands();
 			// Assume that if we can't connect and find the master.json file then why should we try to find every other file.
 			if (! $master_result)
 			{
-				$outputError('brand_update_check_master_file', _("Error: Aborting Brand Downloads. Can't Get Master File, Assuming Timeout Issues!<br>Learn how to manually upload packages here (it's easy!): <a href='%s' target='_blank'>Click Here!</a>"), "http://wiki.provisioner.net/index.php/Endpoint_manager_manual_upload");
-				// return false;
+				$outputError('brand_update_check_master_file', _("❌ Aborting Brand Downloads. Can't Get Master File, Assuming Timeout Issues!<br>Learn how to manually upload packages here (it's easy!): <a href='%s' target='_blank'>Click Here!</a><br>"), "http://wiki.provisioner.net/index.php/Endpoint_manager_manual_upload");
+
+				//TODO: El siguietne return antes estaba en false!!!!
+				return false;
 			}
 			else
 			{
@@ -791,82 +767,80 @@ class Endpointman_Config
 
 				foreach ($json_brands as &$brand)
 				{
-					$brand_name 		  = $brand->getName();
-					$brand_rawname 		  = $brand->getDirectory();
-					$brand_dir 			  = $brand->getDirectory();
-					$brand_file_json_url  = $this->system->buildUrl($this->epm->URL_UPDATE, $brand_dir, $brand_dir.".json");
-					$brand_file_json_path = $this->system->buildPath($local_endpoint, $brand_dir, 'brand_data.json');
+					$brand_rawname = $brand->getDirectory();
 
 					// Check if the brand is local and if not download the brand file
-					if (! $this->epm->is_local_hw_brand($brand_dir))
+					if (! $this->epm->is_local_hw_brand($brand->getDirectory()))
 					{
-						if ($echomsg)
+						$out(sprintf(_("Update Brand (%s):"), $brand->getName()));
+						if (!$brand->downloadBrand($echomsg))
 						{
-							out(sprintf(_("Update Brand (%s):"), $brand_name));
-							$result = $this->system->download_file_with_progress_bar_old($brand_file_json_url, $brand_file_json_path);
-						}
-						else
-						{
-							$result = $this->system->download_file_old($brand_file_json_url, $brand_file_json_path);
-						}
-						if (!$result)
-						{
-							$outputError('brand_update_check', sprintf(_("Not able to connect to repository. Using local brand [%s] file instead."), $brand_name));
-							continue;
+							$outputError('brand_update_check', sprintf(_("💥 Not able to connect to repository. Using local brand [%s] file instead!"), $brand->getName()));
 						}
 					}
 
 					// Check if the brand file exists and is not exist then skip the brand
-					if (! file_exists($brand_file_json_path))
+					if (! file_exists($brand->getJSONFile()))
 					{
-						$outputError('brand_update_check_local_file', sprintf(_("Error: No Local File for %s!<br>Learn how to manually upload packages here (it's easy!): <a href='%s' target='_blank'> Click Here! </a>"), $brand_name, "http://wiki.provisioner.net/index.php/Endpoint_manager_manual_upload"));
+						$outputError('brand_update_check_local_file', sprintf(_("❌ No Local File for %s!<br>Learn how to manually upload packages here (it's easy!): <a href='%s' target='_blank'> Click Here! </a>"), $brand->getName(), "http://wiki.provisioner.net/index.php/Endpoint_manager_manual_upload"));
+						$out(" ");
 						continue;
 					}
 
 					//If is necessary return more info in the exception (set the second parameter to false)
-					if (! $brand->importJSON($brand_file_json_path, true))
+					if (! $brand->importJSON(null, true))
 					{
-						$outputError('brand_update_check_json', sprintf(_("Error: Unable to import JSON file for brand %s"), $brand_name));
+						$outputError('brand_update_check_json', sprintf(_("❌ Unable to import JSON file for brand %s!"), $brand->getName()));
+						$out(" ");
 						continue;
 					}
 					
 					// Update the OUIs for the brand
+					$out( sprintf(_("⚡ Update OUIs for brand '%s' ◾◾◾"), $brand->getName()), false);
 					if ($brand->countOUI() > 0 && $brand->isSetBrandID())
 					{
 						foreach ($brand->getOUI() as $oui)
 						{
+							if (empty($oui))
+							{
+								continue;
+							}
+							$out("◾", false);
 							$this->epm->set_hw_brand_oui($oui, $brand->getBrandID());
 						}
 					}
+					$out(_(" ✔"));
 					
+
 					// Get the maximum last modified date from the family list and the brand
 					$version[$brand_rawname] = $brand->getLastModifiedMax();
-					
-					// Check if the brand is local and if not add the brand to the database
-					if (!($this->system->arraysearchrecursive($brand_dir, $local_brands, 'directory')))
+
+					if ($this->epm->is_exist_hw_brand($brand->getBrandID(), 'id'))
 					{
-						if ($this->epm->is_exist_hw_brand($brand->getBrandID(), 'id'))
-						{
-							$error['brand_update_id_exist_other_brand'] = sprintf(_("You can not add the mark (%s) as the ID (%d) already exists in the database!"), $brand->getName(), $brand->getBrandID());
-							continue;
-						}
-						$data_new = array(
-							'id'		=> $brand->getBrandID(),
-							'name'		=> $brand->getName(),
-							'directory'	=> $brand->getDirectory(),
-							'cfg_ver'	=> $version[$brand_rawname]
-						);
-						if ($this->epm->set_hw_brand($brand->getBrandID(), $data_new) === false)
-						{
-							$outputError('brand_update_check_add_brand', sprintf(_("Error: Unable to add brand '%s' to the database"), $brand->getName()));
-						}
+						$outputError('brand_update_id_exist', sprintf(_("✅ Brand '%s' already exists in the database."), $brand->getName()));
+						$out(" ");
+						continue;
+					}
+					$data_new = array(
+						'id'		=> $brand->getBrandID(),
+						'name'		=> $brand->getName(),
+						'directory'	=> $brand->getDirectory(),
+						'cfg_ver'	=> $version[$brand_rawname]
+					);
+					if (! is_numeric($this->epm->set_hw_brand($brand->getBrandID(), $data_new)))
+					{
+						$outputError('brand_update_check_add_brand', sprintf(_("❌ Unable to add brand '%s' to the database!"), $brand->getName()));
 					}
 					else
 					{
-						//in database already!
+						
+						$outputError('brand_update_check_add_brand', sprintf(_("✅ Brand '%s' added to the database."), $brand->getName()));
 					}
+					unset($data_new);
+					$out(" ");
 				}
 
+				$out("⚡ Remove Obsolete Brands ◾◾◾", false);
 				foreach ($local_brands as $ava_brands)
 				{
 					$db_brand_rawname = $ava_brands['directory'];
@@ -875,6 +849,8 @@ class Endpointman_Config
 					{
 						continue;
 					}
+
+					$out("◾", false);
 
 					// Check if the brand is in the master.json file and if not remove the brand
 					if ($master_json->isBrandExist($db_brand_rawname, true) === false)
@@ -893,14 +869,16 @@ class Endpointman_Config
 					{
 						$master_json->setBrandUpdate($db_brand_rawname, false, '', true);
 					}
-					
 				}
+				$out(" ✔");
 			}
+			$out(" ");
 			return $json_brands;
-			
         }
 		else
 		{
+			//TODO: Pending the completion of the new system
+
             $o = getcwd();
             chdir(dirname($this->epm->PHONE_MODULES_PATH));
             $path = $this->epm->has_git();
@@ -1100,7 +1078,7 @@ class Endpointman_Config
 			return false;
 		}
 
-		$sql = sprintf('SELECT eml.id, eml.product_id, eml.brand, eml.model, epl.cfg_dir, ebl.directory FROM %s as eml
+		$sql = sprintf('SELECT eml.id, eml.product_id, ebl.id as brand_id, eml.brand, eml.model, epl.cfg_dir, ebl.directory FROM %s as eml
 						JOIN %s as epl ON eml.product_id = epl.id
     					JOIN %s as ebl ON eml.brand = ebl.id
     					WHERE eml.id = :id', "endpointman_model_list", "endpointman_product_list", "endpointman_brand_list");
@@ -1145,7 +1123,7 @@ class Endpointman_Config
 		$family = null;
 		try
 		{
-			$family = $this->epm->packages->readFamilyJSON($path_brand_dir_cfg_json);
+			$family = $this->epm->packages->readFamilyJSON($path_brand_dir_cfg_json, $row['brand_id']);
 		}
 		catch (\Exception $e)
 		{
@@ -1220,9 +1198,14 @@ class Endpointman_Config
 	{
     	out(_("Install/Update Brand..."));
 		
-		if (is_null($id) || $id == "")
+		if (!is_numeric($id))
 		{
 			out(_("Error: No Brand ID Given!"));
+			return false;
+		}
+		elseif (! $this->epm->is_exist_hw_brand($id, 'id'))
+		{
+			out(sprintf(_("<b>Error: Brand with id '%s' not found!</b>"), $id));
 			return false;
 		}
 		elseif ($this->configmod->get('use_repo'))
@@ -1230,23 +1213,10 @@ class Endpointman_Config
 			out(_("Error: Installing brands is disabled while in repo mode!"));
 			return false;
 		}
-		
-		$temp_directory = $this->epm->PROVISIONER_PATH;
 
 		outn(_("Downloading Brand JSON....."));
-
-		$sql  = sprintf("SELECT * FROM %s WHERE id = :id", "endpointman_brand_list");
-		$stmt = $this->db->prepare($sql);
-		$stmt->execute([':id' => $id]);
-
-		if ($stmt->rowCount() === 0)
-		{
-			out(_("Error!"));
-			out(sprintf(_("<b>Error: Brand with id '%s' not found!</b>"), $id));
-			return false;
-		}
-			
-		$row = $stmt->fetch(\PDO::FETCH_ASSOC);
+		
+		$row = $this->epm->get_hw_brand($id, 'id');
 			
 		$url_brand_data   = $this->system->buildUrl($this->epm->URL_UPDATE, $row['directory'], $row['directory'].".json");
 		$local_brand_data = $this->system->buildPath($this->epm->PHONE_MODULES_PATH, 'endpoint',  $row['directory'], "brand_data.json");
@@ -1255,6 +1225,8 @@ class Endpointman_Config
 		{
 			if (! $this->system->download_file($url_brand_data, $local_brand_data))
 			{
+				out(_("Error!"));
+				out(_("Error Connecting to the Package Repository. Module not installed. Please Try again later."));
 				return false;
 			}
 			out(_("Done!"));
@@ -1295,7 +1267,7 @@ class Endpointman_Config
 
 
 		out(_("Downloading Brand Package..."));
-
+		$temp_directory = $this->epm->PROVISIONER_PATH;
 		$url_package  = $this->system->buildUrl($this->epm->URL_UPDATE, $row['directory'], $package);
 		$path_package = $this->system->buildPath($temp_directory, $package);
 		try
@@ -1394,7 +1366,7 @@ class Endpointman_Config
 	{
 		$debug = $this->configmod->get('debug');
 
-    	out(sprintf(_("Update Brand %s ... "), $package));
+    	out(sprintf(_("Update Brand '%s' ..."), $package));
 
 		// $temp_directory = $this->system->sys_get_temp_dir() . "/epm_temp/";
 
@@ -1402,7 +1374,7 @@ class Endpointman_Config
 		$temp_brand 	 = $this->system->buildPath($temp_directory, $package);
 		$temp_brand_json = $this->system->buildPath($temp_brand, "brand_data.json");
 		
-		out( sprintf(_("Processing %s..."), $package));
+		out( sprintf(_("Processing '%s'..."), $package));
 
 		$temp = null;
 		try
@@ -1410,13 +1382,13 @@ class Endpointman_Config
 			$temp = $this->epm->file2json($temp_brand_json);
 			if ($temp === false)
 			{
-				out(sprintf(_("<b>Error file2json return false for the file '%s'!</b>"), $temp_brand_json));
+				out(sprintf(_("❌<b>Error file2json return false for the file '%s'!</b>"), $temp_brand_json));
 				return false;
 			}
 		}
 		catch (\Exception $e)
 		{
-			out(sprintf(_("<b>Error file2json return false for the file '%s'!</b>"), $temp_brand_json));
+			out(sprintf(_("❌<b>Error file2json return false for the file '%s'!</b>"), $temp_brand_json));
 			return false;
 		}
 
@@ -1427,26 +1399,26 @@ class Endpointman_Config
 		
 		if (!key_exists('directory', $brands))
 		{
-			out(_("Error: Invalid JSON Structure in file json!"));
+			out(_("❌Error: Invalid JSON Structure in file json!"));
 			return false;
 		}
 		elseif (empty($directory))
 		{
-			out(_("Error: Invalid brand directory in file json!"));
+			out(_("❌Error: Invalid brand directory in file json!"));
 			return false;
 		}
 		elseif (empty($brand_id))
 		{
-			out(_("Error: Invalid brand ID in file json!"));
+			out(_("❌Error: Invalid brand ID in file json!"));
 			return false;
 		}
 		else
 		{
-			out(_("Appears to be a valid Provisioner.net JSON file.....Continuing"));
+			out(_("Appears to be a valid Provisioner.net JSON file.....Continuing ✔"));
 			$brand_name    = $brands['name'] 		  ?? _('Unknown');
 			$brand_version = $brands['last_modified'] ?? '0';
 
-			outn(sprintf(_("Creating Directory Structure for Brand '%s' and Moving Files..."), $brand_name));
+			outn(sprintf(_("Creating Directory Structure for Brand '%s' and Moving Files ..."), $brand_name));
 
 
 			$local_brand 	= $this->system->buildPath($this->epm->PHONE_MODULES_PATH, 'endpoint', $directory);
@@ -1499,49 +1471,41 @@ class Endpointman_Config
 				}
 				outn('.');
 			}
-			out(_(" Completed!"));
+			out(_(" Completed! ✔"));
 			foreach ($errors_move as $error)
 			{
-				out(sprintf(_("Error: Unable to move file '%s'"), $error));
+				out(sprintf(_("‼ Warning: Unable to move file '%s'"), $error));
 			}
 
 
 			$local = $remote ? 0 : 1;
 
-			$sql  = sprintf("SELECT id FROM %s where id = :brand_id", "endpointman_brand_list");
-			$stmt = $this->db->prepare($sql);
-			$stmt->execute([
-				':brand_id' => $brand_id
-			]);
 
-			if ($stmt->rowCount() === 0)
+
+
+			if (! $this->epm->is_exist_hw_brand($directory))
 			{
-				outn(sprintf(_("Inserting %s brand data ..."), $brand_name));
-
-				$sql  = sprintf("INSERT INTO %s (id, name, directory, cfg_ver, local, installed) VALUES (:brand_id, :brand_name, :directory, :brand_version, :local, '1')", "endpointman_brand_list");
-				$stmt = $this->db->prepare($sql);
-				$stmt->execute([
-					':brand_id' 	 => $brand_id,
-					':brand_name' 	 => $brand_name,
-					':directory'     => $directory,
-					':brand_version' => $brand_version,
-					':local' 		 => $local,
-				]);
+				outn( sprintf(_("Inserting Brand '%s' ... "), $brand_name));
 			}
 			else
 			{
-				outn(sprintf(_("Updating %s brand data ..."), $brand_name));
-
-				$sql  = sprintf("UPDATE %s SET local = :local, name = :brand_name, cfg_ver = :brand_version, installed = 1, hidden = 0 WHERE id = :brand_id", "endpointman_brand_list");
-				$stmt = $this->db->prepare($sql);
-				$stmt->execute([
-					':brand_id' 	 => $brand_id,
-					':brand_name' 	 => $brand_name,
-					':brand_version' => $brand_version,
-					':local' 		 => $local,
-				]);
+				outn( sprintf(_("Updating Brand '%s' ... "), $brand_name));
 			}
-			out(_("Done!"));
+			$new_brand = array(
+				'id'		=> $brand_id,
+				'name'		=> $brand_name,
+				'cfg_ver'	=> $brand_version,
+				'local' 	=> $local,
+			);
+			$new_brand_insert = array(
+				'directory'	=> $directory,
+				'installed' => 1,
+			);
+			$this->epm->set_hw_brand($brand_id, $new_brand, 'id', $new_brand_insert);
+			unset($new_brand);
+			unset($new_brand_insert);
+
+			out(_("✔"));
 
 
 			$last_mod = "";
@@ -1603,9 +1567,9 @@ class Endpointman_Config
 						':brand_id'				=> $brand_id,
 						':short_name'			=> str_replace("'", "''", $short_name),
 						':long_name'			=> str_replace("'", "''", $family_line['data']['name']),
-						':cfg_dir'				=> $family_line['data']['directory'],
-						':cfg_ver'				=> $family_line['data']['last_modified'],
-						':config_files'			=> $family_line['data']['configuration_files'],
+						':cfg_dir'				=> $family_line['data']['directory'] ?? '',
+						':cfg_ver'				=> $family_line['data']['last_modified'] ?? '',
+						':config_files'			=> $family_line['data']['configuration_files'] ?? '',
 					]);
 				}
 				else
@@ -1619,8 +1583,8 @@ class Endpointman_Config
 					$stmt->execute([
 						':short_name'			=> str_replace("'", "''", $short_name),
 						':long_name'			=> str_replace("'", "''", $family_line['data']['name']),
-						':cfg_ver'				=> $family_line['data']['version'],
-						':config_files'			=> $family_line['data']['configuration_files'],
+						':cfg_ver'				=> $family_line['data']['version'] ?? '',
+						':config_files'			=> $family_line['data']['configuration_files'] ?? '',
 						':brand_id_family_line' => $brand_id_family_line,
 					]);
 				}

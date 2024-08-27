@@ -20,6 +20,11 @@ class ProvisionerBrand
     private $update_version = '';
 
     private $json_file      = null;
+    private $path_base      = null;
+    private $url_base       = null;
+
+    private $master_json    = null;
+
     private $debug          = false;
     private $system         = null;
 
@@ -358,4 +363,139 @@ class ProvisionerBrand
     {
         $this->update_version = $update_version;
     }
+
+    /**
+     * Retrieves the master JSON object.
+     *
+     * @return mixed The master JSON object.
+     */
+    public function getMasterJSON()
+    {
+        return $this->master_json;
+    }
+    
+    /**
+     * Set the master JSON object.
+     *
+     * @param mixed $master_json The parent object from which this item is derived.
+     * @return mixed The master JSON object.
+     */
+    public function setMasterJSON($master_json)
+    {
+        $this->master_json = $master_json;
+        return $this->master_json;
+    }
+
+    /**
+     * Determines if the master JSON is set.
+     *
+     * @return bool True if the master JSON is set, false otherwise.
+     */
+    public function isMasterJSONSet()
+    {
+        return !empty($this->master_json);
+    }
+
+
+    
+    public function getPathBase()
+    {
+        return $this->path_base;
+    }
+
+    public function setPathBase($path_base)
+    {
+        $this->path_base = $path_base;
+    }
+
+    public function isPathBaseExist()
+    {
+        return file_exists($this->path_base);
+    }
+
+
+
+
+
+
+
+
+    
+
+
+    public function getURLBase()
+    {
+        return $this->url_base;
+    }
+
+    public function setURLBase($url_base)
+    {
+        $this->url_base = $url_base;
+    }
+
+    public function isURLBaseExist()
+    {
+        return ! empty($this->url_base);
+    }
+
+    public function getURLBrandJSON()
+    {
+        return $this->system->buildUrl($this->url_base, $this->directory, $this->directory.".json");
+    }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    
+    public function downloadBrand($showmsg = true, $noException = true)
+    {
+        $url  = $this->getURLBrandJSON();
+        $file = $this->getJSONFile();
+
+        if (empty($url) || empty($file))
+        {
+            $msg_err = _("Empty URL or file!");
+            if ($showmsg)
+            {
+                out($msg_err);
+            }
+            if ($noException) { return false; }
+            throw new \Exception($msg_err);
+        }
+        $result = false;
+        if ($showmsg)
+        {
+
+            try
+            {
+                $result = $this->system->download_file_with_progress_bar($url, $file);
+            }
+            catch (\Exception $e)
+            {
+                $msg_err = "❌ ". $e->getMessage();
+                if ($noException) { return false; }
+                throw new \Exception($msg_err);
+            }
+
+            
+        }
+        else
+        {
+            $result = $this->system->download_file($url, $file);
+        }
+        return $result;
+    }
+
+
+
 }

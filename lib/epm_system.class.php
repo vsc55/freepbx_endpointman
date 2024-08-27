@@ -121,11 +121,12 @@ class epm_system {
      *
      * @param string $url_file The URL of the file to be downloaded.
      * @param string $destination_file The destination path where the file will be saved.
+     * @param bool $noException Whether to throw an exception if an error occurs during the download process.
      * @return bool Returns true if the file was downloaded successfully, false otherwise.
      * @throws \Exception If an error occurs during the download process and $error is null.
      * @package epm_system
      */
-    public function download_file($url_file, $destination_file)
+    public function download_file($url_file, $destination_file, $noException = false)
     {
         $msg_error = null;
 		$dir       = dirname($destination_file);
@@ -134,21 +135,21 @@ class epm_system {
         {
 			if (!mkdir($dir, 0777, true))
             {
-                $msg_error = sprintf(_("Directory could not be created: %s"), $dir);
+                $msg_error = sprintf(_("❌ Directory could not be created: %s"), $dir);
             }
 		}
         if (is_null($msg_error))
         {
             if (!is_writable($dir))
             {
-                $msg_error = sprintf(_("Directory '%s' is not writable! Unable to download files"), $dir);
+                $msg_error = sprintf(_("❌ Directory '%s' is not writable! Unable to download files"), $dir);
             }
             else
             {
                 $fp = fopen($destination_file, 'w');
                 if ($fp === false)
                 {
-                    $msg_error = sprintf(_("Could not open target file: %s"), $destination_file);
+                    $msg_error = sprintf(_("❌ Could not open target file: %s"), $destination_file);
                 }
                 else
                 {
@@ -163,7 +164,7 @@ class epm_system {
        
                     if ($response === false)
                     {
-                        $msg_error = sprintf(_("Error Downloading file '%s' (%s): %s"), $url_file, $httpCode, $httpError);
+                        $msg_error = sprintf(_("❌ Error Downloading file '%s' (%s): %s"), $url_file, $httpCode, $httpError);
                     }
                     curl_close($ch);
                     fclose($fp);
@@ -173,6 +174,7 @@ class epm_system {
 
         if (! empty($msg_error))
         {
+            if ($noException) { return false; }
             throw new \Exception($msg_error);
         }
         return true;
@@ -200,10 +202,11 @@ class epm_system {
      *
      * @param string $url_file The URL of the file to download.
      * @param string $destination_file The destination file path to save the downloaded file.
+     * @param bool $noException Whether to throw an exception if an error occurs during the download process.
      * @return bool Returns true if the file is downloaded successfully, otherwise throws an exception.
      * @throws \Exception Throws an exception if there is an error during the download process.
      */
-    public function download_file_with_progress_bar($url_file, $destination_file)
+    public function download_file_with_progress_bar($url_file, $destination_file, $noException = false)
     {
         $msg_error = null;
 		$dir       = dirname($destination_file);
@@ -212,14 +215,14 @@ class epm_system {
         {
 			if (!mkdir($dir, 0777, true))
             {
-                $msg_error = sprintf(_("Directory could not be created: %s"), $dir);
+                $msg_error = sprintf(_("❌ Directory could not be created: %s"), $dir);
             }
 		}
         if (is_null($msg_error))
         {
             if (!is_writable($dir))
             {
-                $msg_error = sprintf(_("Directory '%s' is not writable! Unable to download files"), $dir);
+                $msg_error = sprintf(_("❌ Directory '%s' is not writable! Unable to download files"), $dir);
             }
             else
             {
@@ -227,7 +230,7 @@ class epm_system {
                 $randnumid  = sprintf("%08d", mt_rand(1, 99999999));
 
                 ?>
-                <div><?= sprintf(_("Downloading %s ..."), basename($destination_file)) ?></div>
+                <div><?= sprintf(_("⚡ Downloading %s ..."), basename($destination_file)) ?></div>
                     <div id='DivProgressBar_<?= $randnumid ?>' class='progress' style='width:100%'>
                         <div class='progress-bar progress-bar-striped' role='progressbar' aria-valuenow='0' aria-valuemin='0' aria-valuemax='100' style='width:0%'>";
                             0% <?= _("(Complete)") ?>
@@ -238,7 +241,7 @@ class epm_system {
                 $fp = fopen($destination_file, 'w');
                 if ($fp === false)
                 {
-                    $msg_error = sprintf(_("Could not open target file: %s"), $destination_file);
+                    $msg_error = sprintf(_("❌ Could not open target file: %s"), $destination_file);
                 }
                 else
                 {
@@ -282,21 +285,20 @@ class epm_system {
                     }
                     else
                     {
-                        $msg_error = sprintf(_("Error Downloading file '%s' (%s): %s"), $url_file, $httpCode, $httpError);
+                        $msg_error = sprintf(_("❌ Error Downloading file '%s' (%s): %s"), $url_file, $httpCode, $httpError);
                         ?>
                         <script type="text/javascript">
                             $('#DivProgressBar_<?= $randnumid ?> .progress-bar').css('width', '100%').attr('aria-valuenow', '100').text("0% (<?= sprintf(_("Error: HTTP %s"), $httpCode) ?>)");
                         </script>
                         <?php
                     }
-
-
                 }
             }
         }
 
         if (!empty($msg_error))
         {
+            if ($noException) { return false; }
             throw new \Exception($msg_error);
         }
         return true;
