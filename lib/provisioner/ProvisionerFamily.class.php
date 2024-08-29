@@ -1,13 +1,13 @@
 <?php
 namespace FreePBX\modules\Endpointman\Provisioner;
 
-require_once(__DIR__.'/../epm_system.class.php');
+// require_once(__DIR__.'/../epm_system.class.php');
+require_once('ProvisionerBase.class.php');
 require_once('ProvisionerModel.class.php');
 
-class ProvisionerFamily
+class ProvisionerFamily extends ProvisionerBase
 {
     private $id                  = null;
-    private $brand_id            = null;
     private $name                = '';
     private $directory           = '';
     private $changelog           = '';
@@ -20,21 +20,16 @@ class ProvisionerFamily
     private $provisioning_types  = [];
     private $model_list          = [];
     
-    private $json_file           = null;
-    private $debug               = false;
-    private $system              = null;
+    private $brand_parent        = null;
 
-
-    public function __construct($id = null, $name = null, $directory = '', $last_modified = '', $brand_id = null, $jsonData = null, $debug = true)
+    public function __construct($id = null, ?string $name = null, string $directory = '', ?string $last_modified = '', $jsonData = null, bool $debug = true)
     {
-        $this->debug  = $debug;
-        $this->system = new \FreePBX\modules\Endpointman\epm_system();
+        parent::__construct($debug);
 
         $this->id            = $id;
         $this->name          = $name;
         $this->directory     = $directory;
         $this->last_modified = $last_modified;
-        $this->brand_id      = $brand_id;
 
         if (!empty($jsonData))
         {
@@ -49,7 +44,11 @@ class ProvisionerFamily
      */
     public function isJSONExist()
     {
-        return file_exists($this->json_file);
+        if (empty($this->getJSONFile()))
+        {
+            return false;
+        }
+        return file_exists($this->getJSONFile());
     }
 
     /**
@@ -59,42 +58,36 @@ class ProvisionerFamily
      */
     public function getJSONFile()
     {
-        return $this->json_file;
+        if (empty($this->getBrandDirecotry()) || empty($this->directory))
+        {
+            return '';
+        }
+        return $this->system->buildPath($this->getPathBase(), 'endpoint', $this->getBrandDirecotry() , $this->getDirectory(), "family_data.json");
     }
 
-    /**
-     * Sets the JSON file.
-     *
-     * @param string $json_file The JSON file.
-     */
-    public function setJSONFile($json_file)
+    public function importJSON($jsonData = null, bool $noException = false, bool $importChildrens = true)
     {
-        $this->json_file = $json_file;
-    }
-
-    public function importJSON($jsonData = null, $noException = false)
-    {
-        if (empty($jsonData) && empty($this->json_file))
+        if (empty($jsonData)) 
         {
-            if ($noException) { return false; }
-            throw new \Exception(_("Empty JSON data and JSON file!"));
-        }
-        elseif (empty($jsonData) && !empty($this->json_file) && !file_exists($this->json_file))
-        {
-            if ($noException) { return false; }
-            throw new \Exception(sprintf(_("JSON file '%s' does not exist!"), $this->json_file));
-        }
-        elseif (empty($jsonData) && !empty($this->json_file))
-        {
-            $jsonData = $this->json_file;
+            if (empty($this->directory))
+            {
+                if ($noException) { return false; }
+                throw new \Exception(sprintf(_("Empty directory [%s]!"), __CLASS__));
+            }
+            elseif (empty($this->getBrandDirecotry()))
+            {
+                if ($noException) { return false; }
+                throw new \Exception(sprintf(_("Empty parent brand directory [%s]!"), __CLASS__));
+            }
+            elseif (!$this->isJSONExist())
+            {
+                if ($noException) { return false; }
+                throw new \Exception(sprintf(_("Empty JSON data and File '%s' not exist [%s]!"), $this->getJSONFile(), __CLASS__));
+            }
+            $jsonData = $this->getJSONFile();
         }
 
-        if (empty($jsonData))
-        {
-            if ($noException) { return false; }
-            throw new \Exception(sprintf(_("Empty JSON data [%s]!"), __CLASS__));
-        }
-        elseif (is_string($jsonData))
+        if (is_string($jsonData))
         {
             try
             {
@@ -111,9 +104,10 @@ class ProvisionerFamily
             if ($noException) { return false; }
             throw new \Exception(sprintf(_("Invalid JSON data [%s]!"), __CLASS__));
         }
+
+        $this->resetAllData();
         
         $this->id                  = $jsonData['data']['id']                  ?? $this->id            ?? null;
-        $this->brand_id            = $jsonData['data']['brand_id']            ?? $this->brand_id      ?? null;
         $this->name                = $jsonData['data']['name']                ?? $this->name          ?? '';
         $this->directory           = $jsonData['data']['directory']           ?? $this->directory     ?? '';
         $this->changelog           = $jsonData['data']['changelog']           ?? '';
@@ -125,11 +119,11 @@ class ProvisionerFamily
         $this->configuration_files = $jsonData['data']['configuration_files'] ?? [];
         $this->provisioning_types  = $jsonData['data']['provisioning_types']  ?? [];
 
-        if (!is_string($this->configuration_files))
+        if (is_string($this->configuration_files))
         {
             $this->configuration_files = explode(',', $this->configuration_files);
         }
-        else
+        elseif (!is_array($this->configuration_files))
         {
             $this->configuration_files = [];
         }
@@ -141,7 +135,8 @@ class ProvisionerFamily
             $model     = $modelData['model']         ?? '';
             $lines     = $modelData['lines']         ?? '1';
             $template  = $modelData['template_data'] ?? [];
-            $brand_id  = $this->brand_id;
+            // $brand_id  = $this->brand_id;
+            $brand_id  = $this->getBrandId();
             $family_id = $this->id;
 
             if (empty($id) || empty($model) || empty($brand_id) || empty($family_id))
@@ -149,13 +144,46 @@ class ProvisionerFamily
                 if ($this->debug)
                 {
                     dbug(sprintf(_("Invalid model data, id '%s', model '%s', brandid '%s', family_id '%s'!"), $id, $model, $brand_id, $family_id));
-                    
                 }
                 continue;
             }
-            $this->model_list[] = new ProvisionerModel($id, $model, $lines, $template, $brand_id, $family_id);
+
+            $template_data = [];
+            foreach ($template as $file)
+            {
+                $template_data[$file] = [];
+            }
+
+            // $new_model = new ProvisionerModel($id, $model, $lines, $template, $brand_id, $family_id);
+            $new_model = new ProvisionerModel($id, $model, $lines, $template_data);
+            $new_model->setParent($this);
+            $new_model->setPathBase($this->getPathBase());
+            $new_model->setURLBase($this->getURLBase());
+
+            $this->model_list[] = $new_model;
         }
-        return true;   
+        return true;
+    }
+
+    /**
+     * Resets all data to default values.
+     */
+    public function resetAllData(bool $noReplace = false)
+    {
+        $this->id             = ($noReplace && !empty($this->id))            ? $this->id            : '';
+        $this->name           = ($noReplace && !empty($this->name))          ? $this->name          : '';
+        $this->directory      = ($noReplace && !empty($this->directory))     ? $this->directory     : '';
+        $this->last_modified  = ($noReplace && !empty($this->last_modified)) ? $this->last_modified : '';
+
+        $this->name                = '';
+        $this->changelog           = '';
+        $this->firmware_ver        = '';
+        $this->firmware_pkg        = 'NULL';
+        $this->firmware_md5sum     = '';
+        $this->description         = '';
+        $this->configuration_files = '';
+        $this->provisioning_types  = [];
+        $this->model_list          = [];
     }
 
     public function getId()
@@ -165,22 +193,50 @@ class ProvisionerFamily
 
     public function getBrandId()
     {
-        return $this->brand_id;
+        if ($this->isParentSet())
+        {
+            return $this->getParent()->getBrandID();
+        }
+        return null;
+    }
+    
+    public function getBrandDirecotry()
+    {
+        if ($this->isParentSet())
+        {
+            return $this->getParent()->getDirectory();
+        }
+        return null;
     }
 
     public function getFamilyId()
     {
-        return  sprintf("%s%s", $this->brand_id, $this->id);
+        if (empty($this->getBrandId()) || empty($this->id))
+        {
+            return null;
+        }
+        return  sprintf("%s%s", $this->getBrandId(), $this->id);
+        // return  sprintf("%s%s", $this->brand_id, $this->id);
     }
 
     public function getName()
     {
+        if (empty($this->name))
+        {
+            return '';
+        }
         return $this->name;
+    }
+
+    public function getNameRaw()
+    {
+        return $this->getDirectory();
     }
 
     public function getShortName()
     {
-        return preg_replace("/\[(.*?)\]/si", "", $this->name);
+
+        return preg_replace("/\[(.*?)\]/si", "", $this->getName());
     }
 
     public function getDirectory()
@@ -218,8 +274,20 @@ class ProvisionerFamily
         return $this->description;
     }
 
-    public function getConfigurationFiles()
+    public function getConfigurationFiles(bool $serialize = false, bool $serialize_json = false)
     {
+        if ($serialize)
+        {
+            if ($serialize_json)
+            {
+                return json_encode($this->getConfigurationFiles());
+            }
+            return implode(",", $this->getConfigurationFiles());
+        }
+        if (empty($this->configuration_files) || !is_array($this->configuration_files))
+        {
+            return [];
+        }
         return $this->configuration_files;
     }
 
@@ -230,16 +298,24 @@ class ProvisionerFamily
 
     public function getModelList()
     {
+        if (empty($this->model_list) || !is_array($this->model_list))
+        {
+            return [];
+        }
         return $this->model_list;
     }
 
-    public function isModelExist($modelName)
+    public function countModels()
+    {
+        return count($this->getModelList());
+    }
+
+    public function isModelExist(string $modelName)
     {
         if (! empty($modelName))
         {
-            foreach ($this->model_list as $model)
+            foreach ($this->getModelList() as $model)
             {
-
                 if ($model->getModel() == $modelName)
                 {
                     return true;
@@ -249,11 +325,11 @@ class ProvisionerFamily
         return false;
     }
 
-    public function getModel($modelName)
+    public function getModel(string $modelName)
     {
         if (! empty($modelName))
         {
-            foreach ($this->model_list as $model)
+            foreach ($this->getModelList() as $model)
             {
                 if ($model->getModel() == $modelName)
                 {
@@ -264,11 +340,11 @@ class ProvisionerFamily
         return null;
     }
 
-    public function getModelTemplateList($modelName)
+    public function getModelTemplateList(string $modelName)
     {
         if (! empty($modelName))
         {
-            foreach ($this->model_list as $model)
+            foreach ($this->getModelList() as $model)
             {
                 if ($model->getModel() == $modelName)
                 {
@@ -278,24 +354,53 @@ class ProvisionerFamily
         }
         return [];
     }
-
-    /**
-     * Retrieves the debug flag.
-     *
-     * @return bool The debug flag.
-     */
-    public function getDebug()
+    
+    
+    public function getURLFamilyJSON()
     {
-        return $this->debug;
+        return "";
+        // return $this->system->buildUrl($this->url_base, $this->directory, $this->directory.".json");
     }
 
-    /**
-     * Sets the debug flag.
-     *
-     * @param bool $debug The debug flag.
-     */
-    public function setDebug($debug)
+
+
+
+    public function generateJSON()
     {
-        $this->debug = $debug;
+        $conf_files = $this->configuration_files;
+
+        if (is_array($conf_files))
+        {
+            if (empty($conf_files))
+            {
+                $conf_files = "";
+            }
+            else
+            {
+                $conf_files = implode(",", $conf_files);
+            }
+        }
+
+        $data = [
+            'id'                  => $this->id           ?? '',
+            'name'                => $this->name         ?? '',
+            'directory'           => $this->directory    ?? '',
+            'changelog'           => $this->changelog    ?? '',
+            // 'last_modified'       => $this->last_modified,
+            'firmware_ver'        => $this->firmware_ver ?? '',
+            'firmware_pkg'        => empty($this->firmware_pkg) ? 'NULL' : $this->firmware_pkg,
+            'firmware_md5sum'     => $this->firmware_md5sum ?? '',
+            'description'         => $this->description     ?? '',
+            'configuration_files' => $conf_files,
+            'provisioning_types'  => $this->provisioning_types ?? array(),
+            'model_list'          => []
+        ];
+        foreach ($this->model_list as $model)
+        {
+            $data['model_list'][] = $model->generateJSON();
+        }
+        return $data;
     }
+
+
 }

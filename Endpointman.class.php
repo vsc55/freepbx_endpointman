@@ -75,6 +75,7 @@ class Endpointman extends FreePBX_Helpers implements BMO {
 		'epm_mac_list' 		=> 'endpointman_mac_list',
 		'epm_brands_list'	=> 'endpointman_brand_list',
 		'epm_oui_list'		=> 'endpointman_oui_list',
+		'epm_global_vars'   => 'endpointman_global_vars',
 	);
 
 	
@@ -1807,25 +1808,24 @@ class Endpointman extends FreePBX_Helpers implements BMO {
 	 */
 	public function getConfig($key = null, $default = false)
 	{
+		// dbug("getConfig: $key, Default: $default");
 		$data = false;
 		if (! empty($key))
 		{
 			// TODO: Retrocompatibility data saved in the database 
-			$sql  = sprintf("SELECT value FROM %s WHERE var_name LIKE :find", "endpointman_global_vars");
-			$stmt = $this->db->prepare($sql);
-			$stmt->execute([
-				':find' => "endpoint_vers"
-			]);
-			// TODO: Retrocompatibility data saved in the database 
+			$where = array(
+				'var_name' => array( 'value' => 'endpoint_vers', 'operator' => "LIKE")
+			);
+			$old_value =  $this->get_database_data(self::TABLES['epm_global_vars'], $where, 'value');
+			// TODO: Retrocompatibility data saved in the database
 
-
-			if (array_key_exists($key, $this->getAllKeys('globalSettings')))
+			if (in_array($key, $this->getAllKeys('globalSettings')))
 			{
 				$data = parent::getConfig($key, 'globalSettings');
 			}
-			elseif ($stmt->rowCount() !== 0)
+			elseif (! empty($old_value))
 			{
-				$data = $stmt->fetchColumn() ?? $default;
+				$data = $old_value;
 			}
 			else
 			{
@@ -1915,12 +1915,46 @@ class Endpointman extends FreePBX_Helpers implements BMO {
 		{
 			if ($debug)
 			{
-				dbug("Invalid data or where condition");
+				dbug("Invalid data or where condition!");
 			}
 			return false;
 		}
-		$isUpdate = !empty($find) && ($this->count_database_data($table, $where, $find) > 0);
 
+		$isExistKeyFind = function () use ($table, $where, $find, $data) {
+
+			// TODO: REMOVE DEBUG!!!!
+			// dbug('0000000000000000000000000000000000000');
+			// dbug(array(
+			// 	'table' => array(
+			// 		'type' => gettype($table),
+			// 		'data' => $table
+			// 	),
+			// 	'where' => array(
+			// 		'type' => gettype($where),
+			// 		'data' => $where
+			// 	),
+			// 	'find' => array(
+			// 		'type' => gettype($find),
+			// 		'data' => $find
+			// 	),
+			// 	'data' => array(
+			// 		'type' => gettype($data),
+			// 		'data' => $data
+			// 	)
+			// ));
+
+
+			$sql  = sprintf("SELECT COUNT(*) as total FROM %s WHERE %s = :find", $table, $where);
+			$stmt = $this->db->prepare($sql);
+			$stmt->execute(
+				[':find' => $find]
+			);
+			$result = $stmt->fetch(\PDO::FETCH_ASSOC);
+			return ($result['total'] ?? 0) > 0;
+		};
+
+		// Check if the record exists in the database, not used $this->count_database_data since it generate loop infinite.
+		$isUpdate  = !empty($find) && $isExistKeyFind();
 		$params    = [];
 		if ($isUpdate)
 		{
@@ -1948,8 +1982,18 @@ class Endpointman extends FreePBX_Helpers implements BMO {
 		}
 		if ($debug)
 		{
-			dbug("SQL Query: $sql");
-			dbug("Data: ", $data);
+			$data_debug = array(
+				'table' 	  => $table,
+				'find' 		  => $find,
+				'data' 		  => $data,
+				'where' 	  => $where,
+				'isUpdate' 	  => $isUpdate ? 'TRUE' : 'FALSE',
+				'sql' 		  => $sql,
+				'data' 		  => $data,
+				'data_insert' => $data_insert,
+				'data_update' => $data_update,
+			);
+			dbug($data_debug);
 		}
 		$stmt = $this->db->prepare($sql);
 
@@ -1998,6 +2042,17 @@ class Endpointman extends FreePBX_Helpers implements BMO {
 	 * $order_dir = 'DESC';
 	 * $result = $this->get_database_data($table, $where, $select, $order_by, $order_dir);
 	 * // Retrieves the 'id', 'username', and 'email' columns from the 'users' table where 'id' is greater than 0 and 'status' is 'active', ordered by 'created_at' in descending order.
+	 *
+	 * @example 
+	 * $where = array(
+	 *		'brand' => array( 'operator' => '=', 'value' => $id)
+	 * );
+	 * if (!$show_all)
+	 * {
+ 	 * 		$where['hidden'] = array('operator' => '=', 'value' => "0");
+	 * }
+	 * return $this->get_database_data(self::TABLES['epm_product_list'], $where, '*', $order_by, $order_dir);
+	 * 
 	 */
 	
 	public function get_database_data($table, $where = array(), $select = null, $order_by = null, $order_dir = null, $return_bool = false, $return_stml = false, $debug = false)
@@ -2071,6 +2126,12 @@ class Endpointman extends FreePBX_Helpers implements BMO {
 	 * @param string $filter The column name to filter the search by.
 	 * @param array $where An associative array of conditions to filter the data. The keys represent the column names, and the values are arrays with the following keys:
 	 * @return bool Returns true if there are records matching the search criteria, false otherwise.
+	 * /example
+	 * // Example usage for counting records in a database table
+	 * $table = 'users';
+	 * $find = 5; // Assuming this is the ID of the user
+	 * $result = $this->count_database_data($table, $find, 'id');
+	 * // Counts the number of records in the 'users' table where 'id' is equal to 5.
 	 */
 	public function count_database_data($table, $find = null, $filter = null, $where = array())
 	{
@@ -2089,8 +2150,32 @@ class Endpointman extends FreePBX_Helpers implements BMO {
 	}
 
 
-	
 
+
+
+
+	public function del_hw_brand_any_list(?int $id = null)
+	{
+		if (empty($id) || !is_numeric($id))
+		{
+			return false;
+		}
+		$tables = [
+			self::TABLES['epm_model_list']	 => 'brand',
+			self::TABLES['epm_product_list'] => 'brand',
+			self::TABLES['epm_oui_list']	 => 'brand',
+			self::TABLES['epm_brands_list']	 => 'id'
+		];
+		foreach ($tables as $table => $where)
+		{
+			$sql = sprintf('DELETE FROM %s WHERE %s = :id', $table, $where);
+			$stmt = $this->db->prepare($sql);
+			$stmt->execute([
+				':id' => $id
+			]);
+		}
+		return true;
+	}
 
 	/**
 	 * Sets the database data for a brand.
@@ -2104,6 +2189,9 @@ class Endpointman extends FreePBX_Helpers implements BMO {
 	 */
 	public function set_hw_brand($find = null, $data = array(), $where = "id", $data_insert = array(), $data_update = array())
 	{
+		// Set true for debug mode to show the generated SQL query
+		$debug 				  = false;
+
 		$data 				  = is_array($data)			? $data 		: [];
 		$data_insert  		  = is_array($data_insert)	? $data_insert	: [];
 		$data_update  		  = is_array($data_update)	? $data_update	: [];
@@ -2118,7 +2206,7 @@ class Endpointman extends FreePBX_Helpers implements BMO {
 		$data_insert = array_merge($data_insert_defaults, $data_insert);
 		$data_update = array_merge($data_update_defaults, $data_update);
 
-		return $this->set_database_data(self::TABLES['epm_brands_list'], $find, $data, $where, $data_insert, $data_update);
+		return $this->set_database_data(self::TABLES['epm_brands_list'], $find, $data, $where, $data_insert, $data_update, $debug);
 	}
 
 	/**
@@ -2144,6 +2232,16 @@ class Endpointman extends FreePBX_Helpers implements BMO {
 	}
 	
 
+	/**
+	 * Retrieves the brand data from the database.
+	 *
+	 * @param mixed $find The value to search for in the database.
+	 * @param string $where The column name to use for the search.
+	 * @param string $select The columns to select from the database.
+	 * @param string $order_by The column to use for sorting the results.
+	 * @param string $order_dir The direction to use for sorting the results.
+	 * @return array The result of the get_database_data method.
+	 */
 	public function get_hw_brand($find = null, $where = "directory")
 	{
 		if (empty($find))
@@ -2209,20 +2307,6 @@ class Endpointman extends FreePBX_Helpers implements BMO {
 		return $return_data;
 	}
 
-	public function set_hw_brand_oui($oui, $brand_id)
-	{
-		$sql = sprintf("REPLACE INTO %s (`oui`, `brand`, `custom`) VALUES (:oui, :brand_id, '0')", self::TABLES['epm_oui_list']);
-		$sth = $this->db->prepare($sql);
-		$sth->execute([
-			':oui' 		=> $oui,
-			':brand_id' => $brand_id
-		]);
-	}
-
-
-
-
-
 
 
 
@@ -2268,6 +2352,9 @@ class Endpointman extends FreePBX_Helpers implements BMO {
 	 */
 	public function set_hw_product($find = null, $data = array(), $where = "id", $data_insert = array(), $data_update = array())
 	{
+		// Set true for debug mode to show the generated SQL query
+		$debug 				  = false;
+
 		$data 				  = is_array($data)			? $data 		: [];
 		$data_insert  		  = is_array($data_insert)	? $data_insert	: [];
 		$data_update  		  = is_array($data_update)	? $data_update	: [];
@@ -2280,7 +2367,7 @@ class Endpointman extends FreePBX_Helpers implements BMO {
 		$data_insert = array_merge($data_insert_defaults, $data_insert);
 		$data_update = array_merge($data_update_defaults, $data_update);
 		
-		return $this->set_database_data(self::TABLES['epm_product_list'], $find, $data, $where, $data_insert, $data_update);
+		return $this->set_database_data(self::TABLES['epm_product_list'], $find, $data, $where, $data_insert, $data_update, $debug);
 	}
 
 	/**
@@ -2308,63 +2395,30 @@ class Endpointman extends FreePBX_Helpers implements BMO {
 		return $this->get_database_data(self::TABLES['epm_product_list'], $where, '*', $order_by, $order_dir);
 	}
 
-
-
-
-
-
-	/**
-	 * Synchronizes the MAC brand by model.
-	 *
-	 * @param string $model The model name.
-	 * @param int $model_id The model ID.
-	 * @return bool Returns true if the synchronization is successful, false otherwise.
-	 */
-	public function sync_mac_brand_by_model($model, $model_id)
+	public function get_hw_product(?int $id, ?string $where = "id", ?string $select = "*", ?bool $order_by = null, ?bool $order_dir = null)
 	{
-		if (empty($model) || empty($model_id))
+		$debug = false;
+		if (empty($id))
 		{
-			return false;
+			return [];
 		}
-
-		$sql  = sprintf("SELECT id FROM %s WHERE model LIKE :model", self::TABLES['epm_model_list']);
-		$stmt = $this->db->prepare($sql);
-		$stmt->execute([
-			':model' => $model,
-		]);
-		$new_model_id = $stmt->rowCount() === 0 ? false : ($stmt->fetchColumn() ?? false);
-	
-		// if ($new_model_id)
-		// {
-		// 	$sql  = sprintf("UPDATE %s SET  model = :new_model_id WHERE  model = :model", "endpointman_mac_list");
-		// 	$stmt = $this->db->prepare($sql);
-		// 	$stmt->execute([
-		// 		':new_model_id' => $new_model_id,
-		// 		':model' 		=> $model_id,
-		// 	]);
-		// }
-		// else
-		// {
-		// 	$sql  = sprintf("UPDATE %s SET  model = '0' WHERE model = :model", self::TABLES["epm_mac_list"]);
-		// 	$stmt = $this->db->prepare($sql);
-		// 	$stmt->execute([
-		// 		':model' => $model_id,
-		// 	]);
-		// }
-
-		$data_oid = array(
-			':model' => $new_model_id ? $new_model_id : 0
+		if (empty($where))
+		{
+			$where = "id";
+		}
+		if (empty($select))
+		{
+			$select = "*";
+		}
+		$where_query = array(
+			$where => array( 'operator' => '=', 'value' => $id)
 		);
-		$this->set_database_data(self::TABLES['epm_mac_list'], $model_id, $data_oid, 'model');
+		return $this->get_database_data(self::TABLES['epm_product_list'], $where_query, $select, $order_by, $order_dir, false, false, $debug);
 	}
 
 
 
-
-
-
-
-
+	
 	/**
 	 * Sets the hardware model data in the database.
 	 *
@@ -2377,6 +2431,9 @@ class Endpointman extends FreePBX_Helpers implements BMO {
 	 */
 	public function set_hw_model($find = null, $data = array(), $where = "id", $data_insert = array(), $data_update = array())
 	{
+		// Set true for debug mode to show the generated SQL query
+		$debug 				  = false;
+
 		$data 				  = is_array($data)			? $data 		: [];
 		$data_insert  		  = is_array($data_insert)	? $data_insert	: [];
 		$data_update  		  = is_array($data_update)	? $data_update	: [];
@@ -2389,7 +2446,7 @@ class Endpointman extends FreePBX_Helpers implements BMO {
 		$data_insert = array_merge($data_insert_defaults, $data_insert);
 		$data_update = array_merge($data_update_defaults, $data_update);
 		
-		return $this->set_database_data(self::TABLES['epm_model_list'], $find, $data, $where, $data_insert, $data_update);
+		return $this->set_database_data(self::TABLES['epm_model_list'], $find, $data, $where, $data_insert, $data_update, $debug);
 	}
 
 	/**
@@ -2471,6 +2528,173 @@ class Endpointman extends FreePBX_Helpers implements BMO {
 
 
 
+
+
+
+	/**
+	 * Synchronizes the MAC brand by model.
+	 *
+	 * @param string $model The model name.
+	 * @param int $model_id The model ID.
+	 * @return bool Returns true if the synchronization is successful, false otherwise.
+	 */
+	public function sync_mac_brand_by_model($model, $model_id)
+	{
+		if (empty($model) || empty($model_id))
+		{
+			return false;
+		}
+
+		$sql  = sprintf("SELECT id FROM %s WHERE model LIKE :model", self::TABLES['epm_model_list']);
+		$stmt = $this->db->prepare($sql);
+		$stmt->execute([
+			':model' => $model,
+		]);
+		$new_model_id = $stmt->rowCount() === 0 ? false : ($stmt->fetchColumn() ?? false);
+	
+		// if ($new_model_id)
+		// {
+		// 	$sql  = sprintf("UPDATE %s SET  model = :new_model_id WHERE  model = :model", "endpointman_mac_list");
+		// 	$stmt = $this->db->prepare($sql);
+		// 	$stmt->execute([
+		// 		':new_model_id' => $new_model_id,
+		// 		':model' 		=> $model_id,
+		// 	]);
+		// }
+		// else
+		// {
+		// 	$sql  = sprintf("UPDATE %s SET  model = '0' WHERE model = :model", self::TABLES["epm_mac_list"]);
+		// 	$stmt = $this->db->prepare($sql);
+		// 	$stmt->execute([
+		// 		':model' => $model_id,
+		// 	]);
+		// }
+
+		$data_oid = array(
+			':model' => $new_model_id ? $new_model_id : 0
+		);
+		$this->set_database_data(self::TABLES['epm_mac_list'], $model_id, $data_oid, 'model');
+	}
+
+ 
+	public function get_hw_mac($id = null, $where = 'id', $select = "*")
+	{
+		$where_query = [];
+		if (empty($select))
+		{
+			$select = "*";
+		}
+		if (! empty($id))
+		{
+			if (empty($where))
+			{
+				$where = 'id';
+			}
+			$where_query = array(
+				$where => array( 'operator' => '=', 'value' => $id)
+			);
+		}
+		return $this->get_database_data(self::TABLES['epm_mac_list'], $where_query, $select);
+		
+		// $sql = sprintf('SELECT id, global_custom_cfg_data, global_user_cfg_data FROM %s WHERE model = :brand_id_family_line_model', "endpointman_mac_list");
+		// $stmt = $this->db->prepare($sql);
+		// $stmt->execute([
+		// 	':brand_id_family_line_model' => $brand_id_family_line_model
+		// ]);
+		// $old_data = $stmt->fetchAll(\PDO::FETCH_ASSOC);
+	}
+
+	public function set_hw_mac($find = null, $data = array(), $where = "id", $data_insert = array(), $data_update = array())
+	{
+		$data 				  = is_array($data)			? $data 		: [];
+		$data_insert  		  = is_array($data_insert)	? $data_insert	: [];
+		$data_update  		  = is_array($data_update)	? $data_update	: [];
+		$data_default 		  = [];
+		$data_insert_defaults = [
+			// 'hidden' => $data['hidden'] ?? 0,
+		];
+		$data_update_defaults = [];
+		$data 		 = array_merge($data_default, $data);
+		$data_insert = array_merge($data_insert_defaults, $data_insert);
+		$data_update = array_merge($data_update_defaults, $data_update);
+		
+		return $this->set_database_data(self::TABLES['epm_mac_list'], $find, $data, $where, $data_insert, $data_update);
+	}
+
+
+
+
+
+
+
+
+	public function get_hw_template($id = null, $where = 'id', $select = "*")
+	{
+		$where_query = [];
+		if (empty($select))
+		{
+			$select = "*";
+		}
+		if (! empty($id))
+		{
+			if (empty($where))
+			{
+				$where = 'id';
+			}
+			$where_query = array(
+				$where => array( 'operator' => '=', 'value' => $id)
+			);	
+		}
+		
+		return $this->get_database_data(self::TABLES['epm_template_list'], $where_query, $select);
+		
+		// $sql = sprintf('SELECT id, global_custom_cfg_data FROM %s WHERE model_id = :brand_id_family_line_model', "endpointman_template_list");
+		// $stmt = $this->db->prepare($sql);
+		// $stmt->execute([
+		// 	':brand_id_family_line_model' => $brand_id_family_line_model
+		// ]);
+		// $old_data = $stmt->fetchAll(\PDO::FETCH_ASSOC);
+	}
+
+	public function set_hw_template($find = null, $data = array(), $where = "id", $data_insert = array(), $data_update = array())
+	{
+		$data 				  = is_array($data)			? $data 		: [];
+		$data_insert  		  = is_array($data_insert)	? $data_insert	: [];
+		$data_update  		  = is_array($data_update)	? $data_update	: [];
+		$data_default 		  = [];
+		$data_insert_defaults = [
+			// 'hidden' => $data['hidden'] ?? 0,
+		];
+		$data_update_defaults = [];
+		$data 		 = array_merge($data_default, $data);
+		$data_insert = array_merge($data_insert_defaults, $data_insert);
+		$data_update = array_merge($data_update_defaults, $data_update);
+		
+		return $this->set_database_data(self::TABLES['epm_mac_list'], $find, $data, $where, $data_insert, $data_update);
+	}
+
+
+
+
+
+
+
+	public function set_hw_oui($oui = null, $brand_id = null, $custom = 0)
+	{
+		if(empty($oui) || empty($brand_id))
+		{
+			return false;
+		}
+
+		$sql = sprintf("REPLACE INTO %s (`oui`, `brand`, `custom`) VALUES (:oui, :brand_id, :custom)", self::TABLES['epm_oui_list']);
+		$sth = $this->db->prepare($sql);
+		$sth->execute([
+			':oui' 		=> $oui,
+			':brand_id' => $brand_id,
+			':custom' 	=> $custom,
+		]);
+		return true;
+	}
 
 
 
@@ -3590,7 +3814,7 @@ $this->error['parse_configs'] = "File not written to hard drive!";
         $temp_file = $temp_directory . $directory . '.json';
         file_exists(dirname($temp_file)) ? '' : mkdir(dirname($temp_file));
 
-        if ($this->system->download_file_old($location, $temp_file)) {
+        if ($this->system->download_file($location, $temp_file)) {
             $handle = fopen($temp_file, "rb");
             $contents = fread($handle, filesize($temp_file));
             fclose($handle);

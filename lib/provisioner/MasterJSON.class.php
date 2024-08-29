@@ -1,10 +1,11 @@
 <?php
 namespace FreePBX\modules\Endpointman\Provisioner;
 
-require_once(__DIR__.'/../epm_system.class.php');
+// require_once(__DIR__.'/../epm_system.class.php');
+require_once('ProvisionerBase.class.php');
 require_once('ProvisionerBrand.class.php');
 
-class MasterJSON
+class MasterJSON extends ProvisionerBase
 {
     private $lastModified = null;
     private $package      = null;
@@ -12,22 +13,10 @@ class MasterJSON
     private $brands       = [];
 
     private $json_file    = null;
-    private $path_base     = null;
-    private $url_base     = null;
-
-    private $debug        = false;
-    private $system       = null;
-
-    /**
-     * Creates a new MasterJSON object.
-     *
-     * @param array|string $jsonData The JSON data to import.
-     * @param bool $debug Whether to enable debugging.
-     */
-    public function __construct($jsonData = null, $noException = false, $debug = true)
+    
+    public function __construct($jsonData = null, bool $noException = false, bool $debug = true)
     {
-        $this->debug  = $debug;
-        $this->system = new \FreePBX\modules\Endpointman\epm_system();
+        parent::__construct($debug);
         if (! empty($jsonData))
         {
             $this->importJSON($jsonData, $noException);
@@ -41,6 +30,10 @@ class MasterJSON
      */
     public function getJSONFile()
     {
+        if(empty($this->json_file))
+        {
+            return null;
+        }
         return $this->json_file;
     }
 
@@ -49,7 +42,7 @@ class MasterJSON
      *
      * @param string $json_file The JSON file.
      */
-    public function setJSONFile($json_file)
+    public function setJSONFile(string $json_file)
     {
         $this->json_file = $json_file;
     }
@@ -61,6 +54,10 @@ class MasterJSON
      */
     public function isJSONFileExist()
     {
+        if(empty($this->json_file))
+        {
+            return false;
+        }
         return file_exists($this->json_file);
     }
 
@@ -72,7 +69,7 @@ class MasterJSON
      * @param bool $noException Whether to throw an exception if the JSON data is invalid.
      * @throws \Exception If the JSON data is invalid.
      */
-    public function importJSON($jsonData = null, $noException = false)
+    public function importJSON($jsonData = null, bool $noException = false, bool $importChildrens = true)
     {
         if (empty($jsonData) && empty($this->json_file))
         {
@@ -130,10 +127,13 @@ class MasterJSON
                 continue;
             }
             $new_brand = new ProvisionerBrand($name, $dir);
-            $new_brand->setMasterJSON($this);
+            $new_brand->setParent($this);
             $new_brand->setPathBase($this->getPathBase());
             $new_brand->setURLBase($this->getURLBase());
-            $new_brand->setJSONFile($this->system->buildPath($this->getPathEndPoint(), $dir, "brand_data.json"));
+            if ($importChildrens)
+            {
+                $new_brand->importJSON(null, $noException, $importChildrens);
+            }
             $this->brands[] = $new_brand;
         }
         return true;
@@ -156,18 +156,22 @@ class MasterJSON
      */
     public function getPackage()
     {
+        if (empty($this->package))
+        {
+            return null;
+        }
         return $this->package;
     }
 
-    /**
-     * Retrieves the version.
-     *
-     * @return string The version.
-     */
-    public function getVersion()
-    {
-        return $this->version;
-    }
+    // /**
+    //  * Retrieves the version.
+    //  *
+    //  * @return string The version.
+    //  */
+    // public function getVersion()
+    // {
+    //     return $this->version;
+    // }
 
     /**
      * Retrieves the brands.
@@ -176,6 +180,10 @@ class MasterJSON
      */
     public function getBrands()
     {
+        if(empty($this->brands) || !is_array($this->brands))
+        {
+            return [];
+        }
         return $this->brands;
     }
 
@@ -186,6 +194,10 @@ class MasterJSON
      */
     public function countBrands()
     {
+        if (empty($this->brands) || !is_array($this->brands))
+        {
+            return 0;
+        }
         return count($this->brands);
     }
     
@@ -197,7 +209,7 @@ class MasterJSON
     public function getLastModifiedMaxBrands()
     {
         $data_return = array();
-        foreach ($this->brands as $brand)
+        foreach ($this->getBrands() as $brand)
         {
             $data_return[$brand->getDirectory()] = $brand->getLastModifiedMax() ?? '';
         }
@@ -211,9 +223,9 @@ class MasterJSON
      * @param bool $findByDirectory (Optional) Whether to search by brand directory instead of brand name. Default is false.
      * @return bool Returns true if the brand exists, false otherwise.
      */
-    public function isBrandExist($brandName, $findByDirectory = false)
+    public function isBrandExist(string $brandName, bool $findByDirectory = false)
     {
-        foreach ($this->brands as $brand)
+        foreach ($this->getbrands() as $brand)
         {
 
             if ($findByDirectory == true && $brand->getDirectory() == $brandName)
@@ -235,7 +247,7 @@ class MasterJSON
      * @param bool $findByDirectory (Optional) Whether to search by brand directory instead of brand name. Default is false.
      * @return ProvisionerBrand|null The brand if found, null otherwise.
      */
-    public function getBrand($brandName, $findByDirectory = false)
+    public function getBrand(string $brandName, bool $findByDirectory = false)
     {
         foreach ($this->brands as &$brand)
         {
@@ -260,7 +272,7 @@ class MasterJSON
      * @param bool $findByDirectory (Optional) Whether to search by brand directory instead of brand name. Default is false.
      * @return bool Returns true if the brand was updated, false otherwise.
      */
-    public function setBrandUpdate($brandName, $newStatus, $version = null, $findByDirectory = false)
+    public function setBrandUpdate(string $brandName, bool $newStatus, ?string $version = null, bool $findByDirectory = false)
     {
         foreach ($this->brands as &$brand)
         {
@@ -278,110 +290,73 @@ class MasterJSON
         return false;
     }
 
-    /**
-     * Retrieves the debug flag.
-     *
-     * @return bool The debug flag.
-     */
-    public function getDebug()
-    {
-        return $this->debug;
-    }
 
     /**
-     * Sets the debug flag.
+     * Retrieves the path for the package.
      *
-     * @param bool $debug The debug flag.
+     * @return string|null The path for the package or null if the package or the temp provider path is not set.
      */
-    public function setDebug($debug)
-    {
-        $this->debug = $debug;
-    }
-
-
-
-
-
-    public function getPathBase()
-    {
-        return $this->path_base;
-    }
-
-    public function setPathBase($path_base)
-    {
-        $this->path_base = $path_base;
-    }
-
-    public function isPathBaseExist()
-    {
-        return file_exists($this->path_base);
-    }
-
-    public function isPathBaseWritable()
-    {
-        return is_writable($this->path_base);
-    }
-
-    public function getPathEndPoint()
-    {
-        return $this->system->buildPath($this->path_base, "endpoint");
-    }
-
-    public function getPathTemp()
-    {
-        return $this->system->buildPath($this->path_base, "temp");
-    }
-
-    public function getPathTempProvider()
-    {
-        return $this->system->buildPath($this->getPathTemp(), "provisioner");
-    }
-
-
     public function getPathPackage()
     {
-        return $this->system->buildPath($this->getPathTempProvider(), $this->getPackage());
+        if (empty($this->getPackage()) || empty($this->getPathTempProvisioner()))
+        {
+            return null;
+        }
+        return $this->system->buildPath($this->getPathTempProvisioner(), $this->getPackage());
     }
 
+    /**
+     * Checks if the package file exists.
+     *
+     * @return bool Returns true if the package file exists, false otherwise.
+     */
     public function isFilePackageExist()
     {
+        if (empty($this->getPackage()))
+        {
+            return false;
+        }
         return file_exists($this->getPathPackage());
     }
 
-
-
-
-
-
-
-
-    public function getURLBase()
-    {
-        return $this->url_base;
-    }
-
-    public function setURLBase($url_base)
-    {
-        $this->url_base = $url_base;
-    }
-
-    public function isURLBaseExist()
-    {
-        return ! empty($this->url_base);
-    }
-
+    /**
+     * Retrieves the URL for the master JSON.
+     *
+     * @return string|null The URL for the master JSON or null if the URL base is not set.
+     */
     public function getURLMaster()
     {
+        if (empty($this->url_base))
+        {
+            return null;
+        }
         return $this->system->buildUrl($this->url_base, "master.json");
     }
 
+    /**
+     * Retrieves the URL for the package.
+     *
+     * @return string|null The URL for the package or null if the URL base or the package is not set.
+     */
     public function getURLPackage()
     {
+        if (empty($this->url_base) || empty($this->package))
+        {
+            return null;
+        }
         return $this->system->buildUrl($this->url_base, $this->package);
     }
     
 
-    public function downloadMaster($showmsg = true, $noException = true)
+    /**
+     * Downloads the master JSON.
+     *
+     * @param bool $showmsg (Optional) Whether to show messages. Default is true.
+     * @param bool $noException (Optional) Whether to throw an exception if the download fails. Default is true.
+     * @return bool|string True if the download was successful, false otherwise.
+     * @throws \Exception If the download fails and $noException is false.
+     */
+    public function downloadMaster(bool $showmsg = true, bool $noException = true)
     {
         $url  = $this->getURLMaster();
         $file = $this->getJSONFile();
@@ -417,13 +392,21 @@ class MasterJSON
         return $result;
     }
 
-
-    public function downloadPackage($local_version = null, $force = false, $noException = true)
+    /**
+     * Downloads the package.
+     *
+     * @param string $local_version (Optional) The local version of the package.
+     * @param bool $force (Optional) Whether to force the download. Default is false.
+     * @param bool $noException (Optional) Whether to throw an exception if the download fails. Default is true.
+     * @return bool|string The last modified date of the package if the download was successful, false otherwise.
+     * @throws \Exception If the download fails and $noException is false.
+     */
+    public function downloadPackage(string $local_version = null, bool $force = false, bool $noException = true)
     {
         $url                  = $this->getURLPackage();
         $file                 = $this->getJSONFile();
         $path_package         = $this->getPathPackage();
-        $path_package_extract = $this->system->buildPath($this->getPathTempProvider(), "provisioner_net");
+        $path_package_extract = $this->getPathTempProvisionerNet();
 
         if (empty($url) || empty($file) || empty($path_package) || empty($path_package_extract))
         {
@@ -463,6 +446,39 @@ class MasterJSON
         return $data_return;
     }
 
+
+    /**
+     * Generates the JSON data.
+     *
+     * @param bool $show_data_brands (Optional) Whether to show the data for each brand. Default is true.
+     * @param bool $arrayMode (Optional) Whether to return the data as an array. Default is false.
+     * @return string|array The JSON data or array if $arrayMode is true.
+     */
+    public function generateJSON(bool $show_data_brands = true, bool $arrayMode = false)
+    {
+        $data_return = array(
+            'last_modified' => $this->getLastModified() ?? '',
+            'package'       => $this->getPackage() ?? '',
+            'brands'        => [],
+            'brands_data'   => []
+        );
+        foreach ($this->getBrands() as $brand)
+        {
+            $data_return['brands'][] = array(
+                'name'      => $brand->getName()      ?? '',
+                'directory' => $brand->getDirectory() ?? ''
+            );
+            if ($show_data_brands)
+            {
+                $data_return['brands_data'][] = $brand->generateJSON();
+            }
+        }
+        if (! $arrayMode)
+        {
+            $data_return = json_encode(['data' => $data_return], JSON_PRETTY_PRINT);
+        }
+        return $data_return;
+    }
 
 
 

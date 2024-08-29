@@ -108,6 +108,16 @@ class Packages
     }
 
 
+    public function getBrandByDirectory(string $brand )
+    {
+        if (empty($this->master_json))
+        {
+            return null;
+        }
+		return $this->master_json->getBrand($brand, true);
+    }
+
+
 
     public function readMasterJSON($load = false, $noException = false)
     {
@@ -121,42 +131,41 @@ class Packages
             $master_json = new Provisioner\MasterJSON(null, $noException);
 
             $master_json->setPathBase($this->getPath("root_phone_module"));
-            $master_json->setJSONFile($master_path);
             $master_json->setURLBase($this->epm->URL_UPDATE);
-            $master_json->importJSON(null, $noException);
+            $master_json->setJSONFile($master_path);
 
-            foreach ($master_json->getBrands() as &$brand)
+            if ($load)
             {
-                $brand_path = $this->system->buildPath($this->getPath("phone_endpoint"), $brand->getDirectory(), "brand_data.json");
-                $brand->setJSONFile($brand_path);
-                if ($load)
-                {
-                    // Check if the brand file exists and is not exist then skip the brand
-                    if (! $brand->isJSONExist())
-                    {
-                        continue;
-                    }
+                $master_json->importJSON(null, $noException, true);
+                // foreach ($master_json->getBrands() as &$brand)
+                // {
+                //     // Check if the brand file exists and is not exist then skip the brand
+                //     if (! $brand->isJSONExist())
+                //     {
+                //         continue;
+                //     }
 
-                    //If is necessary return more info in the exception (set the second parameter to false)
-                    if (! $brand->importJSON(null, true))
-                    {
-                        continue;
-                    }
+                //     //If is necessary return more info in the exception (set the second parameter to false)
+                //     if (! $brand->importJSON(null, true))
+                //     {
+                //         continue;
+                //     }
 
-                    foreach ($brand->getFamilyList() as &$family)
-                    {
-                        $family_dir  = $family->getDirectory();
-                        $family_path = $this->system->buildPath($brand_path, $family_dir, "family_data.json");
-                        
-                        $family->setJSONFile($family_path);
+                //     foreach ($brand->getFamilyList() as &$family)
+                //     {
+                //         // Check if the brand file exists and is not exist then skip the brand
+                //         if (! $family->isJSONExist())
+                //         {
+                //             continue;
+                //         }
 
-                        //If is necessary return more info in the exception (set the second parameter to false)
-                        if (! $family->importJSON(null, true))
-                        {
-                            continue;
-                        }
-                    }
-                }
+                //         //If is necessary return more info in the exception (set the second parameter to false)
+                //         if (! $family->importJSON(null, true))
+                //         {
+                //             continue;
+                //         }
+                //     }
+                // }
             }
         }
         catch (\Exception $e)
