@@ -135,21 +135,21 @@ class epm_system {
         {
 			if (!mkdir($dir, 0777, true))
             {
-                $msg_error = sprintf(_("❌ Directory could not be created: %s"), $dir);
+                $msg_error = sprintf(_("Directory could not be created: %s"), $dir);
             }
 		}
         if (is_null($msg_error))
         {
             if (!is_writable($dir))
             {
-                $msg_error = sprintf(_("❌ Directory '%s' is not writable! Unable to download files"), $dir);
+                $msg_error = sprintf(_("Directory '%s' is not writable! Unable to download files"), $dir);
             }
             else
             {
                 $fp = fopen($destination_file, 'w');
                 if ($fp === false)
                 {
-                    $msg_error = sprintf(_("❌ Could not open target file: %s"), $destination_file);
+                    $msg_error = sprintf(_("Could not open target file: %s"), $destination_file);
                 }
                 else
                 {
@@ -164,7 +164,7 @@ class epm_system {
        
                     if ($response === false)
                     {
-                        $msg_error = sprintf(_("❌ Error Downloading file '%s' (%s): %s"), $url_file, $httpCode, $httpError);
+                        $msg_error = sprintf(_("Error Downloading file '%s' (%s): %s"), $url_file, $httpCode, $httpError);
                     }
                     curl_close($ch);
                     fclose($fp);
@@ -215,14 +215,14 @@ class epm_system {
         {
 			if (!mkdir($dir, 0777, true))
             {
-                $msg_error = sprintf(_("❌ Directory could not be created: %s"), $dir);
+                $msg_error = sprintf(_("Directory could not be created: %s"), $dir);
             }
 		}
         if (is_null($msg_error))
         {
             if (!is_writable($dir))
             {
-                $msg_error = sprintf(_("❌ Directory '%s' is not writable! Unable to download files"), $dir);
+                $msg_error = sprintf(_("Directory '%s' is not writable! Unable to download files"), $dir);
             }
             else
             {
@@ -241,7 +241,7 @@ class epm_system {
                 $fp = fopen($destination_file, 'w');
                 if ($fp === false)
                 {
-                    $msg_error = sprintf(_("❌ Could not open target file: %s"), $destination_file);
+                    $msg_error = sprintf(_("Could not open target file: %s"), $destination_file);
                 }
                 else
                 {
@@ -285,7 +285,7 @@ class epm_system {
                     }
                     else
                     {
-                        $msg_error = sprintf(_("❌ Error Downloading file '%s' (%s): %s"), $url_file, $httpCode, $httpError);
+                        $msg_error = sprintf(_("Error Downloading file '%s' (%s): %s"), $url_file, $httpCode, $httpError);
                         ?>
                         <script type="text/javascript">
                             $('#DivProgressBar_<?= $randnumid ?> .progress-bar').css('width', '100%').attr('aria-valuenow', '100').text("0% (<?= sprintf(_("Error: HTTP %s"), $httpCode) ?>)");
@@ -677,5 +677,73 @@ class epm_system {
             }
             return true;
         }
+    }
+
+
+
+
+
+    /**
+     * Check if the request arguments are present and are of the correct type.
+     * 
+     * @param array $request The request array.
+     * @param array $request_args The required request arguments.
+     * @param array $request_args_int The required request arguments that must be integers.
+     * @return bool|array Returns true if the request arguments are valid, otherwise returns an array with the status and message.
+     */    
+	public function check_request_args(array &$request = array(), ?array $request_args = array(), ?array $request_args_int = array(), bool $trim = true)
+	{
+        if (!is_array($request) || !is_array($request_args) || !is_array($request_args_int))
+        {
+            return false;
+        }
+
+		$args_missing  = array();
+		$args_type_err = array();
+
+		foreach ($request_args as $arg)
+		{
+			if (array_key_exists($arg, $request))
+			{
+                if ($trim && is_string($request[$arg]))
+                {
+                    $request[$arg] = trim($request[$arg]);
+                }
+                continue;
+			}
+			$args_missing[] = $arg;
+		}
+		foreach($request_args_int as $arg)
+		{
+			if (array_key_exists($arg, $request) && !is_numeric($request[$arg]))
+			{
+				$args_type_err[] = $arg;
+			}
+		}
+
+		if ( ! empty($args_missing) || ! empty($args_type_err))
+		{
+			$msg_return = "❌ ";
+			$parts 		= [];
+			if (!empty($args_missing))
+			{
+				$parts[] = sprintf(_("Missing values '%s'"), implode(", ", $args_missing));
+			}
+			if (!empty($args_type_err))
+			{
+				$invalid_msg = sprintf(_("Invalid values '%s'"), implode(", ", $args_type_err));
+				if (!empty($args_missing))
+				{
+					$invalid_msg = lcfirst($invalid_msg);
+				}
+				$parts[] = $invalid_msg;
+			}
+		
+			$msg_return .= implode(_(" and "), $parts);
+			$msg_return .= ".";
+
+			return $msg_return;
+		}
+        return true;
     }
 }

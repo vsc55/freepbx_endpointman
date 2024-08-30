@@ -44,19 +44,20 @@ class Endpointman_Config
         }        
 	}
 
-	public function myShowPage(&$pagedata) {
+	public function myShowPage(&$pagedata) { }
 
-	}
-
+	/**
+	 * Check if the user has access to the module
+	 * 
+	 */
 	public function ajaxRequest($req, &$setting)
 	{
-		$arrVal = array(
+		$allowCommand = array(
 			"saveconfig",
 			"list_all_brand",
 			"list_brand_model_hide"
 		);
-
-		if (in_array($req, $arrVal)) {
+		if (in_array($req, $allowCommand)) {
 			$setting['authenticate'] = true;
 			$setting['allowremote']   = false;
 			return true;
@@ -64,8 +65,17 @@ class Endpointman_Config
 		return false;
 	}
 
-    public function ajaxHandler($module_tab = "", $command = "")
+	/**
+	 * Handle AJAX requests
+	 * 
+	 * @param string $module_tab tab section of the command to execute
+	 * @param string $command Command to execute
+	 * @return array Returns an array with data that will be sent to the client.
+	 */
+    public function ajaxHandler(?string $module_tab = "", ?string $command = "")
 	{
+		$request = freepbxGetSanitizedRequest();
+
 		$txt = array(
 			'ayuda_model' 		 => _("If we can activate the model set terminals of the models.<br /> If this model is disabled will not appear in the list of models that can be configured for PBX."),
 			'ayuda_producto'	 => _('The button "Install Firmware" installs the necessary files to the server for the terminal alone are updated via TFTP or HTTP.<br /> The button "Remove frimware" delete files server products.<br /> The button "Update frimware" appears if a newer frimware detected on the server and asks if you want to update.<br /> The "Update" button appears when a new version of this model pack is detected.'),
@@ -78,7 +88,7 @@ class Endpointman_Config
 			'uninstall' 	 	 => _("Uninstall"),
 			'update' 		 	 => _("Update"),
 			'fw_install' 	 	 => _('FW Install'),
-			'fw_uninstall' 	 	 =>  _('FW Delete'),
+			'fw_uninstall' 	 	 => _('FW Delete'),
 			'fw_update' 	 	 => _('FW Update'),
 			'enable' 			 => _('Enable'),
 			'disable' 			 => _('Disable'),
@@ -99,106 +109,130 @@ class Endpointman_Config
 		switch ($command)
 		{
 			case "saveconfig":
-				$retarr = $this->epm_config_manager_saveconfig();
+				$retarr = $this->epm_config_manager_saveconfig($request);
 				break;
 
 			case "list_all_brand":
-				$retarr = array("status" => true, "message" => "OK", "datlist" => $this->epm_config_manager_hardware_get_list_all());
+				$retarr = array(
+					"status" => true,
+					"message" => "OK",
+					"datlist" => $this->epm_config_manager_hardware_get_list_all()
+				);
 				break;
 
 			case "list_brand_model_hide":
-				$retarr = array("status" => true, "message" => "OK", "datlist" => $this->epm_config_manager_hardware_get_list_all_hide_show());
+				$retarr = array(
+					"status" => true,
+					"message" => "OK",
+					"datlist" => $this->epm_config_manager_hardware_get_list_all_hide_show()
+				);
 				break;
 
 			default:
-				$retarr = array("status" => false, "message" => _("Command not found!") . " [" .$command. "]");
+				$retarr = array(
+					"status" => false,
+					"message" => sprintf(_("Command not found [%s]!"), $command)
+				);
 				break;
 		}
 		$retarr['txt'] = $txt;
 		return $retarr;
 	}
 
-	public function doConfigPageInit($module_tab = "", $command = "")
+	/**
+	 * Initialize the configuration page
+	 * 
+	 * @param string $module_tab tab section of the command to execute
+	 * @param string $command Command to execute
+	 */
+	public function doConfigPageInit(?string $module_tab = "", ?string $command = "")
 	{
+		$request = freepbxGetSanitizedRequest();
+
+		// Force flush all output buffers, need for AJAX
+
+		$endprocess = true;
 		switch ($command)
 		{
 			case "check_for_updates":
-				// Force flush all output buffers, need for AJAX
+				$this->activeFlush();
 				$this->epm_config_manager_check_for_updates();
-				echo "<br /><hr><br />";
-				exit;
 				break;
 
-			case "manual_install":
-				$this->epm_config_manual_install();
-				echo "<br /><hr><br />";
-				exit;
-				break;
+			// case "manual_install":
+			// 	$this->epm_config_manual_install();
+			// 	break;
 
 			case "firmware":
-				$this->epm_config_manager_firmware();
-				echo "<br /><hr><br />";
-				exit;
+				$this->activeFlush();
+				$this->epm_config_manager_firmware($request);
 				break;
 
 			case "brand":
-				$this->epm_config_manager_brand();
-				echo "<br /><hr><br />";
-				exit;
+				$this->activeFlush();
+				$id 	 	 = $request['idfw'] 	   ?? '';
+				$command_sub = $request['command_sub'] ?? '';
+				$this->epm_config_manager_brand($id , $command_sub);
+				break;
+
+			default:
+				$endprocess = false;
 				break;
 		}
+
+		if ($endprocess)
+		{
+			echo "<br /><hr><br />";
+			flush();
+			exit;
+		}
 	}
 
-	public function getRightNav($request, $params = array()) {
-		return "";
-	}
-
-	public function getActionBar($request) {
-		return "";
-	}
-
-
-	/**** FUNCIONES SEC MODULO "epm_config\manager" ****/
-	private function epm_config_manager_check_for_updates ()
+	private function activeFlush()
 	{
-		// Force flush all output buffers, need for AJAX
 		ob_implicit_flush(true);
-		while (ob_get_level() > 0) {
+		while (ob_get_level() > 0)
+		{
 			ob_end_flush();
 		}
+	}
 
+
+	public function getRightNav($request, $params = array()) { return ""; }
+
+	public function getActionBar($request) { return ""; }
+
+	
+	private function epm_config_manager_check_for_updates ()
+	{
 		out("<h3>"._("Update data...")."</h3>");
-		if ($this->update_check(true) === false)
+		if (! $this->update_check(true))
 		{
 			out (_("❌Something Went Wrong!"));
+			return false;
 		}
 		else
 		{
 			out (_("🔳 Process Completed!"));
+			return true;
 		}
 	}
 
-	private function epm_config_manager_brand()
+	private function epm_config_manager_brand($id = "", ?string $command_sub = "")
 	{
-		// Force flush all output buffers, need for AJAX
-		ob_implicit_flush(true);
-		while (ob_get_level() > 0) {
-			ob_end_flush();
-		}
-						
-		$request = freepbxGetSanitizedRequest();
-
-		$id 	 	 = $request['idfw'] ?? '';
-		$command_sub = $request['command_sub'] ?? '';
-		
 		if (!isset($id))
 		{
-			out(_("Error: No ID Received!"));
+			out(_("❌ No ID Received!"));
 			return false;
 		}
 		else if (!is_numeric($id))
 		{
-			out(sprintf(_("Error: ID [%s] Received Is Not a Number!"), $id));
+			out(sprintf(_("❌ ID [%s] Received Is Not a Number!"), $id));
+			return false;
+		}
+		else if (empty($command_sub) || !is_string($command_sub))
+		{
+			out(_("❌ No Command Received or Command Is Not a String!"));
 			return false;
 		}
 
@@ -214,117 +248,134 @@ class Endpointman_Config
 				break;
 
 			default:
-				out ( sprintf(_("Error: Command [%s] not valid!"), $command_sub) );
+				out ( sprintf(_("❌ Command [%s] not valid!"), $command_sub) );
+				return false;
 		}
 		$this->update_check();
 		return true;
 	}
 
-	private function epm_config_manager_firmware()
+	private function epm_config_manager_firmware($request = array())
 	{
-		$arrVal['VAR_REQUEST'] = array("command_sub", "idfw");
-		foreach ($arrVal['VAR_REQUEST'] as $valor) {
-			if (! array_key_exists($valor, $_REQUEST)) {
-				out (_("Error: No send value!")." [".$valor."]");
+		$request_args 	  = array("command_sub", "idfw");
+		$request_args_int = array("idfw");
+		$args_check 	  = $this->epm->system->check_request_args($request, $request_args, $request_args_int);
+
+		switch(true)
+		{
+			case (empty($args_check)):
+			case ($args_check === false):
+				out(_("❌ Error in the process of checking the request arguments!"));
 				return false;
-			}
+
+			case ($args_check === true):
+				break;
+
+			case (is_string($args_check)):
+			default:
+				out($args_check);
+				return false;
 		}
 
-		$arrVal['VAR_IS_NUM'] = array("idfw");
-		foreach ($arrVal['VAR_IS_NUM'] as $valor) {
-			if (! is_numeric($_REQUEST[$valor])) {
-				out (_("Error: Value send is not number!")." [".$valor."]");
-				return false;
-			}
-		}
+		$id 	 = $request['idfw'];
+		$command = $request['command_sub'];
 
-		$dget['command'] =  strtolower($_REQUEST['command_sub']);
-		$dget['id'] = $_REQUEST['idfw'];
-
-		switch($dget['command']) {
+		switch(strtolower($command))
+		{
 			case "fw_install":
 			case "fw_update":
-				$this->install_firmware($dget['id']);
+				$this->install_firmware($id);
 				break;
 
 			case "fw_uninstall":
-				$this->remove_firmware($dget['id']);
+				$this->remove_firmware($id);
 				break;
 
 			default:
-				out (_("Error: Command not found!")." [" . $dget['command'] . "]");
+				out (sprintf(_("❌ Command '%s' not found!"), $command));
+				return false;
 		}
-
-		unset ($dget);
 		return true;
 	}
 
-	private function epm_config_manager_saveconfig()
+	private function epm_config_manager_saveconfig($request = array())
 	{
-		$arrVal['VAR_REQUEST'] = array("typesavecfg", "value", "idtype", "idbt");
-		foreach ($arrVal['VAR_REQUEST'] as $valor) {
-			if (! array_key_exists($valor, $_REQUEST)) {
-				return array("status" => false, "message" => _("No send value!")." [".$valor."]");
-			}
+		$request_args 	  = array("typesavecfg", "value", "idtype", "idbt");
+		$request_args_int = array("value", "idbt");
+		$args_check 	  = $this->epm->system->check_request_args($request, $request_args, $request_args_int);
+
+		switch(true)
+		{
+			case (empty($args_check)):
+			case ($args_check === false):
+				return array("status" => false, "message" => _("Error in the process of checking the request arguments!"));
+
+			case ($args_check === true):
+				break;
+
+			case (is_string($args_check)):
+			default:
+				return array("status" => false, "message" => $args_check);
 		}
 
-		$arrVal['VAR_IS_NUM'] = array("value", "idbt");
-		foreach ($arrVal['VAR_IS_NUM'] as $valor) {
-			if (! is_numeric($_REQUEST[$valor])) {
-				return array("status" => false, "message" => _("Value send is not number!")." [".$valor."]");
-			}
+		$id 		 = $request['idbt'];
+		$idtype 	 = strtolower($request['idtype']);
+		$typesavecfg = strtolower($request['typesavecfg']);
+		$value 		 = strtolower($request['value']);
+		
+		
+		if (! in_array($typesavecfg, array("hidden", "enabled")))
+		{
+			return array("status" => false, "message" => sprintf(_("Invalid TypeSaveCfg '%s'!"), $typesavecfg));
+		}
+		if (($value > 1 ) and ($value < 0))
+		{
+			return array("status" => false, "message" => sprintf(_("Invalid Value '%s'!"), $value));
 		}
 
-		$dget['typesavecfg'] = strtolower($_REQUEST['typesavecfg']);
-		$dget['value'] = strtolower($_REQUEST['value']);
-		$dget['idtype'] = strtolower($_REQUEST['idtype']);
-		$dget['id'] = $_REQUEST['idbt'];
-
-		if (! in_array($dget['typesavecfg'], array("hidden", "enabled"))) {
-			return array("status" => false, "message" => _("Type Save Config is not valid!")." [".$dget['typesavecfg']."]");
-		}
-
-		if (($dget['value'] > 1 ) and ($dget['value'] < 0)) {
-			return array("status" => false, "message" => _("Invalid Value!"));
-		}
-
-
-		if ($dget['typesavecfg'] == "enabled") {
-			if (($dget['idtype']) == "modelo") {
-				$sql = "UPDATE endpointman_model_list SET enabled = " .$dget['value']. " WHERE id = '".$dget['id']."'";
-			}
-			else {
-				$retarr = array("status" => false, "message" => _("IdType not valid to typesavecfg!"));
-			}
-		}
-		else {
-			switch($dget['idtype']) {
-				case "marca":
-					$sql = "UPDATE endpointman_brand_list SET hidden = '".$dget['value'] ."' WHERE id = '".$dget['id']."'";
-					break;
-
-				case "producto":
-					$sql = "UPDATE endpointman_product_list SET hidden = '". $dget['value'] ."' WHERE id = '".$dget['id']."'";
-					break;
-
-				case "modelo":
-					$sql = "UPDATE endpointman_model_list SET hidden = '". $dget['value'] ."' WHERE id = '".$dget['id']."'";
+		if ($typesavecfg == "enabled")
+		{
+			switch($idtype)
+			{
+				case 'modelo':
+					$this->epm->set_hw_model($id, array("enabled" => $value), 'id');
 					break;
 
 				default:
-					$retarr = array("status" => false, "message" => _("IDType invalid: ") . $dget['idtype'] );
+					return array("status" => false, "message" => sprintf(_("IDType '%s' invalid for Enabled!"), $idtype));
 			}
 		}
-		if (isset($sql)) {
-			sql($sql);
-			$retarr = array("status" => true, "message" => "OK", "typesavecfg" => $dget['typesavecfg'], "value" => $dget['value'], "idtype" => $dget['idtype'], "id" => $dget['id']);
-			unset($sql);
-		}
+		else
+		{
+			switch($idtype)
+			{
+				case "marca":
+					$this->epm->set_hw_brand($id, array("hidden" => $value), 'id');
+					break;
 
-		unset($dget);
-		return $retarr;
+				case "producto":
+					$this->epm->set_hw_product($id, array("hidden" => $value), 'id');
+					break;
+
+				case "modelo":
+					$this->epm->set_hw_model($id, array("hidden" => $value), 'id');
+					break;
+
+				default:
+					return array("status" => false, "message" => sprintf(_("IDType '%s' invalid!"), $idtype));
+			}
+		}
+		return array("status" => true, "message" => "OK", "typesavecfg" => $typesavecfg, "value" => $value, "idtype" => $idtype, "id" => $id);
 	}
 
+
+	/**
+	 * Get a list of all brands, products, and models.
+	 * 
+	 * @return array An array of all the brands/products/models and information about what's  enabled, installed or otherwise
+	 * 
+	 * Url Query: http://{serverpbx}/admin/ajax.php?module=endpointman&module_sec=epm_config&module_tab=manager&command=list_brand_model_hide
+	 */
 	public function epm_config_manager_hardware_get_list_all_hide_show()
 	{
 		$row_out	= [];
@@ -383,51 +434,19 @@ class Endpointman_Config
 	}
 
 
-	//TODO: PENDIENTE ACTUALIZAR Y ELIMINAR DATOS NO NECESARIOS (TEMPLATES)
-	//http://pbx.cerebelum.lan/admin/ajax.php?module=endpointman&module_sec=epm_config&module_tab=manager&command=list_all_brand
+	/**
+	 * Get a list of all brands, products, and models.
+	 * 
+	 * @return array An array of all the brands/products/models and information about what's  enabled, installed or otherwise
+	 * 
+	 * Url Query: http://{serverpbx}/admin/ajax.php?module=endpointman&module_sec=epm_config&module_tab=manager&command=list_all_brand
+	 */
 	public function epm_config_manager_hardware_get_list_all()
 	{
 		$row_out 	= [];
 		$brand_list = $this->epm->get_hw_brand_list(true, "name");
 		//FIX: https://github.com/FreePBX-ContributedModules/endpointman/commit/2ad929d0b38f05c9da1b847426a4094c3314be3b
 	
-
-		// return $this->epm->getConfig('endpoint_vers', null);
-		// return;
-		
-		
-		// try
-		// {
-		// 	$master_json = $this->epm->packages->readMasterJSON(true);
-		// }
-		// catch (\Exception $e)
-		// {
-		// 	return [];
-		// }
-		// $master_json = $this->epm->packages->readMasterJSON(true);
-
-		// $version = $master_json->getLastModifiedMaxBrands();
-		// debug($version);
-
-		// $version = array();
-		// foreach ($master_json->getBrands() as &$brand)
-		// {
-		// 	$directory 			  = $brand->getDirectory();
-		// 	$version[$directory] = $brand->getLastModifiedMax();
-		// }
-		// dbug($version);
-
-		
-		
-		// dbug($this->epm->packages->master_json->generateJSON());
-
-		// return $this->epm->packages->master_json->generateJSON(true);
-		// return;
-
-
-
-
-
 		foreach ($brand_list as $i => $brand)
 		{
 			if ($brand['hidden'] == 1)
@@ -459,9 +478,8 @@ class Endpointman_Config
 
 				if ($product['firmware_vers'] > 0)
 				{
-					$temp = $this->firmware_update_check($product['id']);
 					$product['update_fw'] = 1;
-					$product['update_vers_fw'] = $temp['data']['firmware_ver'] ?? '';
+					$product['update_vers_fw'] = $this->firmware_update_check($product['id']);
 				}
 				else
 				{
@@ -489,9 +507,6 @@ class Endpointman_Config
 	
 		return $row_out;
 	}
-	/*** END SEC FUNCTIONS ***/
-
-
 
 
 	/**
@@ -523,7 +538,7 @@ class Endpointman_Config
 			'update_vers_txt' => _("Error: No Version Found"),
 		);
 
-		$row 		 = $this->epm->get_hw_brand($brand_name_find);
+		$row 		 = $this->epm->get_hw_brand($brand_name_find, 'directory', '*', true);
 		$directory 	 = $row['directory'] ?? NULL;
 		$version_db  = $row['cfg_ver'] ?? 0;
 		$json_master = $this->epm->packages->master_json;
@@ -607,7 +622,7 @@ class Endpointman_Config
 	 * If a brand's cfg_ver is lower than the last modified date of its brand_data.json file, it marks the brand for update.
 	 * The function returns an array containing the updated brand information.
 	 *
-	 * @return array The updated brand information.
+	 * @return array An array of all the brands/products/models and information about what's  enabled, installed or otherwise
 	 */
 	public function brand_update_check_all()
 	{
@@ -646,7 +661,6 @@ class Endpointman_Config
 		}
 		return $out;
 	}
-
 
 
 	/**
@@ -1085,7 +1099,14 @@ class Endpointman_Config
     }
 
 
-    public function sync_model(ProvisionerModel $model, &$error = array()) 
+	/**
+	 * Syncs a model with the database.
+	 * 
+	 * @param ProvisionerModel $model The model to sync.
+	 * @param array $error Reference to an array to store error messages.
+	 * @return bool Returns true if the model was successfully synced, false otherwise.
+	 */
+    public function sync_model(?ProvisionerModel $model, &$error = array()) 
 	{
 		if (empty($model))
 		{
@@ -1093,6 +1114,7 @@ class Endpointman_Config
 			return false;
 		}
 
+		//TODO: Is it necessary to bring all the data configured in the database query?
 		$sql = sprintf('SELECT eml.id, eml.product_id, ebl.id as brand_id, eml.brand, eml.model, epl.cfg_dir, ebl.directory FROM %s as eml
 						JOIN %s as epl ON eml.product_id = epl.id
     					JOIN %s as ebl ON eml.brand = ebl.id
@@ -1210,7 +1232,7 @@ class Endpointman_Config
 		}
 
 
-		$row   = $this->epm->get_hw_brand($id, 'id');
+		$row = $this->epm->get_hw_brand($id, 'id', '*', true);
 		if (empty($row['directory']))
 		{
 			out(_("❌ Brand Directory Is Not Set!"));
@@ -1325,12 +1347,16 @@ class Endpointman_Config
 		return $return_update_brand;
     }
 
+
     /**
      * This will install or updated a brand package (which is the same thing to this)
      * Still needs way to determine when models move...perhaps another function?
+	 * 
+	 * @param ProvisionerBrand $brand The brand object to update.
+	 * @param bool $remote (optional) Whether the brand is remote or local.
+	 * @return bool Returns true if the brand was successfully installed/updated, false otherwise.
      */
-	// public function update_brand($package, $remote = true)
-    public function update_brand(ProvisionerBrand $brand, $remote = true)
+    public function update_brand(?ProvisionerBrand $brand, $remote = true)
 	{
 		if (empty($brand))
 		{
@@ -1454,7 +1480,7 @@ class Endpointman_Config
 
 					foreach ($this->epm->get_hw_mac($model->getModelId(), 'model', 'id, global_custom_cfg_data, global_user_cfg_data') as $mac_list_item)
 					{
-						$global_custom_cfg_data = unserialize($mac_list_item['global_custom_cfg_data']);
+						$global_custom_cfg_data = unserialize($mac_list_item['global_custom_cfg_data'] ?? '');
 
 						if ((is_array($global_custom_cfg_data)) AND (!array_key_exists('data', $global_custom_cfg_data)))
 						{
@@ -1498,7 +1524,7 @@ class Endpointman_Config
 							out(" ✔");
 						}
 
-						$global_user_cfg_data = unserialize($mac_list_item['global_user_cfg_data']);
+						$global_user_cfg_data = unserialize($mac_list_item['global_user_cfg_data'] ?? '');
 						$old_check = FALSE;
 						if (is_array($global_user_cfg_data))
 						{
@@ -1565,7 +1591,7 @@ class Endpointman_Config
 
 					foreach ($this->epm->get_hw_template($model->getModelId(), 'model_id', 'id, global_custom_cfg_data') as $template_item)
 					{
-						$global_custom_cfg_data = unserialize($template_item['global_custom_cfg_data']);
+						$global_custom_cfg_data = unserialize($template_item['global_custom_cfg_data'] ?? '');
 
 						if ((is_array($global_custom_cfg_data)) AND (!array_key_exists('data', $global_custom_cfg_data))) 
 						{
@@ -1693,12 +1719,11 @@ class Endpointman_Config
 	/**
 	 * Removes a brand from the system.
 	 *
-	 * @param int|null $id The ID of the brand to be removed.
-	 * @param bool $remove_configs Whether to remove the brand configurations or not.
-	 * @param bool $force Whether to force the removal even in repo mode.
+	 * @param int $id The ID of the brand to remove.
+	 * @param bool $force Whether to force the removal of the brand.
 	 * @return bool Returns true if the brand is successfully removed, false otherwise.
 	 */
-    public function remove_brand($id = null, $remove_configs = false, $force = false)
+    public function remove_brand($id = null, $force = false)
 	{
 		out(_("⚡ Uninstalla Brand ..."));
 
@@ -1720,7 +1745,7 @@ class Endpointman_Config
 
         if (!$this->configmod->get('use_repo') && !$force)
 		{
-			$row = $this->epm->get_hw_brand($id, 'id');
+			$row = $this->epm->get_hw_brand($id, 'id', '*', true);
 			if (empty($row['directory'] || empty($row['id'])))
 			{
 				out(_("❌ Brand Directory or ID Is Not Set!"));
@@ -1753,8 +1778,6 @@ class Endpointman_Config
 	/**
 	 * Installs firmware for a specific product.
 	 *
-	 * @param int $product_id The ID of the product.
-	 * @return bool Returns true if the firmware is successfully installed, false otherwise.
 	 */
     public function install_firmware($product_id)
 	{
@@ -1923,8 +1946,8 @@ class Endpointman_Config
 	/**
 	 * Removes firmware files associated with a specific ID.
 	 *
-	 * @param int $id The ID of the firmware to be removed.
-	 * @return bool Returns true if the firmware files were successfully removed, false otherwise.
+	 * @param int|null $id The ID of the product to remove the firmware from.
+	 * @return bool Returns true if the firmware is successfully removed, false otherwise.
 	 */
     public function remove_firmware($id = null)
 	{
@@ -1942,10 +1965,10 @@ class Endpointman_Config
 		}
 
 		$files  = null;
-		$result = $this->epm->get_hw_product($id, 'id', 'id, firmware_files');
+		$result = $this->epm->get_hw_product($id, 'id', 'id, firmware_files', true);
 		if (!empty($result))
 		{
-			$files = $files[0]['firmware_files'] ?? "";
+			$files = $files['firmware_files'] ?? "";
 		}
 		if (empty($files))
 		{
@@ -1981,13 +2004,6 @@ class Endpointman_Config
 				}
 			}
 		}
-        
-
-		// $sql = sprintf("UPDATE %s SET firmware_files = '', firmware_vers = '' WHERE id = :id", "endpointman_product_list");
-		// $stmt = $this->db->prepare($sql);
-		// $stmt->execute([
-		// 	':id' => $id
-		// ]);
 
 		$this->epm->set_hw_product($id, ['firmware_files' => '', 'firmware_vers' => ''], 'id');
 
@@ -1998,157 +2014,72 @@ class Endpointman_Config
 	/**
 	 * Checks if a firmware update is available for a given product ID.
 	 *
-	 * @param int|null $id The ID of the product to check for firmware update. Defaults to NULL.
-	 * @return mixed Returns the firmware update data if an update is available, otherwise returns false.
+	 * @param int|null $id The ID of the product to check.
+	 * @return string Returns an empty string if the ID is not numeric, the product is not found, or the configuration drive is unknown.
+	 * 			  Returns the firmware version if the firmware version in the database is less than the firmware version in the JSON file.
+	 * 			  Returns an empty string otherwise.
 	 */
     public function firmware_update_check($id = null)
 	{
-		if (is_numeric($id) === false)
+		if (empty($id) || !is_numeric($id))
 		{
-			return false;
+			return '';
 		}
 
-		$sql = sprintf('SELECT * FROM %s WHERE id = :id', "endpointman_product_list");
-		$stmt = $this->db->prepare($sql);
-		$stmt->execute([
-			':id' => $id
-		]);
-		$row = $stmt->fetch(\PDO::FETCH_ASSOC);
+		$product_json = $this->epm->packages->getProductByProductID($id);
+		$product_db   = $this->epm->get_hw_product($id, "id", "*", true);
 
-        //config drive unknown!
-        if ($row['cfg_dir'] == "")
+		if (empty($product_json) || empty($product_db))
 		{
-            return false;
-        }
-
-		$sql = sprintf('SELECT directory FROM %s WHERE id = :id', "endpointman_brand_list");
-		$stmt = $this->db->prepare($sql);
-		$stmt->execute([
-			':id' =>  $row['brand']
-		]);
-		$brand_directory  = $stmt->rowCount() === 0 ? false : ($stmt->fetchColumn() ?? false);
-
-		$path_json_family = $this->system->buildPath($this->epm->PHONE_MODULES_PATH, 'endpoint', $brand_directory, $row['cfg_dir'], "family_data.json");
-		$json_data = null;
-		try
-		{
-			$json_data = $this->epm->file2json($path_json_family);
-			if ($json_data === false || !is_array($json_data))
-			{
-				return false;
-			}
-		}
-		catch (\Exception $e)
-		{
-			return false;
+			// Return false if the product is not found or the configuration drive is unknown.
+			return '';
 		}
 
-		$firmware_ver = $json_data['data']['firmware_ver'] ?? array();
-		
-		if (! array_key_exists('data', $json_data))
+		$firmware_ver_json = $product_json->getFirmwareVer();
+		$firmware_ver_db   = $product_db['firmware_vers'] ?? '';
+
+		if ($firmware_ver_db < $firmware_ver_json)
 		{
-			return false;
+			return $firmware_ver_json;
 		}
-		elseif (!is_array($firmware_ver))
-		{
-			return false;
-		}
-		elseif ($row['firmware_vers'] < $firmware_ver)
-		{
-			return $json_data;
-		}
-		else
-		{
-			return FALSE;
-		}
+		return '';
     }
 
-	
+
 	/**
 	 * Checks the local firmware for a given ID.
 	 *
-	 * @param int|null $id The ID of the firmware to check.
-	 * @return string Returns "nothing" if the ID is not numeric, the firmware is not found, or the configuration drive is unknown.
-	 *                Returns "install" if the firmware version is not empty and the firmware versions in the database is empty.
-	 *                Returns "remove" if the firmware version is not empty and the firmware versions in the database is not empty.
+	 * @param int|null $id The ID of the product to check.
+	 * @return string Returns 'nothing' if the ID is not numeric, the product is not found, or the configuration drive is unknown.
+	 * 			  Returns 'remove' if the firmware version in the database is empty.
+	 * 			  Returns 'install' if the firmware version in the database is not empty.
+	 * 			  Returns 'nothing' otherwise.
 	 */
-    public function firmware_local_check($id = null)
+    public function firmware_local_check(?int $id = null)
 	{
-		if (is_numeric($id) === false)
+		if (empty($id) || ! is_numeric($id) )
 		{
 			return "nothing";
 		}
 
+		// Not exist in the database or the configuration drive is unknown.
 		if (! $this->epm->is_exist_hw_product($id, 'id', true))
 		{
 			return "nothing";
 		}
 
-
-
-
-		$sql = sprintf('SELECT * FROM %s WHERE hidden = 0 AND id = :id', "endpointman_product_list");
-		$stmt = $this->db->prepare($sql);
-		$stmt->execute([
-			':id' => $id
-		]);
-		if ($stmt->rowCount() === 0)
+		$product_json = $this->epm->packages->getProductByProductID($id);
+		if (empty($product_json) || empty($product_db))
 		{
-			return "nothing";
+			// Is not found or the configuration drive is unknown.
+			return 'nothing';
 		}
 
-		$row = $stmt->fetch(\PDO::FETCH_ASSOC);
-		//config drive unknown!
-		if ($row['cfg_dir'] == "")
+		if (empty($product_json->getFirmwareVer()))
 		{
-			return "nothing";
+			return "remove";
 		}
-
-
-
-		$sql  = sprintf('SELECT directory FROM %s WHERE hidden = 0 AND id = :id', "endpointman_brand_list");
-		$stmt = $this->db->prepare($sql);
-		$stmt->execute([
-			':id' => $row['brand']
-		]);
-		$brand_directory = $stmt->rowCount() === 0 ? false : ($stmt->fetchColumn() ?? false);
-
-		if ($brand_directory === false)
-		{
-			return "nothing";
-		}
-
-
-
-		$json_file = $this->system->buildPath($this->epm->PHONE_MODULES_PATH, 'endpoint', $brand_directory, $row['cfg_dir'], "family_data.json");
-		$json_data = null;
-		try
-		{
-			$json_data = $this->epm->file2json($json_file);
-			if ($json_data === false || !is_array($json_data))
-			{
-				return "nothing";
-			}
-		}
-		catch (\Exception $e)
-		{
-			return "nothing";
-		}
-
-		$firmware_ver = $json_data['data']['firmware_ver'] ?? '';
-		if (!empty($firmware_ver))
-		{
-			if ($row['firmware_vers'] != "")
-			{
-				return "install";
-			}
-			else
-			{
-				return "remove";
-			}
-		}
-
-		return "nothing";
+		return "install";
     }
 
 

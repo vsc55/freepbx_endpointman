@@ -117,6 +117,28 @@ class Packages
 		return $this->master_json->getBrand($brand, true);
     }
 
+    public function getProductByProductID(int $product_id )
+    {
+        if (! empty($this->master_json) && ! empty($product_id) && is_numeric($product_id))
+        {
+            foreach ($this->master_json->getBrands() as $brand)
+            {
+                foreach ($brand->getFamilyList() as $family)
+                {
+                    if (empty($family->getFamilyId()))
+                    {
+                        continue;
+                    }
+                    elseif ($family->getFamilyId() == $product_id)
+                    {
+                        return $family;
+                    }
+                }
+            }
+        }
+        return null;
+    }
+
 
 
     public function readMasterJSON($load = false, $noException = false)

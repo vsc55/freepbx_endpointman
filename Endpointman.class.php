@@ -1324,7 +1324,8 @@ class Endpointman extends FreePBX_Helpers implements BMO {
 									$result = & sql($sql, 'getAll', \PDO::FETCH_ASSOC);
 									foreach ($result as $row)
 									{
-										$this->remove_brand($row['id'], FALSE, TRUE);
+										$id_product = $row['id'] ?? null;
+										$this->epm_config->remove_brand($id_product, true);
 									}
 								}
 							}
@@ -2235,31 +2236,49 @@ class Endpointman extends FreePBX_Helpers implements BMO {
 	/**
 	 * Retrieves the brand data from the database.
 	 *
-	 * @param mixed $find The value to search for in the database.
-	 * @param string $where The column name to use for the search.
-	 * @param string $select The columns to select from the database.
-	 * @param string $order_by The column to use for sorting the results.
-	 * @param string $order_dir The direction to use for sorting the results.
+	 * @param mixed $id The ID of the brand to retrieve. The value is ignored if the `$where` parameter is an array.
+	 * @param string|array $where The column name to use for the search (default: "directory") or an array of conditions.
+	 * @param string $select The columns to select from the database (default: "*").
+	 * @param bool $getOne Whether to return only the first result or all results (default: false).
 	 * @return array The result of the get_database_data method.
+	 * @example
+	 * // Example usage for retrieving brand data from the database
+	 * $id = 1;
+	 * $where = 'id';
+	 * $select = 'id, name, directory';
+	 * $result = $this->get_hw_brand($id, $where, $select, true);
+	 * // Retrieves the 'id', 'name', and 'directory' columns for the brand with ID 1 and returns only the first result.
+	 * @example
+	 * $id = 1;
+	 * $where = array('name' => array( 'operator' => 'LIKE', 'value' => "cisco"));
+	 * $select = 'id, name, directory';
+	 * $result = $this->get_hw_brand($id, $where, $select, false);
+	 * // Retrieves the 'id', 'name', and 'directory' columns for the brand with name like "cisco" and returns all results.
 	 */
-	public function get_hw_brand($find = null, $where = "directory")
+	public function get_hw_brand($id, $where = "directory", ?string $select = "*", ?bool $getOne = false)
 	{
-		if (empty($find))
+		$debug = false;
+		if (empty($id) && !is_array($where)) { return []; }
+		if (empty($where))					 { $where  = "directory"; }
+		if (empty($select))					 { $select = "*"; }
+		if (is_array($where))				 { $where_query = $where; }
+		else
 		{
-			return [];
-		}
-		if (empty($where))
-		{
-			$where = "directory";
+			$where_query = array(
+				$where => array( 'operator' => '=', 'value' => $id)
+			);
 		}
 
-		$sql = sprintf("SELECT * FROM %s WHERE %s = :where_id", self::TABLES['epm_brands_list'], $where);
-		$stmt = $this->db->prepare($sql);
-		$stmt->execute([
-			':where_id' => $find
-		]);
-		return $stmt->fetch(\PDO::FETCH_ASSOC);
+		$return_db = $this->get_database_data(self::TABLES['epm_brands_list'], $where_query, $select, null, null, false, false, $debug);
+		
+		if ($getOne && !empty($return_db))
+		{
+			$return_db = $return_db[0] ?? [];
+		}
+		return $return_db;
 	}
+
+	
 
 
 	/**
@@ -2395,25 +2414,27 @@ class Endpointman extends FreePBX_Helpers implements BMO {
 		return $this->get_database_data(self::TABLES['epm_product_list'], $where, '*', $order_by, $order_dir);
 	}
 
-	public function get_hw_product(?int $id, ?string $where = "id", ?string $select = "*", ?bool $order_by = null, ?bool $order_dir = null)
+	public function get_hw_product($id, $where = "id", ?string $select = "*", ?bool $getOne = false)
 	{
 		$debug = false;
-		if (empty($id))
+		if (empty($id) && !is_array($where)) { return []; }
+		if (empty($where))					 { $where  = "id"; }
+		if (empty($select))					 { $select = "*"; }
+		if (is_array($where))				 { $where_query = $where; }
+		else
 		{
-			return [];
+			$where_query = array(
+				$where => array( 'operator' => '=', 'value' => $id)
+			);
 		}
-		if (empty($where))
+
+		$return_db = $this->get_database_data(self::TABLES['epm_product_list'], $where_query, $select, null, null, false, false, $debug);
+
+		if ($getOne && !empty($return_db))
 		{
-			$where = "id";
+			$return_db = $return_db[0] ?? [];
 		}
-		if (empty($select))
-		{
-			$select = "*";
-		}
-		$where_query = array(
-			$where => array( 'operator' => '=', 'value' => $id)
-		);
-		return $this->get_database_data(self::TABLES['epm_product_list'], $where_query, $select, $order_by, $order_dir, false, false, $debug);
+		return $return_db;
 	}
 
 
