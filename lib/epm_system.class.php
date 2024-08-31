@@ -79,22 +79,121 @@ class epm_system {
     }
 
     /**
-    * Uses which to find executables that asterisk can run/use
-    * @version 2.11
-    * @param string $exec Executable to find
-    * @package epm_system
-    */
-    function find_exec($exec) {
-        $o = exec('which '.$exec);
-        if($o) {
-            if(file_exists($o) && is_executable($o)) {
-                return($o);
-            } else {
-                return('');
-            }
-        } else {
-            return('');
+     * This function find the path of a executable file in the system
+     * 
+     * @param string $exec The executable file to find
+     * @param bool $which Whether to use the 'which' command to find the executable file
+     * @param bool $return_empty Whether to return an empty string if the executable file is not found
+     * @return string The path of the executable file or an empty string if the file is not found and $return_empty is true
+     * @package epm_system
+     * @example
+     * $exec = 'php';
+     * $path = $this->find_exec($exec);
+     * if (!empty($path)) {
+     *    echo "The path of the executable file '$exec' is: $path";
+     * } else {
+     *   echo "The executable file '$exec' was not found";
+     * }
+     * @example
+     * $exec = 'php';
+     * $path = $this->find_exec($exec, true);
+     * if (!empty($path)) {
+     *   echo "The path of the executable file '$exec' is: $path";
+     * } else {
+     *  echo "The executable file '$exec' was not found";
+     * }
+     * @example
+     * $exec = 'php';
+     * $path = $this->find_exec($exec, false, false);
+     * if (!empty($path)) {
+     *  echo "The path of the executable file '$exec' is: $path";
+     * } else {
+     * echo "The executable file '$exec' was not found";
+     * }
+     * @example
+     * $exec = 'php';
+     * $path = $this->find_exec($exec, true, false);
+     * if (!empty($path)) {
+     * echo "The path of the executable file '$exec' is: $path";
+     * } else {
+     * echo "The executable file '$exec' was not found";
+     * }
+     * @example
+     * $exec = 'php';
+     * $path = $this->find_exec($exec, false, true);
+     * if (!empty($path)) {
+     * echo "The path of the executable file '$exec' is: $path";
+     * } else {
+     * echo "The executable file '$exec' was not found";
+     * }
+     * @example
+     * $exec = 'php';
+     * $path = $this->find_exec($exec, true, true);
+     * if (!empty($path)) {
+     * echo "The path of the executable file '$exec' is: $path";
+     * } else {
+     * echo "The executable file '$exec' was not found";
+     * }
+     * @example
+     * $exec = 'php';
+     * $path = $this->find_exec($exec, false, false);
+     * if (!empty($path)) {
+     * echo "The path of the executable file '$exec' is: $path";
+     * } else {
+     * echo "The executable file '$exec' was not found";
+     * }
+     */
+    public function find_exec(?string $exec, bool $which = false, $return_empty = true)
+    {
+        if (empty($exec))
+        {
+            return '';
         }
+        $data_return = trim($exec);
+        $find_ok = false;
+        if (! $which)
+        {
+            if (! empty($data_return))
+            {
+                $paths = [
+                    "/usr/local/bin/$exec",
+                    "/usr/local/sbin/$exec",
+                    "/usr/bin/$exec",
+                    "/usr/sbin/$exec",
+                    "/sbin/$exec",
+                    "/bin/$exec",
+                    "/etc/$exec"
+                ];
+        
+                foreach ($paths as $path)
+                {
+                    if (file_exists($path))
+                    {
+                        $data_return = $path;
+                        $find_ok     = true;
+                        break;
+                    }
+                }
+            }
+        }
+        if ($which || !$find_ok)
+        {
+            $cmd = sprintf('which %s', $exec);
+            $out = exec($cmd);
+            if(! empty($out))
+            {
+                if(file_exists($out) && is_executable($out))
+                {
+                    $data_return = $out;
+                    $find_ok     = true;
+                }
+            }
+        }
+        if ($return_empty && ! $find_ok)
+        {
+            return '';
+        }
+        return $data_return;
     }
 
 

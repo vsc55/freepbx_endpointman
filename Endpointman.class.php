@@ -1470,139 +1470,178 @@ class Endpointman extends FreePBX_Helpers implements BMO {
 
 	public function install()
 	{
-		out("Endpoint Manager Installer");
+		out(_("⚡ Endpoint Manager Installer ..."));
+		outn(_("⚡ Createing Structure directories..."));
+		$this->checkPathsFiles();
+		out(" ✔");
 
-		if (!file_exists($this->PHONE_MODULES_PATH))
+		outn(_('⚡ Creating symlink to web provisioner...'));
+		$provisioning_lnk = $this->system->buildPath($this->config->get('AMPWEBROOT'), "provisioning");
+		$provisioning_src = $this->system->buildPath($this->MODULE_PATH, "provisioning");
+		if (file_exists($provisioning_lnk))
 		{
-			outn(_("Creating Phone Modules Directory..."));
-			mkdir($this->PHONE_MODULES_PATH, 0764);
-			out(_("OK"));
-		}
-
-		if (!file_exists($this->PHONE_MODULES_PATH . "/setup.php"))
-		{
-			outn(_("Moving Auto Provisioner Class..."));
-    		copy($this->MODULE_PATH . "/install/setup.php", $this->PHONE_MODULES_PATH . "/setup.php");
-			out(_("OK"));
-		}
-
-		if (!file_exists($this->PHONE_MODULES_PATH . "/temp/"))
-		{
-			outn(_("Creating temp folder..."));
-    		mkdir($this->PHONE_MODULES_PATH . "/temp/", 0764);
-			out(_("OK"));
-		}
-
-		$provisioning = $this->config->get('AMPWEBROOT')."/provisioning";
-		if(!file_exists($provisioning))
-		{
-			outn(_('Creating symlink to web provisioner...'));
-			if (!symlink($this->MODULE_PATH . "/provisioning", $provisioning))
+			if (is_link($provisioning_lnk))
 			{
-				out(_("Error!"));
-				out(sprintf(_("<strong>Your permissions are wrong on %s, web provisioning link not created!</strong>")), $this->config->get('AMPWEBROOT'));
+				$pathNowFile = readlink($provisioning_lnk);
+				if ($pathNowFile === $provisioning_src)
+				{
+					out(_(" Skipped (already exists) ✔"));
+				}
+				else
+				{
+					out(" ❌");
+					out(sprintf("<strong>%s</strong", sprintf(_("The file '%s' already exists and not pointing to the correct location, location is '%s'!")), $provisioning_lnk, $pathNowFile));
+				}
 			}
 			else
 			{
-				out(_("OK"));
+				out(" ❌");
+				out(sprintf("❌ <strong>%s</strong", sprintf(_("The file '%s' already exists and is not a symbolic link!")), $provisioning_lnk));
 			}
 		}
+		else
+		{
+			if (! is_writable($this->config->get('AMPWEBROOT')))
+			{
+				out(" ❌");
+				out(sprintf("❌ <strong>%s</strong", sprintf(_("Your permissions are wrong on '%s', web provisioning link not created!")), $this->config->get('AMPWEBROOT')));
+			
+			}
+			else if (!symlink($provisioning_src, $provisioning_lnk))
+			{
+				out(" ❌");
+				out(sprintf("❌ <strong>%s</strong", sprintf(_("Failed to create symbolic link '%s' to '%s'!")), $provisioning_lnk, $provisioning_src));
+			}
+			else
+			{
+				out(" ✔");
+			}
+		}
+
+		// if (!file_exists($this->PHONE_MODULES_PATH . "/setup.php"))
+		// {
+		// 	outn(_("Moving Auto Provisioner Class..."));
+    	// 	copy($this->MODULE_PATH . "/install/setup.php", $this->PHONE_MODULES_PATH . "/setup.php");
+		// 	out(_("OK"));
+		// }
 
 		$modinfo 	   = module_getinfo('endpointman');
 		$epmxmlversion = $modinfo['endpointman']['version'];
 		$epmdbversion  = !empty($modinfo['endpointman']['dbversion']) ? $modinfo['endpointman']['dbversion'] : null;
-
-	
-		out(_("Locating NMAP + ARP + ASTERISK Executables"));
-
-		$nmap 	  = self::find_exec("nmap");
-		$arp  	  = self::find_exec("arp");
-		$asterisk = self::find_exec("asterisk");
-		$tar 	  = self::find_exec("tar");
-		$netstat  = self::find_exec("netstat");
-		// whoami
-		// groups
-		// nohup
-	
-		outn(_("Inserting data into the global vars Table..."));
+		
+		outn(_("⚡ Inserting Config Global and Updating..."));
 		$dataDefault = [
-			['srvip', ''],
-			['tz', ''],
-			['gmtoff', ''],
-			['gmthr', ''],
-			['config_location', '/tftpboot/'],
-			['update_server', self::URL_PROVISIONER],
-			['version', $epmxmlversion],
-			['enable_ari', '0'],
-			['debug', '0'],
-			['arp_location', $arp],
-			['nmap_location', $nmap],
-			['asterisk_location', $asterisk],
-			['tar_location', $tar],
-			['netstat_location', $netstat],
-			['language', ''],
-			['check_updates', '0'],
-			['disable_htaccess', ''],
-			['endpoint_vers', '0'],
-			['disable_help', '0'],
-			['show_all_registrations', '0'],
-			['ntp', ''],
-			['server_type', 'file'],
-			['allow_hdfiles', '0'],
-			['tftp_check', '0'],
-			['nmap_search', ''],
-			['backup_check', '0'],
-			['use_repo', '0'],
-			['adminpass', '123456'],
-			['userpass', '111111'],
-			['intsrvip', ''],
-			['disable_endpoint_warning', '0'],
+			'srvip' 					=> '',
+			'tz' 						=> '',
+			'gmtoff' 					=> '',
+			'gmthr' 					=> '',
+			'config_location' 			=> '/tftpboot/',
+			'update_server' 			=> self::URL_PROVISIONER,
+			'version' 					=> '',
+			'enable_ari' 				=> '0',
+			'debug' 					=> '0',
+			'arp_location' 				=> $this->system->find_exec("arp", false, false),
+			'nmap_location' 			=> $this->system->find_exec("nmap", false, false),
+			'asterisk_location' 		=> $this->system->find_exec("asterisk", false, false),
+			'tar_location' 				=> $this->system->find_exec("tar", false, false),
+			'netstat_location' 			=> $this->system->find_exec("netstat", false, false),
+			'whoami_location' 			=> $this->system->find_exec("whoami", false, false),
+			'nohup_location' 			=> $this->system->find_exec("nohup", false, false),
+			'groups_location' 			=> $this->system->find_exec("groups", false, false),
+			'language' 					=> '',
+			'check_updates' 			=> '0',
+			'disable_htaccess' 			=> '',
+			'endpoint_vers' 			=> '0',
+			'disable_help' 				=> '0',
+			'show_all_registrations' 	=> '0',
+			'ntp' 						=> '',
+			'server_type' 				=> 'file',
+			'allow_hdfiles' 			=> '0',
+			'tftp_check' 				=> '0',
+			'nmap_search' 				=> '',
+			'backup_check' 				=> '0',
+			'use_repo' 					=> '0',
+			'adminpass' 				=> '123',
+			'userpass' 					=> '111',
+			'intsrvip' 					=> '',
+			'disable_endpoint_warning' 	=> '0',
 		];
-
-		$sql = "INSERT IGNORE INTO `endpointman_global_vars` (`var_name`, `value`) VALUES (?, ?)";
-		$sth = $this->db->prepare($sql);
-		foreach ($dataDefault as $row)
+		foreach ($dataDefault as $key => $val)
 		{
-			$sth->execute($row);
+			// Get the config if it exists (database old or new system kvstore), if not create it with the default value.
+			//TODO: Pending remove old table 'endpointman_global_vars'
+			$config = $this->getConfig($key, $val);
+			switch ($key)
+			{
+				case "update_server":
+					if ($epmdbversion < "17.0.0.0")
+					{
+						$config = self::URL_PROVISIONER;
+					}
+					break;
+
+				case "version":
+					$config = $epmxmlversion;
+					break;
+			}
+			$this->setConfig($config);
 		}
-
-		if ($epmdbversion < "14.0.0.1" || $epmdbversion < "17.0.0.0")
-		{
-			$sql = "UPDATE endpointman_global_vars SET value = :url WHERE var_name = 'update_server'";
-			$sth = $this->db->prepare($sql);
-			$sth->execute([':url' => self::URL_PROVISIONER]);
-		}
-
-		out(_("OK"));
-
-
-		outn( sprintf(_("Update Version Number to %s..."), $epmxmlversion));
-		$sql = "UPDATE endpointman_global_vars SET value = :version WHERE var_name = 'version'";
-		$sth = $this->db->prepare($sql);
-		$sth->execute([':version' => $epmxmlversion]);
-		out(_("OK"));
+		out(_(" ✔"));
+		out(" ");
 	}
 
 	public function uninstall()
 	{
+		outn(_("⚡ Removing Structure Directories..."));
 		if(file_exists($this->PHONE_MODULES_PATH))
 		{
-			out(_("Removing Phone Modules Directory"));
 			$this->system->rmrf($this->PHONE_MODULES_PATH);
-			@exec("rm -R ". $this->PHONE_MODULES_PATH);
+			// @exec("rm -R ". $this->PHONE_MODULES_PATH);
 		}
+		out(_(" ✔"));
 
-		$provisioning_path = $this->config->get('AMPWEBROOT')."/provisioning";
-		if(file_exists($provisioning_path) && is_link($provisioning_path))
+		outn(_("⚡ Removing Symlink to web provisioner..."));
+		$provisioning_lnk = $this->system->buildPath($this->config->get('AMPWEBROOT'), "provisioning");
+		$provisioning_src = $this->system->buildPath($this->MODULE_PATH, "provisioning");
+		if(file_exists($provisioning_lnk))
 		{
-			out(_('Removing symlink to web provisioner'));
-			unlink($provisioning_path);
+			if (is_link($provisioning_lnk))
+			{
+				$provisioning_now_src = readlink($provisioning_lnk);
+				if ($provisioning_now_src === $provisioning_src)
+				{
+					if (! unlink($provisioning_lnk))
+					{
+						out(_("❌"));
+						out(sprintf("❌ <strong>%s</strong>", sprintf(_("Failed to remove symbolic link '%s' to '%s'!")), $provisioning_lnk, $provisioning_src));
+					}
+					else
+					{
+						out(" ✔");
+					}
+				}
+				else
+				{
+					out(_("❌"));
+					out(sprintf("❌ <strong>%s</strong>", sprintf(_("The file '%s' already exists and not pointing to the correct location, location is '%s, can't remove!")), $provisioning_lnk, $provisioning_now_src));
+				}
+			}
+			else
+			{
+				out(_("❌"));
+				out(sprintf("❌ <strong>%s</strong>", sprintf(_("The file '%s' already exists and is not a symbolic link, can't remove!")), $provisioning_lnk));
+			}
 		}
+		else
+		{
+			out(" ✔");
+		}
+		out(" ");
 
-		if(!is_link($this->config->get('AMPWEBROOT').'/admin/assets/endpointman'))
-		{
-			$this->system->rmrf($this->config->get('AMPWEBROOT').'/admin/assets/endpointman');
-		}
+		// if(!is_link($this->config->get('AMPWEBROOT').'/admin/assets/endpointman'))
+		// {
+		// 	$this->system->rmrf($this->config->get('AMPWEBROOT').'/admin/assets/endpointman');
+		// }
 		return true;
 	}
 
@@ -1688,38 +1727,7 @@ class Endpointman extends FreePBX_Helpers implements BMO {
         return FALSE;
     }
 
-	/**
-	 * Finds the specified executable file.
-	 *
-	 * @param string $exec The name of the executable file to find.
-	 * @return string|null The full path of the executable file if found, or null if not found.
-	 */
-	public static function find_exec($exec)
-	{
-		$data_return = trim($exec);
-		if (! empty($data_return))
-		{
-			$paths = [
-				"/usr/local/bin/$exec",
-				"/usr/local/sbin/$exec",
-				"/usr/bin/$exec",
-				"/usr/sbin/$exec",
-				"/sbin/$exec",
-				"/bin/$exec",
-				"/etc/$exec"
-			];
 	
-			foreach ($paths as $path)
-			{
-				if (file_exists($path))
-				{
-					$data_return = $path;
-					break;
-				}
-			}
-		}
-		return $data_return;
-	}
 
 	/**
 	 * Formats the given text with the specified CSS class and replaces any specified text.

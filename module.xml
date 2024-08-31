@@ -129,7 +129,10 @@
 		<module>framework ge 17.0.19.4</module>
 	</depends>
 	<breaking>
-		<module>restart</module>
+		<module>
+			<rawname>restart</rawname>
+        	<type>conflict</type>
+		</module>
 	</breaking>
 	<supported>
 		<version>17.0</version>
