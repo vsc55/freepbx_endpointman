@@ -16,6 +16,8 @@
 
 // function endpointman_hookProcess_core($viewing_itemid, $request) { }
 
+
+// Not exist hook in FreePBX 17
 function endpointman_module_install_check_callback($mods = array()) {
     global $active_modules;
 

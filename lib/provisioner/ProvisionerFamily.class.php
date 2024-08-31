@@ -1,7 +1,6 @@
 <?php
 namespace FreePBX\modules\Endpointman\Provisioner;
 
-// require_once(__DIR__.'/../epm_system.class.php');
 require_once('ProvisionerBase.class.php');
 require_once('ProvisionerModel.class.php');
 
@@ -19,8 +18,6 @@ class ProvisionerFamily extends ProvisionerBase
     private $configuration_files = '';
     private $provisioning_types  = [];
     private $model_list          = [];
-    
-    private $brand_parent        = null;
 
     public function __construct($id = null, ?string $name = null, string $directory = '', ?string $last_modified = '', $jsonData = null, bool $debug = true)
     {
@@ -135,7 +132,6 @@ class ProvisionerFamily extends ProvisionerBase
             $model     = $modelData['model']         ?? '';
             $lines     = $modelData['lines']         ?? '1';
             $template  = $modelData['template_data'] ?? [];
-            // $brand_id  = $this->brand_id;
             $brand_id  = $this->getBrandId();
             $family_id = $this->id;
 
@@ -154,7 +150,6 @@ class ProvisionerFamily extends ProvisionerBase
                 $template_data[$file] = [];
             }
 
-            // $new_model = new ProvisionerModel($id, $model, $lines, $template, $brand_id, $family_id);
             $new_model = new ProvisionerModel($id, $model, $lines, $template_data);
             $new_model->setParent($this);
             $new_model->setPathBase($this->getPathBase());
@@ -170,6 +165,8 @@ class ProvisionerFamily extends ProvisionerBase
      */
     public function resetAllData(bool $noReplace = false)
     {
+        parent::resetAllData($noReplace);
+        
         $this->id             = ($noReplace && !empty($this->id))            ? $this->id            : '';
         $this->name           = ($noReplace && !empty($this->name))          ? $this->name          : '';
         $this->directory      = ($noReplace && !empty($this->directory))     ? $this->directory     : '';
@@ -356,10 +353,206 @@ class ProvisionerFamily extends ProvisionerBase
     }
     
     
-    public function getURLFamilyJSON()
+    //TODO: Not necessary, this file is included in the brand package
+    // public function getURLFamilyJSON()
+    // {
+    //     return "";
+    //     // return $this->system->buildUrl($this->url_base, $this->directory, $this->directory.".json");
+    // }
+
+
+    /**
+     * Retrieves the url to file package file is downloaded from.
+     *
+     * @return string The url to file package file is downloaded from.
+     */
+    public function getURLFirmwarePkg()
     {
-        return "";
-        // return $this->system->buildUrl($this->url_base, $this->directory, $this->directory.".json");
+        if (empty($this->getURLBase()) || empty($this->getBrandDirecotry()) || empty($this->getFirmwarePkg()))
+        {
+            return null;
+        }
+        return $this->system->buildUrl($this->getURLBase(), $this->getBrandDirecotry(), $this->getFirmwarePkg());
+    }
+
+
+
+
+    /**
+     * Retrieves the path to the temporary provisioner directory.
+     *
+     * @return string The path to the temporary provisioner directory.
+     */
+    public function getPathFirmwarePkg()
+    {
+        // $this->system->buildPath($this->epm->PROVISIONER_PATH, $firmware_pkg);
+        if (empty($this->getPathTempProvisioner()) || empty($this->getFirmwarePkg()))
+        {
+            return null;
+        }
+        return $this->system->buildPath($this->getPathTempProvisioner(), $this->getFirmwarePkg());
+    }
+
+    /**
+     * Checks if the firmware package file exists.
+     *
+     * @return bool True if the firmware package exists, false otherwise.
+     */
+    public function isPathFirmwarePkgExist()
+    {
+        if (empty($this->getPathFirmwarePkg()))
+        {
+            return false;
+        }
+        return file_exists($this->getPathFirmwarePkg());
+    }
+
+    /**
+     * Checks if the firmware package file is md5sum valid.
+     *
+     * @return bool True if the firmware package is valid, false otherwise.
+     */
+    public function isMD5SumFirmwarePkgValid()
+    {
+        if (empty($this->getFirmwareMd5sum()) || ! $this->isPathFirmwarePkgExist())
+        {
+            return false;
+        }
+        return md5_file($this->getPathFirmwarePkg()) == $this->getFirmwareMd5sum();
+    }
+
+    /**
+     * Downloads the firmware package file from the URL and saves it to the path.
+     * If the file is not downloaded successfully, it will be removed.
+     *
+     * @param bool $showmsg True to show the progress bar, false otherwise.
+     * @param bool $noException True to not throw an exception, false otherwise.
+     * @return bool True if the firmware package was downloaded, false otherwise.
+     */
+    public function downloadFirmwarePkg($showmsg = true, $noException = true)
+    {
+        $url_fw_pkg  = $this->getURLFirmwarePkg();
+        $path_fw_pkg = $this->getPathFirmwarePkg();
+
+        if (empty($url_fw_pkg) || empty($path_fw_pkg))
+        {
+            if ($noException) { return false; }
+            throw new \Exception(sprintf(_("Empty URL or path for firmware package [%s]!"), __CLASS__));
+        }
+        if (empty($this->getFirmwarePkg()))
+        {
+            if ($noException) { return false; }
+            throw new \Exception(sprintf(_("Empty firmware package name [%s]!"), __CLASS__));
+        }
+
+        $result = false;
+        if ($showmsg)
+        {
+            try
+            {
+                $result = $this->system->download_file_with_progress_bar($url_fw_pkg, $path_fw_pkg);
+            }
+            catch (\Exception $e)
+            {
+                if ($noException) { return false; }
+                throw $e;
+            }
+        }
+        else
+        {
+            $result = $this->system->download_file($url_fw_pkg, $path_fw_pkg);
+        }
+        if(!$result)
+        {
+            $this->removeFirmwarePkg();
+        }
+        return $result;
+    }
+
+    /**
+     * Removes the firmware package file if it exists.
+     *
+     * @return bool True if the firmware package was removed, false otherwise.
+     */
+    public function removeFirmwarePkg()
+    {
+        if (! $this->isPathFirmwarePkgExist())
+        {
+            return false;
+        }
+        return unlink($this->getPathFirmwarePkg());
+    }
+
+    public function installFirmwarePkg(string $destination, bool $noException = true, ?array &$copy_files = [])
+    {
+        if (! $this->isPathFirmwarePkgExist() || empty($destination))
+        {
+            if ($noException) { return false; }
+            throw new \Exception(sprintf(_("Firmware package '%s' not exist or empty directory [%s]!"), $this->getFirmwarePkg(), __CLASS__));
+            
+        }
+        if (empty($this->getBrandDirecotry()) || empty($this->getDirectory()))
+        {
+            if ($noException) { return false; }
+            throw new \Exception(sprintf(_("Empty brand or family directory [%s]!"), __CLASS__));
+        }
+        if (! file_exists($destination))
+        {
+            if ($noException) { return false; }
+            throw new \Exception(sprintf(_("Destination directory '%s' not exist [%s]!"), $destination, __CLASS__));
+        }
+
+        $path_brand = $this->system->buildPath($this->getPathTempProvisioner(), $this->getBrandDirecotry());
+        $path_model = $this->system->buildPath($this->getPathTempProvisioner(), $this->getBrandDirecotry(), $this->getDirectory());
+        $path_fw    = $this->system->buildPath($path_model, "firmware");
+
+        if (file_exists($path_fw))
+        {
+            if (! $this->system->rmrf($path_fw))
+            {
+                if ($noException) { return false; }
+                throw new \Exception(sprintf(_("Failed to remove old firmware directory '%s' [%s]!"), $path_fw, __CLASS__));
+            }
+        }
+        if (! mkdir($path_fw, 0777, true) ) 
+        {
+            if ($noException) { return false; }
+            throw new \Exception(sprintf(_("Failed to create firmware directory '%s' [%s]!"), $path_fw, __CLASS__));
+        }
+
+        try
+        {
+            $this->system->decompressTarGz($this->getPathFirmwarePkg(), $path_model);
+        }
+        catch (\Exception $e)
+        {
+            if ($noException) { return false; }
+            throw $e;
+        }
+        
+        // $path_brand_dir    = $this->system->buildPath($temp_directory, $row['directory']);
+        // $path_cfg_dir 	   = $this->system->buildPath($temp_directory, $row['directory'], $row['cfg_dir']);
+        // $path_firmware_dir = $this->system->buildPath($temp_directory, $row['directory'], $row['cfg_dir'], "firmware");
+		
+        $copy_error = false;
+		foreach (glob($this->system->buildPath($path_fw, "*")) as $src_path)
+		{
+			$file	   		   = basename($src_path);
+			$dest_path 		   = $this->system->buildPath($destination, $file);
+            $copy_file_result  = @copy($src_path, $dest_path);
+			$copy_files[$file] = $copy_file_result;
+            if (! $copy_file_result)
+            {
+                $copy_error = true;
+            }
+		}
+
+        if (file_exists($path_brand))
+        {
+            $this->system->rmrf($path_brand);
+        }
+
+        return $copy_error;
     }
 
 

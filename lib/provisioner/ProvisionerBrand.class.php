@@ -496,9 +496,8 @@ class ProvisionerBrand extends ProvisionerBase
 
         if (empty($url) || empty($file))
         {
-            $msg_err = _("Empty URL or file!");
             if ($noException) { return false; }
-            throw new \Exception($msg_err);
+            throw new \Exception(_("Empty URL or file!"));
         }
         $result = false;
         if ($showmsg)
@@ -509,7 +508,6 @@ class ProvisionerBrand extends ProvisionerBase
             }
             catch (\Exception $e)
             {
-                $msg_err = $e->getMessage();
                 if ($noException) { return false; }
                 throw $e;
             }

@@ -473,6 +473,9 @@ class Endpointman_Config
 					continue;
 				}
 
+				// $product_json = $this->epm->packages->getProductByProductID($product['id']);
+				// $product['firmware_pkg'] = $product_json !== null ? $product_json->getFirmwarePkg() ?? '' : '';
+
 				$product['count'] 		  = count($brand['products']);
 				$product['firmware_vers'] = $product['firmware_vers'] ?? 0;
 
@@ -1461,7 +1464,6 @@ class Endpointman_Config
 					'config_files'	=> $family->getConfigurationFiles(true),
 				);
 				$new_product_insert = array(
-					// 'id' 	  => $family->getID(),
 					'id' 	  => $family->getFamilyId(),
 					'brand'	  => $family->getBrandID(),
 					'cfg_dir' => $family->getDirectory(),
@@ -1775,9 +1777,12 @@ class Endpointman_Config
     }
 
 
+	//TODO: Pending to testing
 	/**
 	 * Installs firmware for a specific product.
 	 *
+	 * @param int $product_id The ID of the product to install the firmware for.
+	 * @return bool Returns true if the firmware is successfully installed, false otherwise.
 	 */
     public function install_firmware($product_id)
 	{
@@ -1788,161 +1793,129 @@ class Endpointman_Config
 			out(_("❌ No ID Given!"));
 			return false;
 		}
-
-		//TOOD: Review howto create temp directory
-        // $temp_directory = $this->system->buildPath($this->system->sys_get_temp_dir(), "/epm_temp/");
-
-		$temp_directory = $this->epm->PROVISIONER_PATH;
-
-		$sql = sprintf('SELECT t_product_list.*, t_brand_list.directory FROM %s as t_product_list, %s as t_brand_list WHERE t_product_list.brand = t_brand_list.id AND t_product_list.id = :product_id', "endpointman_product_list", "endpointman_brand_list");
-		$stmt = $this->db->prepare($sql);
-		$stmt->execute([
-			':product_id' => $product_id
-		]);
-		$row = $stmt->fetch(\PDO::FETCH_ASSOC);
-
-		$path_json_family = $this->system->buildPath($this->epm->PHONE_MODULES_PATH, 'endpoint', $row['directory'], $row['cfg_dir'], "family_data.json");
-
-		$json_data = null;
-		try
+		elseif (! $this->epm->is_exist_hw_product($product_id, "id", true))
 		{
-			$json_data = $this->epm->file2json($path_json_family);
-			if ($json_data === false)
-			{
-				out(sprintf(_("<b>Error file2json return false for the file '%s'!</b>"), $path_json_family));
-				return false;
-			}
-		}
-		catch (\Exception $e)
-		{
-			out(sprintf(_("<b>Error read JSON  file: %s</b>"), $e->getMessage()));
+			out(_("❌ Product is not exist in the database!"));
 			return false;
 		}
 
-		$firmware_ver = $json_data['data']['firmware_ver'] ?? '';
-		$firmware_pkg = $json_data['data']['firmware_pkg'] ?? '';
+		$product_json = $this->epm->packages->getProductByProductID($product_id);
+		$product_db   = $this->epm->get_hw_product($product_id, "id", "*", true);
+
+		if (empty($product_json) || empty($product_db))
+		{
+			out(_("❌ Product JSON or Product DB is empty!"));
+			return false;
+		}
+		
+		$firmware_ver    = $product_json->getFirmwareVer();
+		$firmware_pkg    = $product_json->getFirmwarePkg();
+		$firmware_ver_db = $product_db['firmware_vers'] ?? '';
 
         if (empty($firmware_ver))
 		{
-        	out (_("Error: The version of the firmware package is blank!"));
+			out(_("❌ The firmware version is Null or blank!"));
         	return false;
         }
 
         if ((empty($firmware_pkg)) OR ($firmware_pkg == "NULL"))
 		{
-        	out (_("Error: The package name of the firmware to be downloaded is Null or blank!"));
+			out(_("❌ The firmware package is Null or blank!"));
         	return false;
         }
 
-        if ($firmware_ver > $row['firmware_vers'])
+        if ($firmware_ver > $firmware_ver_db)
 		{
-            $md5_json			  = $json_data['data']['firmware_md5sum'];
-			$firmware_pkg_path	  = $this->system->buildPath($temp_directory, $firmware_pkg);
-			$firmware_pkg_url	  = $this->system->buildUrl($this->epm->URL_UPDATE, $row['directory'], $firmware_pkg);
-			$go_download_firmware = true;
-
-            if (file_exists($firmware_pkg_path))
+			out(_("⚡ New Firmware Version Detected '%s'!"), $firmware_ver);
+			if ($product_json->isMD5SumFirmwarePkgValid())
 			{
-                $md5_pkg = md5_file($firmware_pkg_path);
-                if ($md5_json == $md5_pkg)
-				{
-					out(_("Skipping download, updated local version..."));
-					$go_download_firmware = false;
-                }
-            }
-
-			if ($go_download_firmware)
+				out(_("✅ Firmware file is already downloaded, skipping download!"));
+			}
+			else
 			{
-				out(_("Downloading firmware..."));
+				out(_("⚡ Downloading firmware..."));
 				try
 				{
-					if (! $this->system->download_file_with_progress_bar($firmware_pkg_url, $firmware_pkg_path))
+					if (! $product_json->downloadFirmwarePkg(true, false))
 					{
-						out(_("Error download frimware package!"));
+						out(_("❌ Error Downloading Firmware!"));
 						return false;
 					}
 				}
 				catch (\Exception $e)
 				{
+					out(" ❌" . $e->getMessage());
 					return false;
 				}
-				$md5_pkg = md5_file($firmware_pkg_path);
+				outn(_("⚡ Checking MD5sum of Package thas was downloaded ..."));
+				if (! $product_json->isMD5SumFirmwarePkgValid())
+				{
+					out(" ❌");
+					out(_("❌ Firmware MD5 for the package '%s' is invalid!"), $firmware_pkg);
+					return false;
+				}
+				out(" ✔");
 			}
 
-			outn(_("Checking MD5sum of Package... "));
-            if ($md5_json == $md5_pkg)
+			out(_("⚡ Installing Firmware..."));
+			$copy_ok = true;
+			$firmware_files = array();
+			try
 			{
-				out(_("Matches!"));
+				$copy_ok = $product_json->installFirmwarePkg($this->configmod->get('config_location'), false, $firmware_files);
+			}
+			catch (\Exception $e)
+			{
+				$copy_ok = false;
+				out(" ❌" . $e->getMessage());
+			}
+			finally
+			{
+				// Important: Update the firmware version in the database is necessary for the process to remove the firmware
+				$update_product = array(
+					'firmware_vers'  => $firmware_ver,
+					'firmware_files' => implode(",", array_keys($firmware_files)),
+				);
+				$this->epm->set_hw_product($product_db['id'], $update_product, 'id');
+				unset($update_product);
+			}
 
-				$path_brand_dir    = $this->system->buildPath($temp_directory, $row['directory']);
-				$path_cfg_dir 	   = $this->system->buildPath($temp_directory, $row['directory'], $row['cfg_dir']);
-				$path_firmware_dir = $this->system->buildPath($temp_directory, $row['directory'], $row['cfg_dir'], "firmware");
-								
-                if (file_exists($path_firmware_dir))
+			foreach ($firmware_files as $file => $status)
+			{
+				if ($status === false)
 				{
-                    $this->system->rmrf($path_firmware_dir);
-                }
-                mkdir($path_firmware_dir, 0777, true);
-
-				out(_("Installing Firmware..."));
-				$this->system->decompressTarGz($path_firmware_dir, $path_cfg_dir);
-
-				$firmware_files = array();
-				$copy_error 	= false;
-                foreach (glob($this->system->buildPath($path_firmware_dir, "*")) as $src_path)
-				{
-                    $file	   		  = basename($src_path);
-                    $firmware_files[] = $file;
-					$dest_path 		  = $this->system->buildPath($this->configmod->get('config_location'), $file);
-                    if (!@copy($src_path, $dest_path))
-					{
-                    	out(sprintf(_("- Failed To Copy %s!"), $file));
-                        $copy_error = true;
-                    }
-					elseif ($this->configmod->get('debug'))
-					{
-						out(sprintf(_("- Copied %s to %s."), $file, $this->configmod->get('config_location')));
-                    }
-                }
-
-				if (file_exists($path_brand_dir))
-				{
-					$this->system->rmrf($path_brand_dir);
+					out(sprintf(_("❌ Failed To Copy %s!"), $file));
+					$copy_ok = false;
 				}
-
-				$sql = sprintf('UPDATE %s SET firmware_vers = :firmware_ver, firmware_files = :firmware_files WHERE id = :id', "endpointman_product_list");
-				$stmt = $this->db->prepare($sql);
-				$stmt->execute([
-					':firmware_ver'	  => $firmware_ver,
-					':firmware_files' => implode(",", $firmware_files),
-					':id' 			  => $row['id'],
-				]);
-
-                if ($copy_error)
-				{
-					out(_("Copy Error Detected! Aborting Install!"));
-                    $this->remove_firmware($product_id);
-					out(_("Info: Please Check Directory/Permissions!"));
-                }
 				else
 				{
-					out(_("Done!"));
-                }
-            }
+					if ($this->configmod->get('debug'))
+					{
+						out(sprintf(_("👁‍🗨 Copied '%s' to '%s'!"), $file, $this->configmod->get('config_location')));
+					}
+				}
+			}
+
+			if (! $copy_ok)
+			{
+				out(_("❌ Copy Error Detected! Aborting Install!"));
+				$this->remove_firmware($product_id);
+				out(_("👁‍🗨Info: Please Check Directory/Permissions!"));
+
+			}
 			else
 			{
-				out(_("Firmware MD5 didn't match!"));
-				return false;
-            }
+				out(_("✅ Firmware Installed Successfully!"));
+			}
         }
 		else
 		{
-			out(_("Your Firmware is already up to date."));
+			out(_("✅ Your Firmware is already up to date!"));
         }
 		return true;
     }
 
-	
+	//TODO: Pending to testing
 	/**
 	 * Removes firmware files associated with a specific ID.
 	 *
@@ -2069,16 +2042,26 @@ class Endpointman_Config
 		}
 
 		$product_json = $this->epm->packages->getProductByProductID($id);
+		$product_db   = $this->epm->get_hw_product($id, "id", "*", true);
 		if (empty($product_json) || empty($product_db))
 		{
 			// Is not found or the configuration drive is unknown.
 			return 'nothing';
 		}
 
+		// The product not firmware available to install.
 		if (empty($product_json->getFirmwareVer()))
+		{
+			return 'nothing';
+		}
+
+		// The firmware is already installed, accion allowed is remove.
+		if (! empty($product_db['firmware_vers']))
 		{
 			return "remove";
 		}
+
+		// The firmware is not installed yet, accion allowed is install.
 		return "install";
     }
 
