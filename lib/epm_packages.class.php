@@ -34,7 +34,6 @@ class Packages
         $this->freepbx   = $epm->freepbx;   // FreePBX object
 		$this->db        = $epm->db;        // Database object configurate in the Endpoint Manager object
 		$this->config    = $epm->config;    // Config object configurate in the Endpoint Manager object
-        $this->configepm = $epm->configmod; // Config Endpoint Manager
         $this->system    = new epm_system();
 
         $this->reload_master_json();

@@ -19,7 +19,6 @@ class Endpointman_Devices
 		$this->freepbx   = $epm->freepbx;
 		$this->db 	     = $epm->freepbx->Database;
 		$this->config    = $epm->freepbx->Config;
-		$this->configmod = $epm->configmod;			
 	}
 
 	public function myShowPage(&$pagedata) {

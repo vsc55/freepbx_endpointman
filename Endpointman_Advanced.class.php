@@ -19,7 +19,6 @@ class Endpointman_Advanced
 		$this->freepbx    = $epm->freepbx;
 		$this->db 		  = $epm->freepbx->Database;
 		$this->config 	  = $epm->freepbx->Config;
-		$this->configmod  = $epm->configmod;
 		$this->epm_config = $epm->epm_config;
 
         if (! file_exists($this->epm->MODULE_PATH))
@@ -32,34 +31,34 @@ class Endpointman_Advanced
         }
 	}
 
-	public function myShowPage(&$pagedata)
-	{
-		if(empty($pagedata))
-		{
-			$pagedata['settings'] = array(
-				"name" => _("Settings"),
-				"page" => '/views/epm_advanced_settings.page.php'
-			);
-			$pagedata['oui_manager'] = array(
-				"name" => _("OUI Manager"),
-				"page" => '/views/epm_advanced_oui_manager.page.php'
-			);
-			$pagedata['poce'] = array(
-				"name" => _("Product Configuration Editor"),
-				"page" => '/views/epm_advanced_poce.page.php'
-			);
-			$pagedata['iedl'] = array(
-				"name" => _("Import/Export My Devices List"),
-				"page" => '/views/epm_advanced_iedl.page.php'
-			);
-			$pagedata['manual_upload'] = array(
-				"name" => _("Package Import/Export"),
-				"page" => '/views/epm_advanced_manual_upload.page.php'
-			);
-		}
-	}
+	// public function myShowPage(&$pagedata)
+	// {
+	// 	if(empty($pagedata))
+	// 	{
+	// 		$pagedata['settings'] = array(
+	// 			"name" => _("Settings"),
+	// 			"page" => '/views/epm_advanced_settings.page.php'
+	// 		);
+	// 		$pagedata['oui_manager'] = array(
+	// 			"name" => _("OUI Manager"),
+	// 			"page" => '/views/epm_advanced_oui_manager.page.php'
+	// 		);
+	// 		$pagedata['poce'] = array(
+	// 			"name" => _("Product Configuration Editor"),
+	// 			"page" => '/views/epm_advanced_poce.page.php'
+	// 		);
+	// 		$pagedata['iedl'] = array(
+	// 			"name" => _("Import/Export My Devices List"),
+	// 			"page" => '/views/epm_advanced_iedl.page.php'
+	// 		);
+	// 		$pagedata['manual_upload'] = array(
+	// 			"name" => _("Package Import/Export"),
+	// 			"page" => '/views/epm_advanced_manual_upload.page.php'
+	// 		);
+	// 	}
+	// }
 
-	public function ajaxRequest($req, &$setting)
+	public function ajaxRequest($req, &$setting, array $data)
 	{
 		$allowRequest = array(
 			"oui",
@@ -84,9 +83,8 @@ class Endpointman_Advanced
 		return false;
 	}
 
-    public function ajaxHandler($module_tab = "", $command = "")
+    public function ajaxHandler(array $data)
 	{
-		$command_allow = true;
 		$txt = array(
 			'settings' => array(
 				'error' 		  => _("Error!"),
@@ -95,121 +93,139 @@ class Endpointman_Advanced
 				'opt_invalid' 	  => _("Invalid Option!")
 			)
 		);
-		
-		switch($module_tab)
-		{
-			case 'settings':
-				switch ($command)
-				{
-					case "saveconfig":
-						$retarr = $this->epm_advanced_settings_saveconfig();
-						break;
-	
-					default:
-						$command_allow = false;
-				}
-				break;
 
-			case 'oui_manager':
-				switch ($command)
-				{
-					case "oui":
-						//$sql = 'SELECT endpointman_oui_list.id, endpointman_oui_list.oui , endpointman_brand_list.name, endpointman_oui_list.custom FROM endpointman_oui_list , endpointman_brand_list WHERE endpointman_oui_list.brand = endpointman_brand_list.id ORDER BY endpointman_oui_list.oui ASC';
-						$sql = 'SELECT T1.id, T1.oui, T2.name, T1.custom FROM endpointman_oui_list as T1 , endpointman_brand_list as T2 WHERE T1.brand = T2.id ORDER BY T1.oui ASC';
-						$data = sql($sql, 'getAll', \PDO::FETCH_ASSOC);
-						$ret = array();
-						foreach ($data as $item) {
-							$ret[] = array('id' => $item['id'], 'oui' => $item['oui'], 'brand' => $item['name'], 'custom' => $item['custom']);
-						}
-						return $ret;
-						break;
-	
-					case "oui_add":
-						$retarr = $this->epm_advanced_oui_add();
-						break;
-	
-					case "oui_del":
-						$retarr = $this->epm_advanced_oui_remove();
-						break;
-	
-					default:
-						$command_allow = false;
-				}
-				break;
-
-
-			case 'iedl':
-				switch ($command)
-				{
-					default:
-						$command_allow = false;
-				}
-				
-				break;
-			
-			case 'poce':
-				switch ($command)
-				{
-					case "poce_list_brands":
-						$retarr = $this->epm_advanced_poce_list_brands();
-						break;
-
-					case "poce_select":
-						$retarr = $this->epm_advanced_poce_select();
-						break;
-
-					case "poce_select_file":
-						$retarr = $this->epm_advanced_poce_select_file();
-						break;
-
-					case "poce_save_file":
-					case "poce_save_as_file":
-						$retarr = $this->epm_advanced_poce_save_file();
-						break;
-
-					case "poce_sendid":
-						$retarr = $this->epm_advanced_poce_sendid();
-						break;
-
-					case "poce_delete_config_custom":
-						$retarr = $this->epm_advanced_poce_delete_config_custom();
-						break;
-
-					default:
-						$command_allow = false;
-				}
-				break;
-			
-			case 'manual_upload':
-				switch ($command)
-				{
-					case "list_files_brands_export":
-						$retarr = $this->epm_advanced_manual_upload_list_files_brans_export();
-						break;
-
-					default:
-						$command_allow = false;
-				}
-				break;
-
-			default:
-				$retarr = array(
-					"status" => false,
-					"message" => sprintf(_("Tab '%s' not valid!"), $module_tab)
-				);
-		}
-		if (! $command_allow)
+		if (empty($data) || !is_array($data))
 		{
 			$retarr = array(
 				"status" => false,
-				"message" => sprintf(_("Command '%s' not found!"), $command)
+				"message" => _("Empty data received or data is not foromatted correctly!")
 			);
 		}
 		else
 		{
-			if (! empty($txt[strtolower($module_tab)]))
+			$command_allow  = true;
+			$command 		= $data['command'] 	  ?? '';
+			$request		= $data['request'] 	  ?? array();
+			$module_tab		= $data['module_tab'] ?? '';
+
+			switch($module_tab)
 			{
-				$retarr['txt'] = $txt[strtolower($module_tab)];
+				case 'settings':
+					switch ($command)
+					{
+						case "saveconfig":
+							$retarr = $this->epm_advanced_settings_saveconfig($request);
+							break;
+		
+						default:
+							$command_allow = false;
+					}
+					break;
+
+				case 'oui_manager':
+					switch ($command)
+					{
+						case "oui":
+							//$sql = 'SELECT endpointman_oui_list.id, endpointman_oui_list.oui , endpointman_brand_list.name, endpointman_oui_list.custom FROM endpointman_oui_list , endpointman_brand_list WHERE endpointman_oui_list.brand = endpointman_brand_list.id ORDER BY endpointman_oui_list.oui ASC';
+							$sql = 'SELECT T1.id, T1.oui, T2.name, T1.custom FROM endpointman_oui_list as T1 , endpointman_brand_list as T2 WHERE T1.brand = T2.id ORDER BY T1.oui ASC';
+							$data = sql($sql, 'getAll', \PDO::FETCH_ASSOC);
+							$ret = array();
+							foreach ($data as $item) {
+								$ret[] = array('id' => $item['id'], 'oui' => $item['oui'], 'brand' => $item['name'], 'custom' => $item['custom']);
+							}
+							return $ret;
+							break;
+		
+						case "oui_add":
+							$retarr = $this->epm_advanced_oui_add();
+							break;
+		
+						case "oui_del":
+							$retarr = $this->epm_advanced_oui_remove();
+							break;
+		
+						default:
+							$command_allow = false;
+					}
+					break;
+
+
+				case 'iedl':
+					switch ($command)
+					{
+						default:
+							$command_allow = false;
+					}
+					
+					break;
+				
+				case 'poce':
+					switch ($command)
+					{
+						case "poce_list_brands":
+							$retarr = $this->epm_advanced_poce_list_brands();
+							break;
+
+						case "poce_select":
+							$retarr = $this->epm_advanced_poce_select($data);
+							break;
+
+						case "poce_select_file":
+							$retarr = $this->epm_advanced_poce_select_file();
+							break;
+
+						case "poce_save_file":
+						case "poce_save_as_file":
+							$retarr = $this->epm_advanced_poce_save_file();
+							break;
+
+						case "poce_sendid":
+							$retarr = $this->epm_advanced_poce_sendid();
+							break;
+
+						case "poce_delete_config_custom":
+							$retarr = $this->epm_advanced_poce_delete_config_custom();
+							break;
+
+						default:
+							$command_allow = false;
+					}
+					break;
+				
+				case 'manual_upload':
+					switch ($command)
+					{
+						case "list_files_brands_export":
+							$retarr = $this->epm_advanced_manual_upload_list_files_brans_export();
+							break;
+
+						default:
+							$command_allow = false;
+					}
+					break;
+
+				default:
+					$retarr = array(
+						"status" => false,
+						"message" => sprintf(_("Tab '%s' not valid!"), $module_tab)
+					);
+			}
+
+
+
+			if (! $command_allow)
+			{
+				$retarr = array(
+					"status" => false,
+					"message" => sprintf(_("Command '%s' not found!"), $command)
+				);
+			}
+			else
+			{
+				if (! empty($txt[strtolower($module_tab)]))
+				{
+					$retarr['txt'] = $txt[strtolower($module_tab)];
+				}
 			}
 		}
 		return $retarr;
@@ -276,7 +292,7 @@ class Endpointman_Advanced
 	/**** FUNCIONES SEC MODULO "epm_advanced\settings" ****/
 	public function epm_advanced_config_loc_is_writable()
 	{
-		$config_loc    = $this->configmod->get("config_loc");
+		$config_loc    = $this->epm->getConfig("config_loc");
 		$tftp_writable = FALSE;
 		if ((isset($config_loc)) AND ($config_loc != ""))
 		{
@@ -291,145 +307,167 @@ class Endpointman_Advanced
 		return $tftp_writable;
 	}
 
-	private function epm_advanced_settings_saveconfig ()
+	private function epm_advanced_settings_saveconfig (array $request)
 	{
-		$arrVal['VAR_REQUEST'] = array("name", "value");
-		foreach ($arrVal['VAR_REQUEST'] as $valor)
+		$request_args 	  = array("name", "value");
+		$request_args_int = array();
+		$args_check 	  = $this->epm->system->check_request_args($request, $request_args, $request_args_int);
+
+		switch(true)
 		{
-			if (! array_key_exists($valor, $_REQUEST))
-			{
-				return array("status" => false, "message" => _("No send value!")." [".$valor."]");
-			}
+			case (empty($args_check)):
+			case ($args_check === false):
+				return array("status" => false, "message" => _("Error in the process of checking the request arguments!"));
+
+			case ($args_check === true):
+				break;
+
+			case (is_string($args_check)):
+			default:
+				return array("status" => false, "message" => $args_check);
 		}
 
-		$dget['name'] = strtolower($_REQUEST['name']);
-		$dget['value'] = $_REQUEST['value'];
+		$name  = strtolower($request['name']);
+		$value = $request['value'];
 
-		switch($dget['name']) {
+		switch($name)
+		{
 			case "enable_ari":
-				$dget['value'] = strtolower($dget['value']);
-				$sql = "UPDATE endpointman_global_vars SET value='" . ($dget['value'] == "yes" ? "1": "0") . "' WHERE var_name='enable_ari'";
+				$this->epm->setConfig('enable_ari', in_array($value, array("0", "1")) ? $value : "0");
 				break;
 
 			case "enable_debug":
-				$dget['value'] = strtolower($dget['value']);
-				$sql = "UPDATE endpointman_global_vars SET value='" . ($dget['value'] == "yes" ? "1": "0") . "' WHERE var_name='debug'";
+				$this->epm->setConfig('debug', in_array($value, array("0", "1")) ? $value : "0");
 				break;
 
 			case "disable_help":
-				$dget['value'] = strtolower($dget['value']);
-				$sql = "UPDATE endpointman_global_vars SET value='" . ($dget['value'] == "yes" ? "1": "0") . "' WHERE var_name='disable_help'";
+				$this->epm->setConfig('disable_help', in_array($value, array("0", "1")) ? $value : "0");
 				break;
 	
 			case "disable_endpoint_warning":
-				$dget['value'] = strtolower($dget['value']);
-				$sql = "UPDATE endpointman_global_vars SET value='" . ($dget['value'] == "yes" ? "1": "0") . "' WHERE var_name='disable_endpoint_warning'";
+				$this->epm->setConfig('disable_endpoint_warning', in_array($value, array("0", "1")) ? $value : "0");
 				break;
 
 			case "allow_dupext":
-				$dget['value'] = strtolower($dget['value']);
-				$sql = "UPDATE endpointman_global_vars SET value='" . ($dget['value'] == "yes" ? "1": "0") . "' WHERE var_name='show_all_registrations'";
+				$this->epm->setConfig('show_all_registrations', in_array($value, array("0", "1")) ? $value : "0");
 				break;
 
 			case "allow_hdfiles":
-				$dget['value'] = strtolower($dget['value']);
-				$sql = "UPDATE endpointman_global_vars SET value='" . ($dget['value'] == "yes" ? "1": "0") . "' WHERE var_name='allow_hdfiles'";
+				$this->epm->setConfig('allow_hdfiles', in_array($value, array("0", "1")) ? $value : "0");
 				break;
 
 			case "tftp_check":
-				$dget['value'] = strtolower($dget['value']);
-				$sql = "UPDATE endpointman_global_vars SET value='" . ($dget['value'] == "yes" ? "1": "0") . "' WHERE var_name='tftp_check'";
+				$this->epm->setConfig('tftp_check', in_array($value, array("0", "1")) ? $value : "0");
 				break;
 
 			case "backup_check":
-				$dget['value'] = strtolower($dget['value']);
-				$sql = "UPDATE endpointman_global_vars SET value='" . ($dget['value'] == "yes" ? "1": "0") . "' WHERE var_name='backup_check'";
+				$this->epm->setConfig('backup_check', in_array($value, array("0", "1")) ? $value : "0");
 				break;
 
 			case "use_repo":
-				$dget['value'] = strtolower($dget['value']);
-				if (($dget['value'] == "yes") and (! $this->has_git())) {
-					$retarr = array("status" => false, "message" => _("Git not installed!"));
+				$value = strtolower($value);
+				if (($value == "yes") and (! $this->epm->has_git()))
+				{
+					return array("status" => false, "message" => _("Git not installed!"));
 				}
-				else {
-					$sql = "UPDATE endpointman_global_vars SET value='" . ($dget['value'] == "yes" ? "1": "0") . "' WHERE var_name='use_repo'";
+				else
+				{
+					$this->epm->setConfig('use_repo', $value == "yes" ? "1" : "0");
 				}
 				break;
 
 			case "config_loc":
-				$dget['value'] = trim($dget['value']);
 				//No trailing slash. Help the user out and add one :-)
-				if ($dget['value'][strlen($dget['value']) - 1] != "/")
+				$value = $this->epm->system->buildPath($value);
+				if (empty($value))
 				{
-					$dget['value'] = $dget['value'] . "/";
+					return array("status" => false, "message" => _("No Configuration Location Defined!"));
 				}
-				if ($dget['value'] != "") {
-					if ((file_exists($dget['value'] = $dget['value'])) AND (is_dir($dget['value'] = $dget['value']))) {
-						if (is_writable($dget['value'] = $dget['value'])) {
-							$sql = "UPDATE endpointman_global_vars SET value='" . $dget['value'] . "' WHERE var_name='config_location'";
-						} else {
-							$retarr = array("status" => false, "message" => _("Directory Not Writable!"));
-						}
-					} else {
-						$retarr = array("status" => false, "message" => _("Not a Vaild Directory.<br /> Try to run 'mkdir " . $_POST['config_loc'] . "' as root."));
-					}
-				} else {
-					$retarr = array("status" => false, "message" => _("No Configuration Location Defined!"));
+				elseif (!file_exists($value))
+				{
+					return array("status" => false, "message" => _("Directory does not exist!"));
+				}
+				elseif (!is_dir($value))
+				{
+					return array("status" => false, "message" => _("The path '%s' is not a directory!", $value));
+				}
+				elseif (!is_writable($value))
+				{
+					return array("status" => false, "message" => _("Directory '%s' Not Writable!", $value));
+				}
+				else
+				{
+					$this->epm->setConfig('config_location', $value);
 				}
 				break;
 
 			case "srvip":
-				$dget['value'] = trim($dget['value']);
-				$sql = "UPDATE endpointman_global_vars SET value='" . $dget['value'] . "' WHERE var_name='srvip'";
+				$this->epm->setConfig('srvip', trim($value));
 				break;
+
 			case "intsrvip":
-				$dget['value'] = trim($dget['value']);
-				$sql = "UPDATE endpointman_global_vars SET value='" . $dget['value'] . "' WHERE var_name='intsrvip'";
+				$this->epm->setConfig('intsrvip', trim($value));
 				break;
+
 			case "tz":
-				$sql = "UPDATE endpointman_global_vars SET value='" . $dget['value'] . "' WHERE var_name='tz'";
+				$this->epm->setConfig('tz', $value);
 				break;
 
 			case "adminpass":
-				$dget['value'] = trim($dget['value']);
-				$sql = "UPDATE endpointman_global_vars SET value='" . $dget['value'] . "' WHERE var_name='adminpass'";
+				$this->epm->setConfig('adminpass', trim($value));
 				break;
+
 			case "userpass":
-				$dget['value'] = trim($dget['value']);
-				$sql = "UPDATE endpointman_global_vars SET value='" . $dget['value'] . "' WHERE var_name='userpass'";
+				$this->epm->setConfig('userpass', trim($value));
 				break;
 				
 			case "ntp_server":
-				$dget['value'] = trim($dget['value']);
-				$sql = "UPDATE endpointman_global_vars SET value='" . $dget['value'] . "' WHERE var_name='ntp'";
+				$this->epm->setConfig('ntp', trim($value));
 				break;
 
 			case "nmap_loc":
-				$sql = "UPDATE endpointman_global_vars SET value='" . $dget['value'] . "' WHERE var_name='nmap_location'";
+				$this->epm->setConfig('nmap_location', trim($value));
 				break;
 
 			case "arp_loc":
-				$sql = "UPDATE endpointman_global_vars SET value='" . $dget['value'] . "' WHERE var_name='arp_location'";
+				$this->epm->setConfig('arp_location', trim($value));
 				break;
 
 			case "asterisk_loc":
-				$sql = "UPDATE endpointman_global_vars SET value='" . $dget['value'] . "' WHERE var_name='asterisk_location'";
+				$this->epm->setConfig('asterisk_location', trim($value));
 				break;
 
 			case "tar_loc":
-				$sql = "UPDATE endpointman_global_vars SET value='" . $dget['value'] . "' WHERE var_name='tar_location'";
+				$this->epm->setConfig('tar_location', trim($value));
 				break;
 
 			case "netstat_loc":
-				$sql = "UPDATE endpointman_global_vars SET value='" . $dget['value'] . "' WHERE var_name='netstat_location'";
+				$this->epm->setConfig('netstat_location', trim($value));
 				break;
 
 			case "package_server":
-				$sql = "UPDATE endpointman_global_vars SET value='" . $dget['value'] . "' WHERE var_name='update_server'";
+				$this->epm->setConfig('update_server', trim($value));
+				break;
+			
+			case "whoami_loc":
+				$this->epm->setConfig('whoami_location', trim($value));
+				break;
+
+			case "nohup_loc":
+				$this->epm->setConfig('nohup_location', trim($value));
+				break;
+
+			case "groups_loc":
+				$this->epm->setConfig('groups_location', trim($value));
 				break;
 
 			case "cfg_type":
-				if ($dget['value'] == 'http' or $dget['value'] == 'https' )
+				$value = strtolower($value);
+				if (!in_array($value, array("http", "https", 'file')))
+				{
+					return array("status" => false, "message" => _("Invalid server type '%s'!", $value));
+				}
+				if (in_array($value, array("http", "https")))
 				{
 					$symlink  = $this->epm->system->buildPath($this->config->get('AMPWEBROOT'), "provisioning");
 					$reallink = $this->epm->system->buildPath($this->epm->MODULE_PATH, "provisioning");
@@ -437,36 +475,18 @@ class Endpointman_Advanced
 					{
 						if (!symlink($reallink, $symlink))
 						{
-							$retarr = array(
-								"status"  => false,
-								"message" => sprintf(_("Your permissions are wrong on %s, web provisioning link not created!"), $this->config->get('AMPWEBROOT') )
-							);
-							//$dget['value'] = 'file';
-							break;
-						} //else {
-							//$dget['value'] = 'http';
-						//}
-					}// else {
-						//$dget['value'] = 'http';
-					//}
-				} else {
-					$dget['value'] = 'file';
+							return array("status"  => false, "message" => sprintf(_("Your permissions are wrong on %s, web provisioning link not created!"), $this->config->get('AMPWEBROOT')));
+						}
+					}
 				}
-				$sql = "UPDATE endpointman_global_vars SET value='" . $dget['value'] . "' WHERE var_name='server_type'";
+				$this->epm->setConfig('server_type', $value);
 				break;
 
 			default:
-				$retarr = array("status" => false, "message" => _("Name invalid: ") . $dget['name'] );
+				return array("status" => false, "message" => sprintf(_("Name invalid: %s"), $name) );
 		}
 
-		if (isset($sql)) {
-			sql($sql);
-			$retarr = array("status" => true, "message" => "OK", "name" => $dget['name'], "value" => $dget['value']);
-			unset($sql);
-		}
-
-		unset($dget);
-		return $retarr;
+		return array("status" => true, "message" => "OK", "name" => $name, "value" => $value);
 	}
 
 
@@ -489,52 +509,67 @@ class Endpointman_Advanced
 		return array("status" => true, "message" => _("Ok!"), "ldatos" => $temp);
 	}
 
-	public function epm_advanced_poce_select()
+	public function epm_advanced_poce_select(array $data)
 	{
-			if (! isset($_REQUEST['product_select'])) {
-			$retarr = array("status" => false, "message" => _("No send Product Select!"));
+		$request 		= $data['request'] ?? array();
+		$product_select = $request['product_select'] ?? '';
+		$path_setup 	= $this->epm->system->buildPath($this->epm->PHONE_MODULES_PATH, 'setup.php');
+
+
+		if (empty($product_select))
+		{
+			return array("status" => false, "message" => _("No send Product Select!"));
 		}
-		elseif (! is_numeric($_REQUEST['product_select'])) {
-			$retarr = array("status" => false, "message" => _("Product Select send is not number!"));
+		elseif (! is_numeric($product_select))
+		{
+			return array("status" => false, "message" => _("Product Select send is not number!"));
 		}
-		elseif ($_REQUEST['product_select'] < 0) {
-			$retarr = array("status" => false, "message" => _("Product Select send is number not valid!"));
+		elseif ($product_select < 0)
+		{
+			return array("status" => false, "message" => _("Product Select send is number not valid!"));
+		}
+		elseif (!file_exists($path_setup))
+		{
+			return array("status" => false, "message" => _("File setup.php not found!"));
 		}
 		else
 		{
-			$dget['product_select'] = $_REQUEST['product_select'];
+			// $sql = 'SELECT * FROM `endpointman_product_list` WHERE `hidden` = 0 AND `id` = '.$dget['product_select'];
+			// $product_select_info = sql($sql, 'getRow', \PDO::FETCH_ASSOC);
+			$product_select_info = $this->epm->get_hw_product($product_select);
 
-			$sql = 'SELECT * FROM `endpointman_product_list` WHERE `hidden` = 0 AND `id` = '.$dget['product_select'];
-			$product_select_info = sql($sql, 'getRow', \PDO::FETCH_ASSOC);
 
-			$sql = "SELECT cfg_dir,directory,config_files FROM endpointman_product_list,endpointman_brand_list WHERE endpointman_product_list.brand = endpointman_brand_list.id AND endpointman_product_list.id ='" . $dget['product_select'] . "'";
-			$row =  sql($sql, 'getRow', \PDO::FETCH_ASSOC);
-			$config_files = explode(",", $row['config_files']);
-			$i = 0;
-			if (count($config_files)) {
-				foreach ($config_files as $config_files_data) {
-					//$file_list[$i]['value'] = $i;
-					$file_list[$i]['value'] = $dget['product_select'];
-					$file_list[$i]['text'] = $config_files_data;
-					$i++;
-				}
-			} else { $file_list = NULL; }
+			$sql			= sprintf("SELECT epl.cfg_dir, ebl.directory, epl.config_files FROM %s as epl, %s as ebl WHERE epl.brand = ebl.id AND epl.id ='%s'", "endpointman_product_list", "endpointman_brand_list", $product_select);
+			$row 			= sql($sql, 'getRow', \PDO::FETCH_ASSOC);
+			$config_files	= explode(",", $row['config_files'] ?? ''); 
+			$file_list		= array();
+			$sql_file_list	= array();
+			
+			foreach ($config_files as $config_files_data)
+			{
+				$file_list[] = array(
+					'value' => $product_select,
+					'text'  => $config_files_data
+				);
+			}
+			// if (empty($file_list)) { $file_list = NULL; }
 
-			$sql = "SELECT * FROM endpointman_custom_configs WHERE product_id = '" . $dget['product_select'] . "'";
+			$sql = sprintf("SELECT * FROM %s WHERE product_id = '%s'", "endpointman_custom_configs", $product_select);
 			$data = sql($sql,'getAll', \PDO::FETCH_ASSOC);
-			$i = 0;
-			if (count($data)) {
-				//$data = sql($sql, 'getAll', \PDO::FETCH_ASSOC);
-				foreach ($data as $row2) {
-					$sql_file_list[$i]['value'] = $row2['id'];
-					$sql_file_list[$i]['text'] = $row2['name'];
-					$sql_file_list[$i]['ref'] = $row2['original_name'];
-					$i++;
-				}
-			} else { $sql_file_list = NULL; }
+			foreach ($data as $row2)
+			{
+				$sql_file_list[] = array(
+					'value' => $row2['id'],
+					'text'	=> $row2['name'],
+					'ref' 	=> $row2['original_name']
+				);
+			}
+			// if (empty($sql_file_list)) { $sql_file_list = NULL; }
 
 
-			require_once($this->epm->system->buildPath($this->epm->PHONE_MODULES_PATH, 'setup.php'));
+			
+
+			require_once($path_setup);
 
 			$class 		  = sprintf("endpoint_%s_%s_phone", $row['directory'], $row['cfg_dir']);
 			$base_class   = sprintf("endpoint_%s_base", $row['directory']);
@@ -544,39 +579,46 @@ class Endpointman_Advanced
 			 *** Quick Fix for FreePBX Distro
 			 *** I seriously want to figure out why ONLY the FreePBX Distro can't do autoloads.
 			 **********************************************************************************/
-			if (!class_exists($master_class)) {
-				ProvisionerConfig::endpointsAutoload($master_class);
+			if (!class_exists($master_class))
+			{
+				\ProvisionerConfig::endpointsAutoload($master_class);
 			}
-			if (!class_exists($base_class)) {
-				ProvisionerConfig::endpointsAutoload($base_class);
+			if (!class_exists($base_class))
+			{
+				\ProvisionerConfig::endpointsAutoload($base_class);
 			}
-			if (!class_exists($class)) {
-				ProvisionerConfig::endpointsAutoload($class);
+			if (!class_exists($class))
+			{
+				\ProvisionerConfig::endpointsAutoload($class);
 			}
+			
 			//end quick fix
 			$phone_config = new $class();
 
 			//TODO: remove
-			$template_file_list[0]['value'] = "template_data_custom.xml";
-			$template_file_list[0]['text']  = "template_data_custom.xml";
+			$template_file_list = array(
+				array(
+					'value' => 'template_data_custom.xml',
+					'text'  => 'template_data_custom.xml'
+				)
+			);
 
-			$sql = "SELECT id, model FROM endpointman_model_list WHERE product_id = '" . $dget['product_select'] . "' AND enabled = 1 AND hidden = 0";
+			$sql = sprintf("SELECT id, model FROM %s WHERE product_id = '%s' AND enabled = 1 AND hidden = 0", "endpointman_model_list", $product_select);
 			$data = sql($sql, 'getAll', \PDO::FETCH_ASSOC);
-			$i = 1;
-			foreach ($data as $list) {
-				//$template_file_list[$i]['value'] = "template_data_" . $list['model'] . "_custom.xml";
-				$template_file_list[$i]['value'] = $list['id'];
-				$template_file_list[$i]['text'] = "template_data_" . $list['model'] . "_custom.xml";
+			foreach ($data as $list)
+			{
+				$template_file_list[] = array(
+					'value' => $list['id'],
+					'text'  => "template_data_" . $list['model'] . "_custom.xml"
+				);
 			}
 
-			$retarr = array("status" => true,
-							"message" 		 	  => _("OK"),
-							"product_select" 	  => $dget['product_select'],
+			$retarr = array("status" => true, "message" => _("OK"),
+							"product_select" 	  => $product_select,
 							"product_select_info" => $product_select_info,
 							"file_list" 		  => $file_list,
 							"template_file_list"  => $template_file_list,
 							"sql_file_list" 	  => $sql_file_list);
-			unset($dget);
 		}
 		return $retarr;
 	}
@@ -925,6 +967,8 @@ class Endpointman_Advanced
 							"file" 		=> $archivo,
 							"filename" 	=> pathinfo($archivo, PATHINFO_FILENAME),
 							"extension" => pathinfo($archivo, PATHINFO_EXTENSION),
+							"basename"  => basename($archivo),
+							"size" 		=> filesize($pathandfile),
 							"timer" 	=> $ftime,
 							"timestamp" => $datetime->format('[Y-m-d H:i:s]'),
 							"mime_type" => mime_content_type($pathandfile),
@@ -1006,13 +1050,13 @@ class Endpointman_Advanced
 							}
 							if (file_exists($temp_directory))
 							{
-								if ($this->configmod->get('debug')) {
+								if ($this->epm->getConfig('debug')) {
 									outn(sprintf(_("Extracting Tarball %s to %s... "), $uploads_dir_file, $temp_directory));
 								} else {
 									outn(_("Extracting Tarball... "));
 								}
 								//TODO: PENDIENTE VALIDAR SI EL EXEC NO DA ERROR!!!!!
-								exec( sprintf("%s -xvf %s -C %s", $this->configmod->get("tar_location"), $uploads_dir_file, $temp_directory) );
+								exec( sprintf("%s -xvf %s -C %s", $this->epm->getConfig("tar_location"), $uploads_dir_file, $temp_directory) );
 								// exec("tar -xvf ".$uploads_dir_file." -C ".$temp_directory);
 								out(_("Done!"));
 
@@ -1020,7 +1064,7 @@ class Endpointman_Advanced
 								$package 	  = explode("-",$package);
 								$package_path = $this->epm->system->buildPath($temp_directory, $package[0]);
 
-								if ($this->configmod->get('debug')) {
+								if ($this->epm->getConfig('debug')) {
 									out(sprintf(_("Looking for file %s to pass on to update_brand() ... "), $package_path));
 								} else {
 									out(_("Looking file and update brand's ... "));
@@ -1075,7 +1119,7 @@ class Endpointman_Advanced
 						{
 							outn(_("Extracting Provisioner Package... "));
 							//TODO: Pendiente añadir validacion si exec no da error!!!!
-							exec( sprintf("%s -xvf %s -C %s", $this->configmod->get("tar_location"), $uploads_dir_file, $uploads_dir) );
+							exec( sprintf("%s -xvf %s -C %s", $this->epm->getConfig("tar_location"), $uploads_dir_file, $uploads_dir) );
 							// exec("tar -xvf ".$uploads_dir_file." -C ".$uploads_dir."/");
 							out(_("Done!"));
 
@@ -1119,35 +1163,47 @@ class Endpointman_Advanced
 
 	public function epm_advanced_manual_upload_export_brans_available_file()
 	{
-		if ((! isset($_REQUEST['file_package'])) OR ($_REQUEST['file_package'] == "")) {
-			header('HTTP/1.0 404 Not Found', true, 404);
-			echo "<h1>Error 404 Not Found</h1>";
-			echo "No send name file!";
-			die();
-		}
-		else {
-			$dget['file_package'] = $_REQUEST['file_package'];
-			$path_tmp_file = $this->epm->system->buildPath($this->epm->EXPORT_PATH, $_REQUEST['file_package']);
+		// Security Bug - GHSA-x9wc-qjrc-j7ww
 
-			if (! file_exists($path_tmp_file)) {
-				header('HTTP/1.0 404 Not Found', true, 404);
-				echo "<h1>Error 404 Not Found</h1>";
-				echo "File no exist!";
-				die();
+		$request = $_REQUEST;
+
+		$file_package = $request['file_package'] ?? '';
+		$error 		  = 0;
+
+		if (empty($request['file_package']))
+		{
+			$error = 404;
+		}
+		else
+		{
+			$file_package 	   = basename($file_package);
+			$file_package_temp = $this->epm->system->buildPath($this->epm->EXPORT_PATH, $file_package);
+
+			if (! file_exists($file_package_temp))
+			{
+				$error = 404;
 			}
-			else {
+			else
+			{
 				header('Content-Description: File Transfer');
 				header('Content-Type: application/octet-stream');
-				header('Content-Disposition: attachment; filename="'.basename($dget['file_package']).'"');
+				header('Content-Disposition: attachment; filename="'.$file_package.'"');
 				header('Expires: 0');
-				header('Cache-Control: must-revalidate');
+				header("Cache-Control: no-cache, must-revalidate");
 				header('Pragma: public');
-				header('Content-Length: ' . filesize($path_tmp_file));
-				readfile($path_tmp_file);
+				header('Content-Length: ' . filesize($file_package_temp));
+				readfile($file_package_temp);
 				exit;
 			}
-			unset ($path_tmp_file);
-			unset ($dget);
+			unset($file_package);
+			unset($file_package_temp);
+		}
+
+		if ($error == 404)
+		{
+			header("HTTP/1.0 404 Not Found", true, $error);
+			echo "404 Not Found";
+			die();
 		}
 		exit;
 	}
@@ -1175,7 +1231,7 @@ class Endpointman_Advanced
 				$time = time();
 				//TODO: Pendiente validar si exec no retorna error!!!!!
 				exec( sprintf("%s zcf %s --exclude .svn --exclude .git --exclude firmware -C %s %s",
-						$this->configmod->get("tar_location"), 
+						$this->epm->getConfig("tar_location"), 
 						$this->epm->system->buildPath($this->epm->EXPORT_PATH, sprintf("%s-%s.tgz", $row['directory'], $time)), 
 						$this->epm->system->buildPath($this->epm->PHONE_MODULES_PATH, 'endpoint'), 
 						$row['directory']

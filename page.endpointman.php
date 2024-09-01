@@ -2,7 +2,7 @@
 global $active_modules;
 
 if (!empty($active_modules['endpoint']['rawname'])) {
-	if (FreePBX::Endpointman()->configmod->get("disable_endpoint_warning") !== "1") {
+	if (FreePBX::Endpointman()->getConfig("disable_endpoint_warning") !== "1") {
 		include('page.epm_warning.php');  
 	}
 }

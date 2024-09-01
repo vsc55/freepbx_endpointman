@@ -13,13 +13,11 @@ class epm_data_abstraction
     public $emp       = null;
     public $db        = null;
     public $config    = null;
-    public $configmod = null;
 
     function __construct($epm)
     {
         $this->epm       = $epm;
     	$this->config    = $epm->config;
-    	$this->configmod = $epm->configmod;
 
         //The only time dbh_asterisk is set is when we are inside the ARI Recording interface
         if(isset($_SESSION['dbh_asterisk']))
@@ -144,7 +142,7 @@ class epm_data_abstraction
     }
 
     function all_unused_registrations() {
-        if($this->configmod->get('show_all_registrations')) {
+        if($this->epm->getConfig('show_all_registrations')) {
             $not_added="SELECT devices.id, devices.description FROM devices WHERE tech in ('sip','pjsip') ORDER BY devices.id";
         } else {
             $not_added="SELECT devices.id, devices.description FROM devices WHERE tech in('sip','pjsip') AND devices.id not in (SELECT devices.id FROM devices, endpointman_line_list WHERE tech in ('sip','pjsip') AND devices.id = endpointman_line_list.ext ) ORDER BY devices.id";

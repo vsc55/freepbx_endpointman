@@ -9,7 +9,7 @@
         <div class="row">
             <div class="col-sm-12">
                 <div class="fpbx-container">
-
+                    
                     <nav class="navbar navbar-light bg-info">
                         <span class="navbar-brand  mb-0 h1">
                             <button type="button" class="navbar-btn btn btn-default" id="button_check_for_updates" name="button_check_for_updates" disabled="false"><i class="fa fa-refresh"></i> <?= _("Check for Update") ?></button>
@@ -20,7 +20,6 @@
                         </form>
                     </nav>
                     <br>
-
 
                     <div class="alert alert-info" role="alert">
                         <h3><?= _("Hidden Packages") ?></h3>
@@ -53,8 +52,6 @@
                         </div>                        
                     </div>
 
-
-
                     <div class="panel panel-primary"> 
                         <div class="panel-heading"> 
                             <h3 class="panel-title"><?= _("List Packages Manager") ?></h3>
@@ -69,7 +66,6 @@
                         </div> 
                     </div> 
 
-                    
                 </div>
             </div>
         </div>

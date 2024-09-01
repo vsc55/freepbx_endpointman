@@ -31,7 +31,6 @@ class Endpointman_Config
 		$this->freepbx 	 = $epm->freepbx;
 		$this->db 		 = $epm->freepbx->Database;
 		$this->config 	 = $epm->freepbx->Config;
-		$this->configmod = $epm->configmod;
 		$this->system 	 = new Endpointman\epm_system();
 
 		if (! file_exists($this->epm->MODULE_PATH))
@@ -44,22 +43,21 @@ class Endpointman_Config
         }        
 	}
 
-	public function myShowPage(&$pagedata) { }
 
 	/**
 	 * Check if the user has access to the module
-	 * 
 	 */
-	public function ajaxRequest($req, &$setting)
+	public function ajaxRequest($req, &$setting, array $data)
 	{
 		$allowCommand = array(
 			"saveconfig",
 			"list_all_brand",
 			"list_brand_model_hide"
 		);
-		if (in_array($req, $allowCommand)) {
+		if (in_array($req, $allowCommand))
+		{
 			$setting['authenticate'] = true;
-			$setting['allowremote']   = false;
+			$setting['allowremote']  = false;
 			return true;
 		}
 		return false;
@@ -68,14 +66,17 @@ class Endpointman_Config
 	/**
 	 * Handle AJAX requests
 	 * 
-	 * @param string $module_tab tab section of the command to execute
-	 * @param string $command Command to execute
-	 * @return array Returns an array with data that will be sent to the client.
+	 * @param array $data Data to be processed
+	 * 		- command: Command to be executed
+	 * 		- request: Request data
+	 * @return array Data to be returned
+	 * 		- status: Status of the request
+	 * 		- message: Message to be returned
+	 * 		- datlist: Data list to be returned only for return list (list_all_brand, list_brand_model_hide)
+	 * 		- txt: Text to be returned
 	 */
-    public function ajaxHandler(?string $module_tab = "", ?string $command = "")
+    public function ajaxHandler(array $data)
 	{
-		$request = freepbxGetSanitizedRequest();
-
 		$txt = array(
 			'ayuda_model' 		 => _("If we can activate the model set terminals of the models.<br /> If this model is disabled will not appear in the list of models that can be configured for PBX."),
 			'ayuda_producto'	 => _('The button "Install Firmware" installs the necessary files to the server for the terminal alone are updated via TFTP or HTTP.<br /> The button "Remove frimware" delete files server products.<br /> The button "Update frimware" appears if a newer frimware detected on the server and asks if you want to update.<br /> The "Update" button appears when a new version of this model pack is detected.'),
@@ -106,34 +107,47 @@ class Endpointman_Config
 			'opt_invalid' 		 => _("Invalid Option!")
 		);
 
-		switch ($command)
+		if (empty($data) || !is_array($data))
 		{
-			case "saveconfig":
-				$retarr = $this->epm_config_manager_saveconfig($request);
-				break;
+			$retarr = array(
+				"status" => false,
+				"message" => _("Empty data received or data is not foromatted correctly!")
+			);
+		}
+		else
+		{
+			$command = $data['command'] ?? '';
+			$request = $data['request'] ?? array();
 
-			case "list_all_brand":
-				$retarr = array(
-					"status" => true,
-					"message" => "OK",
-					"datlist" => $this->epm_config_manager_hardware_get_list_all()
-				);
-				break;
+			switch ($command)
+			{
+				case "saveconfig":
+					$retarr = $this->epm_config_manager_saveconfig($request);
+					break;
 
-			case "list_brand_model_hide":
-				$retarr = array(
-					"status" => true,
-					"message" => "OK",
-					"datlist" => $this->epm_config_manager_hardware_get_list_all_hide_show()
-				);
-				break;
+				case "list_all_brand":
+					$retarr = array(
+						"status" => true,
+						"message" => "OK",
+						"datlist" => $this->epm_config_manager_hardware_get_list_all()
+					);
+					break;
 
-			default:
-				$retarr = array(
-					"status" => false,
-					"message" => sprintf(_("Command not found [%s]!"), $command)
-				);
-				break;
+				case "list_brand_model_hide":
+					$retarr = array(
+						"status" => true,
+						"message" => "OK",
+						"datlist" => $this->epm_config_manager_hardware_get_list_all_hide_show()
+					);
+					break;
+
+				default:
+					$retarr = array(
+						"status" => false,
+						"message" => sprintf(_("Command not found [%s]!"), $command)
+					);
+					break;
+			}
 		}
 		$retarr['txt'] = $txt;
 		return $retarr;
@@ -142,49 +156,54 @@ class Endpointman_Config
 	/**
 	 * Initialize the configuration page
 	 * 
-	 * @param string $module_tab tab section of the command to execute
-	 * @param string $command Command to execute
+	 * @param array $data Data to be processed
+	 * 		- command: Command to be executed is string
+	 * 		- request: Request data is array
+	 * @return void
 	 */
-	public function doConfigPageInit(?string $module_tab = "", ?string $command = "")
+	public function doConfigPageInit(array $data)
 	{
-		$request = freepbxGetSanitizedRequest();
-
 		// Force flush all output buffers, need for AJAX
-
-		$endprocess = true;
-		switch ($command)
+		if (!empty($data) && is_array($data))
 		{
-			case "check_for_updates":
-				$this->activeFlush();
-				$this->epm_config_manager_check_for_updates();
-				break;
+			$command = $data['command'] ?? '';
+			$request = $data['request'] ?? array();
 
-			// case "manual_install":
-			// 	$this->epm_config_manual_install();
-			// 	break;
-
-			case "firmware":
-				$this->activeFlush();
-				$this->epm_config_manager_firmware($request);
-				break;
-
-			case "brand":
-				$this->activeFlush();
-				$id 	 	 = $request['idfw'] 	   ?? '';
-				$command_sub = $request['command_sub'] ?? '';
-				$this->epm_config_manager_brand($id , $command_sub);
-				break;
-
-			default:
-				$endprocess = false;
-				break;
-		}
-
-		if ($endprocess)
-		{
-			echo "<br /><hr><br />";
-			flush();
-			exit;
+			$endprocess = true;
+			switch ($command)
+			{
+				case "check_for_updates":
+					$this->activeFlush();
+					$this->epm_config_manager_check_for_updates();
+					break;
+	
+				// case "manual_install":
+				// 	$this->epm_config_manual_install();
+				// 	break;
+	
+				case "firmware":
+					$this->activeFlush();
+					$this->epm_config_manager_firmware($request);
+					break;
+	
+				case "brand":
+					$this->activeFlush();
+					$id 	 	 = $request['idfw'] 	   ?? '';
+					$command_sub = $request['command_sub'] ?? '';
+					$this->epm_config_manager_brand($id , $command_sub);
+					break;
+	
+				default:
+					$endprocess = false;
+					break;
+			}
+	
+			if ($endprocess)
+			{
+				echo "<br /><hr><br />";
+				flush();
+				exit;
+			}
 		}
 	}
 
@@ -197,10 +216,12 @@ class Endpointman_Config
 		}
 	}
 
+	public function myShowPage(array &$pagedata, array $data) { }
 
-	public function getRightNav($request, $params = array()) { return ""; }
 
-	public function getActionBar($request) { return ""; }
+	public function getRightNav(array $data) { return ""; }
+
+	public function getActionBar(array $data) { return ""; }
 
 	
 	private function epm_config_manager_check_for_updates ()
@@ -704,34 +725,37 @@ class Endpointman_Config
 		}
 
 
-        if (!$this->configmod->get('use_repo'))
+        if (!$this->epm->getConfig('use_repo'))
 		{
 			$url_status	= $this->system->buildUrl($this->epm->URL_UPDATE, "update_status");
+			dbug($url_status);
 
 			$out("⚡ Checking status server...", false);
 			try
 			{
 				if (($contents = file_get_contents($url_status)) === false)
 				{
+					$out(" ❌");
 					$outputError('check_status_server', _("❌ The stream could not be opened: the requested url was not found or there was a problem with the request."));
 					$contents = -2;
 				}
 			}
 			catch (\Exception $e)
 			{
+				$out(" ❌");
 				$outputError('check_status_server', "❌ ".$e->getMessage());
 				$contents = -1;
 			}
 			
 			if ($contents != '0')
 			{
-				$out ("❌");
 				if (in_array($contents, [-1, -2]))
 				{
 					$outputError('remote_server', _("❌ The Remote server did not return any status information, Please try again later!"));
 				}
 				else
 				{
+					$out ("❌");
 					$outputError('remote_server', _("❌ The Remote Server Is Currently Syncing With the Master Server, Please try again later!"));
 				}
 				$out(" ");
@@ -1228,7 +1252,7 @@ class Endpointman_Config
 			out(sprintf(_("❌ Brand with id '%s' not found!"), $id));
 			return false;
 		}
-		elseif ($this->configmod->get('use_repo'))
+		elseif ($this->epm->getConfig('use_repo'))
 		{
 			out(_("❌ Installing brands is disabled while in repo mode!"));
 			return false;
@@ -1734,7 +1758,7 @@ class Endpointman_Config
 			out(_("❌ No ID Given!"));
 			return false;
 		}
-		elseif ($this->configmod->get('use_repo') && !$force)
+		elseif ($this->epm->getConfig('use_repo') && !$force)
 		{
 			out(_("❌ Not allowed in repo mode!!"));
 			return false;
@@ -1745,7 +1769,7 @@ class Endpointman_Config
 			return false;
 		}
 
-        if (!$this->configmod->get('use_repo') && !$force)
+        if (!$this->epm->getConfig('use_repo') && !$force)
 		{
 			$row = $this->epm->get_hw_brand($id, 'id', '*', true);
 			if (empty($row['directory'] || empty($row['id'])))
@@ -1862,7 +1886,7 @@ class Endpointman_Config
 			$firmware_files = array();
 			try
 			{
-				$copy_ok = $product_json->installFirmwarePkg($this->configmod->get('config_location'), false, $firmware_files);
+				$copy_ok = $product_json->installFirmwarePkg($this->epm->getConfig('config_location'), false, $firmware_files);
 			}
 			catch (\Exception $e)
 			{
@@ -1889,9 +1913,9 @@ class Endpointman_Config
 				}
 				else
 				{
-					if ($this->configmod->get('debug'))
+					if ($this->epm->getConfig('debug'))
 					{
-						out(sprintf(_("👁‍🗨 Copied '%s' to '%s'!"), $file, $this->configmod->get('config_location')));
+						out(sprintf(_("👁‍🗨 Copied '%s' to '%s'!"), $file, $this->epm->getConfig('config_location')));
 					}
 				}
 			}
@@ -1949,7 +1973,7 @@ class Endpointman_Config
 			return true;
 		}
 
-		$path_config = $this->configmod->get('config_location');
+		$path_config = $this->epm->getConfig('config_location');
 		if (empty($path_config))
 		{
 			out(_("⭕ Skipping, Config Location tftp is not set!"));

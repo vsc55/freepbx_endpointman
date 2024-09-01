@@ -27,7 +27,7 @@ $epm = FreePBX::create()->Endpointman;
 
 
 define('PROVISIONER_BASE', $amp_conf['AMPWEBROOT'].'/admin/modules/_ep_phone_modules/');
-$server_type = FreePBX::Endpointman()->configmod->get("server_type");
+$server_type = FreePBX::Endpointman()->getConfig("server_type");
 
 
 //Check if it's allowed in FreePBX through Endpoint Manager first
@@ -39,7 +39,7 @@ if ((!isset($server_type)) OR ($server_type != 'http')) {
 }
 
 
-$provis_ip = FreePBX::Endpointman()->configmod->get("srvip");
+$provis_ip = FreePBX::Endpointman()->getConfig("srvip");
 
 if(((getMethod() == 'PUT') OR (getMethod() == 'POST'))) {
     //write log files or other files to drive. not sussed out yet completely.
@@ -90,7 +90,7 @@ if(getMethod() == "GET")
         
         #Just moved this Block of code up to fix the provisioning for Snom Phones
         require_once (PROVISIONER_BASE.'endpoint/base.php');
-        $data = Provisioner_Globals::dynamic_global_files($filename, FreePBX::Endpointman()->configmod->get("config_location"), $web_path);
+        $data = Provisioner_Globals::dynamic_global_files($filename, FreePBX::Endpointman()->getConfig("config_location"), $web_path);
         if($data !== FALSE) {
             echo $data;
         } 

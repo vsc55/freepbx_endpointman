@@ -14,7 +14,6 @@ use BMO;
 use PDO;
 use Exception;
 
-require_once('lib/Config.class.php');
 require_once('lib/epm_system.class.php');
 require_once('lib/epm_data_abstraction.class.php');
 require_once('lib/epm_packages.class.php');
@@ -38,7 +37,6 @@ class Endpointman extends FreePBX_Helpers implements BMO {
 	public $freepbx   = null;
 	public $db		  = null; //Database from FreePBX
 	public $config 	  = null;
-	public $configmod = null;
 	public $system    = null;
 	public $eda		  = null; //endpoint data abstraction layer
 	public $astman	  = null;
@@ -97,22 +95,22 @@ class Endpointman extends FreePBX_Helpers implements BMO {
 		$this->astman 	 = $freepbx->astman;
 		$this->system 	 = new Endpointman\epm_system();
 
-		$this->configmod = new Endpointman\Config();
-		$this->configmod->set('disable_epm', FALSE);
-		$this->configmod->set('tz', $this->config->get('PHPTIMEZONE'));	// Set TimeZone by config FREEPBX
-		date_default_timezone_set($this->configmod->get('tz'));
+		$this->setConfig('disable_epm', false);
+
+		if (!$this->isConfigExist('tz') || empty($this->getConfig('tz')))
+		{
+			// Set TimeZone by config FREEPBX is not set
+			$this->setConfig('tz', $this->config->get('PHPTIMEZONE'));
+		}
+		date_default_timezone_set($this->getConfig('tz'));
 		
 		$this->eda 		 = new epm_data_abstraction($this);
-		$this->eda->global_cfg = $this->configmod->getall();
-
-		
 
 		
         //Generate empty array
         $this->error   = array();
         $this->message = array();
-
-		$this->URL_UPDATE   = $this->configmod->get('update_server');
+		$this->URL_UPDATE   = $this->getConfig('update_server');
         $this->MODULES_PATH = $this->system->buildPath($this->config->get('AMPWEBROOT'), 'admin', 'modules');
 		$this->MODULE_PATH 	= $this->system->buildPath($this->MODULES_PATH, "endpointman");
 
@@ -139,7 +137,7 @@ class Endpointman extends FreePBX_Helpers implements BMO {
 		}
 
         //Define error reporting
-        if (($this->configmod->get('debug')) AND (!isset($_REQUEST['quietmode'])))
+        if (($this->getConfig('debug')) AND (!isset($_REQUEST['quietmode'])))
 		{
             error_reporting(E_ALL);
             ini_set('display_errors', 1);
@@ -150,9 +148,9 @@ class Endpointman extends FreePBX_Helpers implements BMO {
         }
 
         //Check if config location is writable and/or exists!
-        if ($this->configmod->isExiste('config_location'))
+        if ($this->isConfigExist('config_location'))
 		{
-			$config_location = $this->configmod->get('config_location');
+			$config_location = $this->getConfig('config_location');
             if (is_dir($config_location))
 			{
                 if (!is_writeable($config_location))
@@ -164,13 +162,13 @@ class Endpointman extends FreePBX_Helpers implements BMO {
                             Or run this command on SSH: <br />
 							'chown -hR root:%2\$s %3\$s'<br />
 							'chmod g+w %3\$s'"), 'config.php?display=epm_advanced', $group, $config_location);
-					$this->configmod->set('disable_epm', TRUE);
+					$this->setConfig('disable_epm', true);
                 }
             }
 			else
 			{
                 $this->error['config_location'] = sprintf(_("Configuration Directory is not a directory or does not exist! Please change the location here: <a href='%s'>Here</a>"), "config.php?display=epm_advanced");
-				$this->configmod->set('disable_epm', TRUE);
+				$this->setConfig('disable_epm', true);
             }
         }
 
@@ -197,10 +195,10 @@ class Endpointman extends FreePBX_Helpers implements BMO {
 				'action'		=> 'check',
 				'action_error'	=> 'break'
 			],
-			[
-				'path'	 => $this->system->buildPath($this->PHONE_MODULES_PATH, "setup.php"),
-				'action' => 'del'
-			],
+			// [
+			// 	'path'	 => $this->system->buildPath($this->PHONE_MODULES_PATH, "setup.php"),
+			// 	'action' => 'del'
+			// ],
 			[
 				'path' 		  => $this->system->buildPath($this->PHONE_MODULES_PATH, "endpoint"),
 				'permissions' => 0755,
@@ -298,7 +296,6 @@ class Endpointman extends FreePBX_Helpers implements BMO {
 		return $return_data;
 	}
 
-
 	public function chownFreepbx()
 	{
 		$files = array();
@@ -320,89 +317,112 @@ class Endpointman extends FreePBX_Helpers implements BMO {
 		return $files;
 	}
 
+	/**
+	 * Allow or deny access to ajax requests
+	 * 
+	 * @param string $req The request command ($_REQUEST['command'])
+	 * @param array $setting The setting array to be passed by reference
+	 * 						$setting['authenticate'] = true/false (default true), if true, the request will be authenticated
+	 * 						$setting['allowremote']  = true/false (default false), if true, the request will be allowed from remote
+	 * @return bool True if the request is allowed, false otherwise
+	 */
 	public function ajaxRequest($req, &$setting)
 	{
 		// ** Allow remote consultation with Postman **
 		// ********************************************
 		$setting['authenticate'] = false;
-		$setting['allowremote'] = true;
+		$setting['allowremote']  = true;
 		return true;
 		// ********************************************
 
-		$module_sec = isset($_REQUEST['module_sec']) ? trim($_REQUEST['module_sec']) : '';
+		$request 	= freepbxGetSanitizedRequest();
 
-		switch($module_sec)
+		$data = array(
+			'epm' 		 => $this,
+			'request' 	 => $request,
+			'module_sec' => strtolower(trim($request['module_sec'] ?? '')),
+		);
+
+		switch($data['module_sec'])
 		{
 			case "epm_devices":
-				return $this->epm_devices->ajaxRequest($req, $setting);
+				$return_status = $this->epm_devices->ajaxRequest($req, $setting);
 				break;
 
 			case "epm_oss":
-				return $this->epm_oss->ajaxRequest($req, $setting);
+				$return_status = $this->epm_oss->ajaxRequest($req, $setting);
 				break;
 
 			case "epm_placeholders":
-				return $this->epm_placeholders->ajaxRequest($req, $setting);
+				$return_status = $this->epm_placeholders->ajaxRequest($req, $setting);
 				break;
 
 			case "epm_config":
-				return $this->epm_config->ajaxRequest($req, $setting);
+				$return_status = $this->epm_config->ajaxRequest($req, $setting, $data);
 				break;
 
 			case "epm_advanced":
-				return $this->epm_advanced->ajaxRequest($req, $setting);
+				$return_status = $this->epm_advanced->ajaxRequest($req, $setting, $data);
 				break;
 
 			case "epm_templates":
-				return $this->epm_templates->ajaxRequest($req, $setting);
+				$return_status = $this->epm_templates->ajaxRequest($req, $setting);
 				break;
+			default:
+				$return_status = false;
 		}
-        return false;
+        return $return_status;
     }
 
+	/**
+	 * When making an ajax query to the module, this function is in charge of processing it and returning with the results
+	 * 
+	 * @return array The data to be returned to the client
+	 * 				$data_return['status'] = true/false
+	 * 				$data_return['message'] = string
+	 * 
+	 */
     public function ajaxHandler()
 	{
 		$request = freepbxGetSanitizedRequest();
+		$data = array(
+			'epm' 		 => $this,
+			'request' 	 => $request,
+			'module_sec' => strtolower(trim($request['module_sec'] ?? '')),
+			'module_tab' => strtolower(trim($request['module_tab'] ?? '')),
+			'command' 	 => strtolower(trim($request['command']    ?? '')),
+		);
 
-		$module_sec = isset($request['module_sec']) ? trim($request['module_sec']) : '';
-		$module_tab = isset($request['module_tab']) ? trim($request['module_tab']) : '';
-		$command    = $request['command'] ?? null;
-
-		$data_return = false;
-
-		if (empty($command))
+		if (empty($data['command']))
 		{
-			$data_return = array(
-				"status"  => false,
-				"message" => _("No command was sent!")
-			);
+			$data_return = array( "status" => false, "message" => _("No command was sent!") );
 		}
 		else
 		{
-			switch ($module_sec)
+			switch ($data['module_sec'])
 			{
 				case "epm_devices":
-					$data_return = $this->epm_devices->ajaxHandler($module_tab, $command);
+					$data_return = $this->epm_devices->ajaxHandler($data['module_tab'], $data['command']);
 					break;
 
 				case "epm_oss":
-					$data_return = $this->epm_oss->ajaxHandler($module_tab, $command);
+					$data_return = $this->epm_oss->ajaxHandler($data['module_tab'], $data['command']);
 					break;
 
 				case "epm_placeholders":
-					$data_return = $this->epm_placeholders->ajaxHandler($module_tab, $command);
+					$data_return = $this->epm_placeholders->ajaxHandler($data['module_tab'], $data['command']);
 					break;
 
 				case "epm_templates":
-					$data_return = $this->epm_templates->ajaxHandler($module_tab, $command);
+					$data_return = $this->epm_templates->ajaxHandler($data['module_tab'], $data['command']);
 					break;
 
 				case "epm_config":
-					$data_return = $this->epm_config->ajaxHandler($module_tab, $command);
+					$data_return = $this->epm_config->ajaxHandler($data);
 					break;
 
 				case "epm_advanced":
-					$data_return = $this->epm_advanced->ajaxHandler($module_tab, $command);
+					$data_return = $this->epm_advanced->ajaxHandler($data);
 					break;
 
 				case "epm_ajax":
@@ -423,7 +443,7 @@ class Endpointman extends FreePBX_Helpers implements BMO {
 						$macid = $request['macid'] ?? null;
 						$mac   = $request['mac'] ?? null;
 
-						switch($command)
+						switch($data['command'])
 						{
 							case "model":
 								$sql = sprintf("SELECT * FROM %s WHERE enabled = 1 AND brand = %s", self::TABLES['epm_model_list'], $id);
@@ -488,7 +508,7 @@ class Endpointman extends FreePBX_Helpers implements BMO {
 								break;	
 						}
 
-						switch($command)
+						switch($data['command'])
 						{
 							case "template":
 							case "template2":
@@ -511,7 +531,7 @@ class Endpointman extends FreePBX_Helpers implements BMO {
 						
 					
 						$result = array();
-						if(($command == "lines") && (!empty($mac)) && (!empty($macid)))
+						if(($data['command'] == "lines") && (!empty($mac)) && (!empty($macid)))
 						{
 							$count = $this->eda->sql($sql, 'getOne');
 							for($z=0; $z<$count; $z++)
@@ -558,14 +578,16 @@ class Endpointman extends FreePBX_Helpers implements BMO {
 					break;
 
 				default:
-					$data_return = array(
-						"status" => false,
-						"message" => _("Invalid section module!"),
-					);
+					$data_return = array("status" => false, "message" => _("Invalid section module '%s'!", $data['module_sec']));
 			}
 		}
 		return $data_return;
     }
+
+
+
+
+
 
 	public static function myDialplanHooks()
 	{
@@ -844,6 +866,11 @@ class Endpointman extends FreePBX_Helpers implements BMO {
 		return;
 	}
 
+
+
+	/**
+	 * Get the list of pages that the module will be displayed on the GUI
+	 */
 	public static function myConfigPageInits()
 	{
 		return array("extensions", "devices");
@@ -858,38 +885,47 @@ class Endpointman extends FreePBX_Helpers implements BMO {
 		$request = freepbxGetSanitizedRequest();
 
 		//TODO: Pendiente revisar y eliminar moule_tab.
-		$module_tab = isset($request['module_tab'])? trim($request['module_tab']) : '';
-		if ($module_tab == "") {
-			$module_tab = isset($request['subpage'])? trim($request['subpage']) : '';
-		}
-		$command = isset($request['command'])? trim($request['command']) : '';
-		$extdisplay = '';
-		$step2 = false;
+		$data = array(
+			'epm' 		 => $this,
+			'request' 	 => $request,
+			'module_sec' => $display,
+			'module_tab' => strtolower(trim($request['module_tab'] ?? $request['subpage'] ?? '')),
+			'command' 	 => strtolower(trim($request['command'] ?? '')),
+		);
 
+		// //TODO: Pendiente revisar y eliminar moule_tab.
+		// $module_tab = isset($request['module_tab'])? trim($request['module_tab']) : '';
+		// if ($module_tab == "") {
+		// 	$module_tab = isset($request['subpage'])? trim($request['subpage']) : '';
+		// }
+		// $command = isset($request['command'])? trim($request['command']) : '';
+
+		$extdisplay = '';
+		$step2 		= false;
 		switch ($display)
 		{
 			case "epm_devices":
-				$this->epm_devices->doConfigPageInit($module_tab, $command);
+				$this->epm_devices->doConfigPageInit($data['module_tab'], $data['command']);
 				break;
 
 			case "epm_oss":
-				$this->epm_oss->doConfigPageInit($module_tab, $command);
+				$this->epm_oss->doConfigPageInit($data['module_tab'], $data['command']);
 				break;
 
 			case "epm_placeholders":
-				$this->epm_placeholders->doConfigPageInit($module_tab, $command);
+				$this->epm_placeholders->doConfigPageInit($data['module_tab'], $data['command']);
 				break;
 
 			case "epm_templates":
-				$this->epm_templates->doConfigPageInit($module_tab, $command);
+				$this->epm_templates->doConfigPageInit($data['module_tab'], $data['command']);
 				break;
 
 			case "epm_config":
-				$this->epm_config->doConfigPageInit($module_tab, $command);
+				$this->epm_config->doConfigPageInit($data);
 				break;
 
 			case "epm_advanced":
-				$this->epm_advanced->doConfigPageInit($module_tab, $command);
+				$this->epm_advanced->doConfigPageInit($data['module_tab'], $data['command']);
 				break;
 			
 			case "extensions":
@@ -907,8 +943,7 @@ class Endpointman extends FreePBX_Helpers implements BMO {
 				return true;
 		}
 
-
-		if ($step2 = false)
+		if (!$step2)
 		{
 			return true;
 		}
@@ -1115,59 +1150,75 @@ class Endpointman extends FreePBX_Helpers implements BMO {
 		needreload();
 	}
 
-	public function myShowPage() {
-		if (! isset($_REQUEST['display']))
-			return $this->pagedata;
-
-		switch ($_REQUEST['display'])
+	public function myShowPage()
+	{
+		$pagedata = array();
+		$request  = freepbxGetSanitizedRequest();
+		$data     = array(
+			'epm' 	  => $this,
+			'request' => $request,
+			'display' => $request['display'] ?? '',
+		);
+		
+		switch ($data['display'])
 		{
 			case "epm_devices":
-				$this->epm_devices->myShowPage($this->pagedata);
+				$this->epm_devices->myShowPage($pagedata);
 				break;
+
 			case "epm_oss":
-				return $this->epm_oss->myShowPage($this->pagedata);
+				return $this->epm_oss->myShowPage($pagedata);
 				break;
+
 			case "epm_placeholders":
-				return $this->epm_placeholders->myShowPage($this->pagedata);
+				return $this->epm_placeholders->myShowPage($pagedata);
 				break;
+
 			case "epm_templates":
-				$this->epm_templates->myShowPage($this->pagedata);
-				return $this->pagedata;
+				$this->epm_templates->myShowPage($pagedata);
+				return $pagedata;
 				break;
 
 			case "epm_config":
-				$this->epm_config->myShowPage($this->pagedata);
+				$this->epm_config->myShowPage($pagedata, $data);
 				break;
 
-			case "epm_advanced":
-				$this->epm_advanced->myShowPage($this->pagedata);
-				break;
+			// case "epm_advanced":
+			// 	$this->epm_advanced->myShowPage($pagedata);
+			// 	break;
+
+			case "":
+			default:
+				return $pagedata;
 		}
 
-		if(! empty($this->pagedata))
+		if(! empty($pagedata))
 		{
-			foreach($this->pagedata as &$page) {
-				ob_start();
-				include( $this->system->buildPath($this->MODULE_PATH, $page['page']));
-				$page['content'] = ob_get_contents();
-				ob_end_clean();
+			foreach($pagedata as &$page)
+			{
+				if (empty($page['page'] ?? ''))
+				{
+					continue;
+				}
+				$page['content'] = load_view($this->system->buildPath(__DIR__, $page['page']), $data);
 			}
-			return $this->pagedata;
+			return $pagedata;
 		}
 	}
 
 	public function showPage($page, $params = array())
 	{
+		$request = freepbxGetSanitizedRequest();
 		$data = array(
 			"epm"		    => $this,
-			'request'	    => $_REQUEST,
-			'page' 		    => $page,
+			'request'	    => $request,
+			'page' 		    => $page ?? '',
 			'endpoint_warn' => "",
 		);
 
 		if ($this->isActiveModule('endpoint'))
 		{
-			if ($this->configmod->get("disable_endpoint_warning") !== "1")
+			if ($this->getConfig("disable_endpoint_warning") !== "1")
 			{
 				$data['endpoint_warn'] = load_view(__DIR__."/views/page.epm_warning.php", $data);
 			}
@@ -1253,14 +1304,8 @@ class Endpointman extends FreePBX_Helpers implements BMO {
 			break;
 
 			case "main.advanced":
-				if ((! isset($_REQUEST['subpage'])) || ($_REQUEST['subpage'] == ""))
-				{
-					$_REQUEST['subpage'] 		= "settings";
-					$data['request']['subpage'] = "settings";
-				}
+				$data['subpage'] = $request['subpage'] ?? 'settings';
 
-				$data['subpage']  = $_REQUEST['subpage'] ?? 'settings';
-				// $this->epm_advanced->myShowPage($tabs);
 				$tabs = array(
 					'settings' => array(
 						"name" => _("Settings"),
@@ -1289,14 +1334,12 @@ class Endpointman extends FreePBX_Helpers implements BMO {
 					switch($key)
 					{
 						case "settings":
-							$this->configmod->getConfigModuleSQL(false);
-
-							if (($this->configmod->get("server_type") == 'file') AND ($this->epm_advanced->epm_advanced_config_loc_is_writable()))
+							if (($this->getConfig("server_type") == 'file') AND ($this->epm_advanced->epm_advanced_config_loc_is_writable()))
 							{
 								$this->tftp_check();
 							}
 							
-							if ($this->configmod->get("use_repo") == "1") 
+							if ($this->getConfig("use_repo") == "1")
 							{
 								if ($this->has_git())
 								{
@@ -1329,39 +1372,376 @@ class Endpointman extends FreePBX_Helpers implements BMO {
 									}
 								}
 							}
+							
+							$url_provisioning = $this->system->buildUrl(sprintf("%s://%s", $this->getConfig("server_type"), $this->getConfig("srvip")), "provisioning","p.php");
 
-							$data_tab['config']['srvip'] 			= $this->configmod->get("srvip");
-							$data_tab['config']['intsrvip'] 		= $this->configmod->get("intsrvip");
-							$data_tab['config']['server_type']  	= $this->configmod->get("server_type");
-							$data_tab['config']['provisioning_url'] = sprintf("%s://%s/provisioning/p.php", $data_tab['config']['server_type'], $data_tab['config']['srvip']);
-							$data_tab['config']['config_location']  = $this->configmod->get("config_location");
-							$data_tab['config']['adminpass']  		= $this->configmod->get("adminpass");
-							$data_tab['config']['userpass']  		= $this->configmod->get("userpass");
-							$data_tab['config']['ls_tz']  			= $this->listTZ($this->configmod->get("tz"));
-							$data_tab['config']['PHPTIMEZONE']  	= $this->config->get('PHPTIMEZONE');
-							$data_tab['config']['ntp']  			= $this->configmod->get("ntp");
-							$data_tab['config']['nmap_location']  	= $this->configmod->get("nmap_location");
-							$data_tab['config']['arp_location']  	= $this->configmod->get("arp_location");
-							$data_tab['config']['asterisk_location']= $this->configmod->get("asterisk_location");
-							$data_tab['config']['tar_location']  	= $this->configmod->get("tar_location");
-							$data_tab['config']['netstat_location'] = $this->configmod->get("netstat_location");
-							$data_tab['config']['update_server']  	= $this->configmod->get("update_server");
-							$data_tab['config']['default_mirror']	= self::URL_PROVISIONER;
-							$data_tab['config']['disable_endpoint_warning'] = $this->configmod->get("disable_endpoint_warning");
-							$data_tab['config']['enable_ari']  		= $this->configmod->get("enable_ari");
-							$data_tab['config']['debug']  			= $this->configmod->get("debug");
-							$data_tab['config']['disable_help']  	= $this->configmod->get("disable_help");
-							$data_tab['config']['show_all_registrations']  = $this->configmod->get("show_all_registrations");
-							$data_tab['config']['allow_hdfiles']  	= $this->configmod->get("allow_hdfiles");
-							$data_tab['config']['tftp_check']  		= $this->configmod->get("tftp_check");
-							$data_tab['config']['backup_check']  	= $this->configmod->get("backup_check");
+							$data_tab['config']['data'] = array(
+								'setting_provision' => array(
+									'label' => _("Provisioner Settings"),
+									'items' => array(
+										'srvip' => array(
+											'label' 	  => _("IP address of phone server"),
+											'type' 		  => 'text',
+											'value' 	  => $this->getConfig("srvip"),
+											'placeholder' => _("IP Server PBX..."),
+											'help' 		  => _("The IP Address of the Server PBX that will be used to provision the phones."),
+											'button' 	  => array(
+												'id' 	  => 'autodetect',
+												'label'   => _("Use Me!"),
+												'icon'    => 'fa-search',
+												'onclick' => sprintf("epm_advanced_tab_setting_input_value_change_bt('#srvip', sValue = '%s', bSaveChange = true);", $_SERVER["SERVER_ADDR"]),
+											),
+										),
+										'intsrvip' => array(
+											'label' 	  => _("Internal IP address of phone server"),
+											'type' 		  => 'text',
+											'value' 	  => $this->getConfig("intsrvip"),
+											'placeholder' => _("Internal IP Server PBX..."),
+											'help' 		  => _("The Internal IP Address of the Server PBX that will be used to provision the phones."),
+											'button' 	  => array(
+												'id' 	  => 'autodetect',
+												'label'   => _("Use Me!"),
+												'icon'    => 'fa-search',
+												'onclick' => sprintf("epm_advanced_tab_setting_input_value_change_bt('#intsrvip', sValue = '%s', bSaveChange = true);", $_SERVER["SERVER_ADDR"]),
+											),
+										),
+										'cfg_type' => array(
+											'label' 	  => _("Configuration Type"),
+											'type' 		  => 'select',
+											'value' 	  => $this->getConfig("server_type"),
+											'help' 		  => _("The type of server that will be used to provision the phones (TFTP/FTP, HTTP, HTTPS)."),
+											'select_check'=> function ($option, $value) {
+												return (strtolower($value) == strtolower($option['value']));
+											},
+											'options'	  => array(
+												'file'  => array(
+													'text' => _("File (TFTP/FTP)"),
+													'icon'  => 'fa-upload',
+													'value' => 'file',
+												),
+												'http'  => array(
+													'text' => _("HTTP"),
+													'icon'  => 'fa-upload',
+													'value' => 'http',
+												),
+												'https' => array(
+													'text' => _("HTTPS"),
+													'icon'  => 'fa-upload',
+													'value' => 'https',
+												),
+											),
+											'alert' => array(
+												'cfg_type_alert' => array(
+													'msg'   => sprintf(_("<strong>Updated!</strong> - Point your phones to: %s"), sprintf('<a href="%1$s" class="alert-link" target="_blank">%1$s</a>', $url_provisioning)),
+													'types' => array('http', 'https'),
+												)
+											)
+										),
+										'config_loc' => array(
+											'label' 	  => _("Global Final Config & Firmware Directory"),
+											'type' 		  => 'text',
+											'value' 	  => $this->getConfig("config_location"),
+											'placeholder' => _("Configuration Location..."),
+											'help' 		  => _("Path location root TFTP server."),
+										),
+										'adminpass' => array(
+											'label' 	  => _("Phone Admin Password"),
+											'type' 		  => 'text',
+											'class' 	  => 'confidential',	//'password-meter confidential',
+											'value' 	  => $this->getConfig("adminpass"),
+											'placeholder' => _("Admin Password..."),
+											'help' 		  => _("Enter a admin password for your phones. Must be 6 characters and only nummeric is recommendet!"),
+										),
+										'userpass' => array(
+											'label' 	  => _("Phone User Password"),
+											'type' 		  => 'text',
+											'class' 	  => 'confidential',	//'password-meter confidential',
+											'value' 	  => $this->getConfig("userpass"),
+											'placeholder' => _("User Password..."),
+											'help' 		  => _("Enter a user password for your phones. Must be 6 characters and only nummeric is recommendet!"),
+										),
+
+
+									)
+								),
+								'setting_time' => array(
+									'label' => _("Time Settings"),
+									'items' => array(
+										'tz' => array(
+											'label'				 => _("Time Zone"),
+											'type'				 => 'select',
+											'value'				 => $this->getConfig("tz"),
+											'help'				 => _("Time Zone configuration terminasl. Like England/London"),
+											'options'			 => $this->listTZ($this->getConfig("tz")),
+											'search'			 => true,
+											'search_placeholder' => _("Search"),
+											'size'				 => 10,
+											'icon_option'		 => 'fa-clock-o',
+											'select_check'		 => function ($option, $value) {
+												return ($option['selected'] == 1);
+											},
+											'button'			 => array(
+												'id' 	  => 'tzphp',
+												'label'   =>_("Time Zone PBX"),
+												'icon'    => 'fa-clock-o',
+												'onclick' => sprintf("epm_advanced_tab_setting_input_value_change_bt('#tz', sValue = '%s', bSaveChange = true);", $this->config->get('PHPTIMEZONE')),
+											),
+										),
+										'ntp_server' => array(
+											'label' 	  => _("Time Server (NTP Server)"),
+											'type' 		  => 'text',
+											'value' 	  => $this->getConfig("ntp"),
+											'placeholder' => _("NTP Server..."),
+											'help' 		  => _("The NTP Server that will be used to provision the phones."),
+											'button' 	  => array(
+												'id' 	  => 'autodetectntp',
+												'label'   => _("Use Me!"),
+												'icon'    => 'fa-search',
+												'onclick' => sprintf("epm_advanced_tab_setting_input_value_change_bt('#ntp_server', sValue = '%s', bSaveChange = true);", $_SERVER["SERVER_ADDR"]),
+											),
+										),
+									)
+								),
+								'setting_local_paths' => array(
+									'label' => _("Local Paths"),
+									'items' => array(
+										'nmap_loc' => array(
+											'label' 	  => _("NMAP Executable Path"),
+											'type' 		  => 'text',
+											'value' 	  => $this->getConfig("nmap_location"),
+											'placeholder' => _("Nmap Location..."),
+											'help' 		  => _("The location of the Nmap binary."),
+										),
+										'arp_loc' => array(
+											'label' 	  => _("Arp Executable Path"),
+											'type' 		  => 'text',
+											'value' 	  => $this->getConfig("arp_location"),
+											'placeholder' => _("Arp Location..."),
+											'help' 		  => _("The location of the Arp binary."),
+										),
+										'asterisk_loc' => array(
+											'label' 	  => _("Asterisk Executable Path"),
+											'type' 		  => 'text',
+											'value' 	  => $this->getConfig("asterisk_location"),
+											'placeholder' => _("Asterisk Location..."),
+											'help' 		  => _("The location of the Asterisk binary."),
+										),
+										'tar_loc' => array(
+											'label' 	  => _("Tar Executable Path"),
+											'type' 		  => 'text',
+											'value' 	  => $this->getConfig("tar_location"),
+											'placeholder' => _("Tar Location..."),
+											'help' 		  => _("The location of the Tar binary."),
+										),
+										'netstat_loc' => array(
+											'label' 	  => _("Netstat Executable Path"),
+											'type' 		  => 'text',
+											'value' 	  => $this->getConfig("netstat_location"),
+											'placeholder' => _("Netstat Location..."),
+											'help' 		  => _("The location of the Netstat binary."),
+										),
+										'whoami_loc' => array(
+											'label' 	  => _("Whoami Executable Path"),
+											'type' 		  => 'text',
+											'value' 	  => $this->getConfig("whoami_location"),
+											'placeholder' => _("Whoami Location..."),
+											'help' 		  => _("The location of the Whoami binary."),
+										),
+										'nohup_loc' => array(
+											'label' 	  => _("Nohup Executable Path"),
+											'type' 		  => 'text',
+											'value' 	  => $this->getConfig("nohup_location"),
+											'placeholder' => _("Nohup Location..."),
+											'help' 		  => _("The location of the Nohup binary."),
+										),
+										'groups_loc' => array(
+											'label' 	  => _("Groups Executable Path"),
+											'type' 		  => 'text',
+											'value' 	  => $this->getConfig("groups_location"),
+											'placeholder' => _("Groups Location..."),
+											'help' 		  => _("The location of the Groups binary."),
+										),
+									)
+								),
+								'setting_web_directories' => array(
+									'label' => _("Web Directories"),
+									'items' => array(
+										'package_server' => array(
+											'label' 	  => _("Package Server"),
+											'type' 		  => 'text',
+											'value' 	  => $this->getConfig("update_server"),
+											'placeholder' => _("Server Packages..."),
+											'help' 		  => _("URL download files and packages the configuration terminals."),
+											'button' 	  => array(
+												'id' 	  => 'default_package_server',
+												'label'   => _("Default Mirror FreePBX"),
+												'icon'    => 'fa-undo',
+												'onclick' => sprintf("epm_advanced_tab_setting_input_value_change_bt('#package_server', sValue = '%s', bSaveChange = true);", self::URL_PROVISIONER),
+											),
+										),
+									)
+								),
+								'setting_other' => array(
+									'label' => _("Other Settings"),
+									'items' => array(
+										'disable_endpoint_warning' => array(
+											'label' 	  => _("Disable Endpoint Warning"),
+											'type' 		  => 'radioset',
+											'help' 		  => _("Enable this setting if you dont want to get a warning message anymore if you have the Commercial Endpoint Manager installed together with OSS Endpoint Manager."),
+											'value' 	  => $this->getConfig("disable_endpoint_warning"),
+											'options'	  => array(
+												'No' => array(
+													'label' => _("No"),
+													'value' => '0',
+													'icon'  => 'fa-times',
+												),
+												'Yes' => array(
+													'label' => _("Yes"),
+													'value' => '1',
+													'icon'  => 'fa-check',
+												)
+											),
+										),
+									)
+								),
+								'setting_experimental' => array(
+									'label' => _("Experimental Settings"),
+									'items' => array(
+										'enable_ari' => array(
+											'label' 	  => _("Enable FreePBX ARI Module"),
+											'type' 		  => 'radioset',
+											'help' 		  => sprintf(_('Enable FreePBX ARI Module %s.'), '<a href="http://wiki.provisioner.net/index.php/Endpoint_manager_manual_ari" target="_blank"><i class="fa fa-external-link" aria-hidden="true"></i></a>'),
+											'value' 	  => $this->getConfig("enable_ari"),
+											'options'	  => array(
+												'No' => array(
+													'label' => _("No"),
+													'value' => '0',
+													'icon'  => 'fa-times',
+												),
+												'Yes' => array(
+													'label' => _("Yes"),
+													'value' => '1',
+													'icon'  => 'fa-check',
+												)
+											),
+										),
+										'enable_debug' => array(
+											'label' 	  => _("Debug"),
+											'type' 		  => 'radioset',
+											'help' 		  => _("Enable this setting if you want to see debug messages."),
+											'value' 	  => $this->getConfig("debug"),
+											'disabled'	  => true,
+											'options'	  => array(
+												'No' => array(
+													'label' => _("No"),
+													'value' => '0',
+													'icon'  => 'fa-times',
+												),
+												'Yes' => array(
+													'label' => _("Yes"),
+													'value' => '1',
+													'icon'  => 'fa-check',
+												)
+											),
+										),
+										'disable_help' => array(
+											'label' 	  => _("Disable Tooltips"),
+											'type' 		  => 'radioset',
+											'help' 		  => _("Disable Tooltip popups"),
+											'value' 	  => $this->getConfig("disable_help"),
+											'options'	  => array(
+												'No' => array(
+													'label' => _("No"),
+													'value' => '0',
+													'icon'  => 'fa-times',
+												),
+												'Yes' => array(
+													'label' => _("Yes"),
+													'value' => '1',
+													'icon'  => 'fa-check',
+												)
+											),
+										),
+										'allow_dupext' => array(
+											'label' 	  => _("Allow Duplicate Extensions"),
+											'type' 		  => 'radioset',
+											'help' 		  => _("Assign the same extension to multiple phones (Note: This is not supported by Asterisk)"),
+											'value' 	  => $this->getConfig("show_all_registrations"),
+											'options'	  => array(
+												'No' => array(
+													'label' => _("No"),
+													'value' => '0',
+													'icon'  => 'fa-times',
+												),
+												'Yes' => array(
+													'label' => _("Yes"),
+													'value' => '1',
+													'icon'  => 'fa-check',
+												)
+											),
+										),
+										'allow_hdfiles' => array(
+											'label' 	  => _("Allow Saving Over Default Configuration Files"),
+											'type' 		  => 'radioset',
+											'help' 		  => _("When editing the configuration files allows one to save over the global template default instead of saving directly to the database. These types of changes can and will be overwritten when updating the brand packages from the configuration/installation page."),
+											'value' 	  => $this->getConfig("allow_hdfiles"),
+											'options'	  => array(
+												'No' => array(
+													'label' => _("No"),
+													'value' => '0',
+													'icon'  => 'fa-times',
+												),
+												'Yes' => array(
+													'label' => _("Yes"),
+													'value' => '1',
+													'icon'  => 'fa-check',
+												)
+											),
+										),
+										'tftp_check' => array(
+											'label' 	  => _("Disable TFTP Server Check"),
+											'type' 		  => 'radioset',
+											'help' 		  => _("Disable checking for a valid, working TFTP server which can sometimes cause Apache to crash."),
+											'value' 	  => $this->getConfig("tftp_check"),
+											'options'	  => array(
+												'No' => array(
+													'label' => _("No"),
+													'value' => '0',
+													'icon'  => 'fa-times',
+												),
+												'Yes' => array(
+													'label' => _("Yes"),
+													'value' => '1',
+													'icon'  => 'fa-check',
+												)
+											),
+										),
+										'backup_check' => array(
+											'label' 	  => _("Disable Configuration File Backups"),
+											'type' 		  => 'radioset',
+											'help' 		  => _("Disable backing up the tftboot directory on every phone rebuild or save"),
+											'value' 	  => $this->getConfig("backup_check"),
+											'options'	  => array(
+												'No' => array(
+													'label' => _("No"),
+													'value' => '0',
+													'icon'  => 'fa-times',
+												),
+												'Yes' => array(
+													'label' => _("Yes"),
+													'value' => '1',
+													'icon'  => 'fa-check',
+												)
+											),
+										),
+									)
+								)
+							);
 							break;
 
 						case "manual_upload":
-							$sql = "SELECT value FROM endpointman_global_vars WHERE var_name LIKE 'endpoint_vers'";
-							$provisioner_ver = sql($sql, 'getOne');
-
-							$data_tab['config']['provisioner_ver']  = date("d-M-Y", $provisioner_ver) . " at " . date("g:ia", $provisioner_ver);
+							$provisioner_ver 						= $this->getConfig("endpoint_vers");
+							$data_tab['config']['provisioner_ver']  = sprintf(_("%s at %s"), date("d-M-Y", $provisioner_ver) , date("g:ia", $provisioner_ver));
 							$data_tab['config']['brands_available'] = $this->brands_available("", false);
 							break;
 
@@ -1370,7 +1750,10 @@ class Endpointman extends FreePBX_Helpers implements BMO {
 							break;
 
 						case "oui_manager":
-							$data_tab['config']['brands']   = sql('SELECT * from '. self::TABLES['epm_brands_list'] .' WHERE id > 0 ORDER BY name ASC', 'getAll', \PDO::FETCH_ASSOC);
+							// $data_tab['config']['brands']   = sql('SELECT * from '. self::TABLES['epm_brands_list'] .' WHERE id > 0 ORDER BY name ASC', 'getAll', \PDO::FETCH_ASSOC);
+
+							// Send the brands list to the view to be used in the select box for the win new OUI is added
+							$data_tab['config']['brands']   = $this->get_hw_brand_list(true, 'name', 'ASC');
 							$data_tab['config']['url_grid'] = "ajax.php?module=endpointman&amp;module_sec=epm_advanced&amp;module_tab=oui_manager&amp;command=oui";
 							break;
 
@@ -1412,11 +1795,10 @@ class Endpointman extends FreePBX_Helpers implements BMO {
 	//http://wiki.freepbx.org/display/FOP/Adding+Floating+Right+Nav+to+Your+Module
 	public function getRightNav($request, $params = array())
 	{
-		$data_return = "";
 		$data = array(
 			"epm" 	  => $this,
 			"request" => $request,
-			"display" => strtolower($request['display']),
+			"display" => strtolower(trim($request['display'] ?? '')),
 		);
 		$data = array_merge($data, $params);
 
@@ -1429,7 +1811,10 @@ class Endpointman extends FreePBX_Helpers implements BMO {
 			case 'epm_advanced':
 			case 'epm_templates':
 				$data_return = load_view(__DIR__.'/views/rnav.php', $data);
-			break;
+				break;
+
+			default:
+				$data_return = "";
 		}
 		return $data_return;
 	}
@@ -1437,9 +1822,13 @@ class Endpointman extends FreePBX_Helpers implements BMO {
 	//http://wiki.freepbx.org/pages/viewpage.action?pageId=29753755
 	public function getActionBar($request)
 	{
-		$display = $request['display'] ?? '';
-		$data_return = "";
-		switch($display)
+		$data = array(
+			"epm" 	  => $this,
+			"request" => $request,
+			"display" => strtolower(trim($request['display'] ?? '')),
+		);
+
+		switch($data['display'])
 		{
 			case "epm_devices":
 				$data_return = $this->epm_devices->getActionBar($request);
@@ -1454,7 +1843,7 @@ class Endpointman extends FreePBX_Helpers implements BMO {
 				break;
 
 			case "epm_config":
-				$data_return = $this->epm_config->getActionBar($request);
+				$data_return = $this->epm_config->getActionBar($data);
 				break;
 
 			case "epm_advanced":
@@ -1464,6 +1853,9 @@ class Endpointman extends FreePBX_Helpers implements BMO {
 			case "epm_templates":
 				$data_return = $this->epm_templates->getActionBar($request);
 				break;
+
+			default:
+				$data_return = "";
 		}
 		return $data_return;
 	}
@@ -1584,7 +1976,7 @@ class Endpointman extends FreePBX_Helpers implements BMO {
 					$config = $epmxmlversion;
 					break;
 			}
-			$this->setConfig($config);
+			$this->setConfig($key, $config);
 		}
 		out(_(" ✔"));
 		out(" ");
@@ -1596,7 +1988,6 @@ class Endpointman extends FreePBX_Helpers implements BMO {
 		if(file_exists($this->PHONE_MODULES_PATH))
 		{
 			$this->system->rmrf($this->PHONE_MODULES_PATH);
-			// @exec("rm -R ". $this->PHONE_MODULES_PATH);
 		}
 		out(_(" ✔"));
 
@@ -1811,14 +2202,19 @@ class Endpointman extends FreePBX_Helpers implements BMO {
 	 *
 	 * @param string $key The configuration key to retrieve.
 	 * @param mixed $default The default value to return if the key is not found.
+	 * @param string $section The configuration section where the key is stored. Defaults to `globalSettings`.
 	 * @return mixed The value of the configuration key, or the default value if not found.
 	 *
 	 * @deprecated This method currently supports retrocompatibility with data saved in the database, but it will be removed in the future.
 	 */
-	public function getConfig($key = null, $default = false)
+	public function getConfig($key = null, $default = false, $section = "globalSettings")
 	{
 		// dbug("getConfig: $key, Default: $default");
-		$data = false;
+		$data = $default;
+		if (empty($section))
+		{
+			$section = "globalSettings";
+		}
 		if (! empty($key))
 		{
 			// TODO: Retrocompatibility data saved in the database 
@@ -1828,9 +2224,9 @@ class Endpointman extends FreePBX_Helpers implements BMO {
 			$old_value =  $this->get_database_data(self::TABLES['epm_global_vars'], $where, 'value');
 			// TODO: Retrocompatibility data saved in the database
 
-			if (in_array($key, $this->getAllKeys('globalSettings')))
+			if ( $this->isConfigExist($key, $section))
 			{
-				$data = parent::getConfig($key, 'globalSettings');
+				$data = parent::getConfig($key, $section);
 			}
 			elseif (! empty($old_value))
 			{
@@ -1845,22 +2241,46 @@ class Endpointman extends FreePBX_Helpers implements BMO {
 	}
 
 	/**
+	 * Check if a configuration key exists.
+	 * 
+	 * @param string $key The configuration key to retrieve.
+	 * @param string $section The configuration section where the key is stored. Defaults to `globalSettings`.
+	 * @return array Returns an true if the configuration key exists, false otherwise.
+	 */
+	public function isConfigExist(string $key = '', ?string $section = "globalSettings")
+	{
+		if (empty($key))
+		{
+			return false;
+		}
+		if (empty($section))
+		{
+			$section = "globalSettings";
+		}
+		return in_array($key, $this->getAllKeys($section));
+	}
+
+	/**
 	 * Sets the value of a configuration key.
 	 *
 	 * @param string $key The configuration key to set.
 	 * @param mixed $value The value to set for the configuration key.
-	 * @param string $id The configuration ID to set the key for (default: "globalSettings").
+	 * @param string $section The configuration section where the key will be stored. Defaults to `globalSettings`.
 	 * @return bool Returns true if the configuration key was set, false otherwise.
 	 *
 	 * @deprecated This method currently supports retrocompatibility with data saved in the database, but it will be removed in the future.
 	 */
-	public function setConfig($key = null, $value = false, $id = "globalSettings")
+	public function setConfig($key = '', $value = false, $section = "globalSettings")
 	{
-		if (!empty($key))
-		{ 
-			return parent::setConfig($key, $value, $id);
+		if (empty($key))
+		{
+			return false;
 		}
-		return false;
+		if (empty($section))
+		{
+			$section = "globalSettings";
+		}
+		return parent::setConfig($key, $value, $section);
 	}
 
 
@@ -2809,17 +3229,17 @@ class Endpointman extends FreePBX_Helpers implements BMO {
             if (preg_match('/:69\s/i', $subject))
 			{
                 $rand = md5(rand(10, 2000));
-                if (file_put_contents($this->configmod->get('config_location') . 'TEST', $rand))
+                if (file_put_contents($this->getConfig('config_location') . 'TEST', $rand))
 				{
                     if ($this->system->tftp_fetch('127.0.0.1', 'TEST') != $rand) {
                         $this->error['tftp_check'] = _('Local TFTP Server is not correctly configured');
 echo $this->error['tftp_check'];
                     }
-                    unlink($this->configmod->get('config_location') . 'TEST');
+                    unlink($this->getConfig('config_location') . 'TEST');
                 }
 				else
 				{
-                    $this->error['tftp_check'] = sprintf(_('Unable to write to %s'), $this->configmod->get('config_location'));
+                    $this->error['tftp_check'] = sprintf(_('Unable to write to %s'), $this->getConfig('config_location'));
 echo $this->error['tftp_check'];
                 }
             } else {
@@ -3040,7 +3460,7 @@ echo $this->error['tftp_check'];
     					$sql = "SELECT mac_id FROM " . self::TABLES['epm_line_list'] . " WHERE ext = " . $ext;
     					$used = sql($sql, 'getOne');
 
-					if (($used) AND (! $this->configmod->get('show_all_registrations'))) {
+					if (($used) AND (! $this->getConfig('show_all_registrations'))) {
 //$this->error['add_device'] =
 						out(_("You can't assign the same user to multiple devices") . "!");
     						return(FALSE);
@@ -3389,19 +3809,19 @@ echo $this->error['tftp_check'];
     				if (isset($phone_info['template_data_info']['global_settings_override'])) {
     					$settings = unserialize($phone_info['template_data_info']['global_settings_override']);
     				} else {
-    					$settings['srvip'] = $this->configmod->get('srvip');
-    					$settings['ntp'] = $this->configmod->get('ntp');
-    					$settings['config_location'] = $this->configmod->get('config_location');
-    					$settings['tz'] = $this->configmod->get('tz');
+    					$settings['srvip'] = $this->getConfig('srvip');
+    					$settings['ntp'] = $this->getConfig('ntp');
+    					$settings['config_location'] = $this->getConfig('config_location');
+    					$settings['tz'] = $this->getConfig('tz');
     				}
     			} else {
     				if (isset($phone_info['global_settings_override'])) {
     					$settings = unserialize($phone_info['global_settings_override']);
     				} else {
-    					$settings['srvip'] = $this->configmod->get('srvip');
-    					$settings['ntp'] = $this->configmod->get('ntp');
-    					$settings['config_location'] = $this->configmod->get('config_location');
-    					$settings['tz'] = $this->configmod->get('tz');
+    					$settings['srvip'] = $this->getConfig('srvip');
+    					$settings['ntp'] = $this->getConfig('ntp');
+    					$settings['config_location'] = $this->getConfig('config_location');
+    					$settings['tz'] = $this->getConfig('tz');
     				}
     			}
 
@@ -3410,7 +3830,7 @@ echo $this->error['tftp_check'];
     			//Tell the system who we are and were to find the data.
     			$provisioner_lib->root_dir = $this->PHONE_MODULES_PATH;
     			$provisioner_lib->engine = 'asterisk';
-    			$provisioner_lib->engine_location = $this->configmod->get('asterisk_location','asterisk');
+    			$provisioner_lib->engine_location = $this->getConfig('asterisk_location','asterisk');
     			$provisioner_lib->system = 'unix';
 
     			//have to because of versions less than php5.3
@@ -3486,7 +3906,7 @@ $this->error['parse_configs'] = 'Error Returned From Timezone Library: ' . $e->g
     					$count = count($key);
     					switch ($count) {
     						case 1:
-    							if (($this->configmod->get('enable_ari') == 1) AND (isset($global_custom_cfg_ari[$full_key])) AND (isset($global_user_cfg_data[$full_key]))) {
+    							if (($this->getConfig('enable_ari') == 1) AND (isset($global_custom_cfg_ari[$full_key])) AND (isset($global_user_cfg_data[$full_key]))) {
     								$new_template_data[$full_key] = $global_user_cfg_data[$full_key];
     							} else {
     								$new_template_data[$full_key] = $global_custom_cfg_data[$full_key];
@@ -3494,14 +3914,14 @@ $this->error['parse_configs'] = 'Error Returned From Timezone Library: ' . $e->g
     							break;
     						case 2:
     							$breaks = explode('_', $key[1]);
-    							if (($this->configmod->get('enable_ari') == 1) AND (isset($global_custom_cfg_ari[$full_key])) AND (isset($global_user_cfg_data[$full_key]))) {
+    							if (($this->getConfig('enable_ari') == 1) AND (isset($global_custom_cfg_ari[$full_key])) AND (isset($global_user_cfg_data[$full_key]))) {
     								$new_template_data['loops'][$breaks[0]][$breaks[2]][$breaks[1]] = $global_user_cfg_data[$full_key];
     							} else {
     								$new_template_data['loops'][$breaks[0]][$breaks[2]][$breaks[1]] = $global_custom_cfg_data[$full_key];
     							}
     							break;
     						case 3:
-    							if (($this->configmod->get('enable_ari') == 1) AND (isset($global_custom_cfg_ari[$full_key])) AND (isset($global_user_cfg_data[$full_key]))) {
+    							if (($this->getConfig('enable_ari') == 1) AND (isset($global_custom_cfg_ari[$full_key])) AND (isset($global_user_cfg_data[$full_key]))) {
     								$line_ops[$key[1]][$key[2]] = $global_user_cfg_data[$full_key];
     							} else {
     								$line_ops[$key[1]][$key[2]] = $global_custom_cfg_data[$full_key];
@@ -3544,7 +3964,7 @@ $this->error['parse_configs'] = 'Error Returned From Timezone Library: ' . $e->g
     			$li = 0;
     			foreach ($phone_info['line'] as $line) {
     				$line_options = is_array($line_ops[$line['line']]) ? $line_ops[$line['line']] : array();
-    				$line_statics = array('line' => $line['line'], 'username' => $line['ext'], 'authname' => $line['ext'], 'secret' => $line['secret'], 'displayname' => $line['description'], 'server_host' => $this->configmod->get('srvip'), 'server_port' => '5060', 'user_extension' => $line['user_extension']);
+    				$line_statics = array('line' => $line['line'], 'username' => $line['ext'], 'authname' => $line['ext'], 'secret' => $line['secret'], 'displayname' => $line['description'], 'server_host' => $this->getConfig('srvip'), 'server_port' => '5060', 'user_extension' => $line['user_extension']);
     				$provisioner_lib->settings['line'][$li] = array_merge($line_options, $line_statics);
     				$li++;
     			}
@@ -3602,7 +4022,7 @@ $this->error['parse_configs'] = 'Error Returned From Timezone Library: ' . $e->g
 
     			//Setting a line variable here...these aren't defined in the template_data.xml file yet. however they will still be parsed
     			//and if they have defaults assigned in a future template_data.xml or in the config file using pipes (|) those will be used, pipes take precedence
-    			$provisioner_lib->processor_info = "EndPoint Manager Version " . $this->configmod->get('version');
+    			$provisioner_lib->processor_info = "EndPoint Manager Version " . $this->getConfig('version');
 
     			// Because every brand is an extension (eventually) of endpoint, you know this function will exist regardless of who it is
     			//Start timer

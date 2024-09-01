@@ -33,7 +33,7 @@
 		echo '</div>';
 //$endpoint->global_cfg['new'] = 1;
 	} 
-	elseif(FreePBX::Endpointman()->configmod->get("srvip") == "") 
+	elseif(FreePBX::Endpointman()->getConfig("srvip") == "") 
 	{
 		echo '<div class="alert alert-warning" role="alert">';
 		echo '<strong>'._("Warning!").'</strong>'.(" Your Global Variables are not set! Please head on over to ").'<a href="config.php?display=epm_advanced"><b>'._("Advanced Settings").'</b></a>'._(" to setup your configuration");
@@ -60,7 +60,7 @@
 	
 	$i = 0;
 	$list = array();
-	$device_statuses = shell_exec(FreePBX::Endpointman()->configmod->get("asterisk_location")." -rx 'sip show peers'");
+	$device_statuses = shell_exec(FreePBX::Endpointman()->epm->getConfig("asterisk_location")." -rx 'sip show peers'");
 	
 	$device_statuses = explode("\n", $device_statuses);
 	$devices_status = array();

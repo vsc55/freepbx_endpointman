@@ -19,7 +19,7 @@ class Endpointman_Templates
 		$this->freepbx 	  = $epm->freepbx;
 		$this->db 	   	  = $epm->freepbx->Database;
 		$this->config  	  = $epm->freepbx->Config;
-		$this->configmod  = $epm->configmod;
+		// $this->configmod  = $epm->configmod;
 		$this->epm_config = $epm->epm_config;
 		$this->eda 		  = $epm->eda;
 	}
@@ -190,14 +190,14 @@ class Endpointman_Templates
 
 			if ((isset($settings)) and (strlen($settings) > 0)) {
 				$settings = unserialize($settings);
-				//$settings['tz'] = FreePBX::Endpointman()->listTZ(FreePBX::Endpointman()->configmod->get("tz"));
+				//$settings['tz'] = FreePBX::Endpointman()->listTZ(FreePBX::Endpointman()->epm->getConfig("tz"));
 			} 
 			else {
-				$settings['srvip'] 			 = ""; //$this->configmod->get("srvip");
-				$settings['ntp'] 			 = ""; //$this->configmod->get("ntp");
-				$settings['config_location'] = ""; //$this->configmod->get("config_location");
-				$settings['tz'] 		 	 = $this->configmod->get("tz");
-				$settings['server_type'] 	 = $this->configmod->get("server_type");
+				$settings['srvip'] 			 = ""; //$this->epm->getConfig("srvip");
+				$settings['ntp'] 			 = ""; //$this->epm->getConfig("ntp");
+				$settings['config_location'] = ""; //$this->epm->getConfig("config_location");
+				$settings['tz'] 		 	 = $this->epm->getConfig("tz");
+				$settings['server_type'] 	 = $this->epm->getConfig("server_type");
 			}
     		
 			$retarr = array("status" => true, "settings" => $settings, "message" => _("Global Config Read OK!"));
@@ -240,15 +240,15 @@ class Endpointman_Templates
 							$_REQUEST['config_loc'] = $_REQUEST['config_loc'];
 						} else {
 							$settings_warning = _("Directory Not Writable!");
-							$_REQUEST['config_loc'] = $this->configmod->get('config_location');
+							$_REQUEST['config_loc'] = $this->epm->getConfig('config_location');
 						}
 					} else {
 						$settings_warning = _("Not a Vaild Directory");
-						$_REQUEST['config_loc'] = $this->configmod->get('config_location');
+						$_REQUEST['config_loc'] = $this->epm->getConfig('config_location');
 					}
 				} else {
 					$settings_warning = _("No Configuration Location Defined!");
-					$_REQUEST['config_loc'] = $this->configmod->get('config_location');
+					$_REQUEST['config_loc'] = $this->epm->getConfig('config_location');
 				}
 			}
 			
@@ -751,6 +751,7 @@ class Endpointman_Templates
     	}
     
     	if (!isset($temp)) {
+			//TODO: Esto seguro que peta, pero si no lo hace hay que ver que hace!!!! configmod es obsoleto ahora es epm->isConfigExist
     		if (! $this->configmod->isExiste('new')) {
     			$this->error['modelsAvailable'] = "You need to enable at least ONE model";
     		}
@@ -1065,7 +1066,7 @@ class Endpointman_Templates
     		$template_variables_array['tooltip'] = htmlentities($cfg_data['tooltip']);
     	}
     
-    	if (($this->configmod->get('enable_ari')) AND ($admin) AND ($cfg_data['type'] != "break") AND ($cfg_data['type'] != "group") AND ($template_type == 'GENERAL')) {
+    	if (($this->epm->getConfig('enable_ari')) AND ($admin) AND ($cfg_data['type'] != "break") AND ($cfg_data['type'] != "group") AND ($template_type == 'GENERAL')) {
     
     		$template_variables_array['aried'] = 1;
     		$template_variables_array['ari']['key'] = $key;

@@ -197,7 +197,7 @@ function epm_advanced_tab_manual_upload_list_files_brand_expor()
 									$('<span/>', {'class' : 'label label-default label-pill pull-xs-right'}).text(itemData.timestamp),
 									$('<i/>',    {'class' : 'fa fa-file-archive-o' })
 								)
-								.append($("<span/>", {}).text(" " + itemData.pathall))
+								.append($("<span/>", {}).text(" " + itemData.basename + " (" + itemData.size + " bytes)"))
 							);
 						});
 					}
@@ -525,7 +525,7 @@ function epm_advanced_tab_poce_select_file_edit (idpro_select, txtnamefile, idna
 			} 
 			else {
 				$("#poce_file_name_path").text("Error obteniendo datos!");
-				$('#config_textarea').prop('disabled', true);
+				$('#config_textarea').prop('disabled', true);ff
 				if (cmeditor !== null) {
 					cmeditor.setValue("");
 					cmeditor.setOption("readOnly",true);
