@@ -17,6 +17,7 @@ use Exception;
 require_once('lib/epm_system.class.php');
 require_once('lib/epm_data_abstraction.class.php');
 require_once('lib/epm_packages.class.php');
+require_once('lib/epm_packages_db.class.php');
 //require_once("lib/RainTPL.class.php");
 
 require_once('Endpointman_Config.class.php');
@@ -34,13 +35,14 @@ class Endpointman extends FreePBX_Helpers implements BMO {
 	public $epm_oss 		 = null;
 	public $epm_placeholders = null;
 
-	public $freepbx   = null;
-	public $db		  = null; //Database from FreePBX
-	public $config 	  = null;
-	public $system    = null;
-	public $eda		  = null; //endpoint data abstraction layer
-	public $astman	  = null;
-	public $packages  = null;
+	public $freepbx		= null;
+	public $db			= null; //Database from FreePBX
+	public $config		= null;
+	public $system		= null;
+	public $eda			= null; //endpoint data abstraction layer
+	public $astman		= null;
+	public $packages	= null;
+	public $packagesdb	= null;
 	
 	private $endpoint = null;
 
@@ -176,6 +178,7 @@ class Endpointman extends FreePBX_Helpers implements BMO {
 		//$this->tpl = new RainTPL('/admin/assets/endpointman/images');
 
 		$this->packages			= new Endpointman\Packages($this);
+		$this->packagesdb		= new Endpointman\PackagesDB($this);
 		$this->epm_config 		= new Endpointman_Config($this);
 		$this->epm_advanced 	= new Endpointman_Advanced($this);
 		$this->epm_templates 	= new Endpointman_Templates($this);

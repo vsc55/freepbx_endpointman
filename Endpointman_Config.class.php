@@ -359,7 +359,13 @@ class Endpointman_Config
 			switch($idtype)
 			{
 				case 'modelo':
-					$this->epm->set_hw_model($id, array("enabled" => $value), 'id');
+					// $this->epm->set_hw_model($id, array("enabled" => $value), 'id');
+					$model = $this->epm->packagesdb->getModelByID($id);
+					if (! $model->setEnabled($value))
+					{
+						return array("status" => false, "message" => _("Error in the process of enabling the model!"));
+					}
+
 					break;
 
 				default:
@@ -371,15 +377,29 @@ class Endpointman_Config
 			switch($idtype)
 			{
 				case "marca":
-					$this->epm->set_hw_brand($id, array("hidden" => $value), 'id');
+					$brand = $this->epm->packagesdb->getBrandByID($id);
+					if (! $brand->setHidden($value))
+					{
+						return array("status" => false, "message" => _("Error in the process of hiding the brand!"));
+					}
+					unset($brand);
 					break;
 
 				case "producto":
-					$this->epm->set_hw_product($id, array("hidden" => $value), 'id');
+					$product = $this->epm->packagesdb->getProductByID($id);
+					if (! $product->setHidden($value))
+					{
+						return array("status" => false, "message" => _("Error in the process of hiding the product!"));
+					}
 					break;
 
 				case "modelo":
-					$this->epm->set_hw_model($id, array("hidden" => $value), 'id');
+					$model = $this->epm->packagesdb->getModelByID($id);
+					if (! $model->setHidden($value))
+					{
+						return array("status" => false, "message" => _("Error in the process of hiding the model!"));
+					}
+					// $this->epm->set_hw_model($id, array("hidden" => $value), 'id');
 					break;
 
 				default:
@@ -858,48 +878,49 @@ class Endpointman_Config
 						continue;
 					}
 					
+
+					$brand_db = $this->epm->packagesdb->getBrandByID($brand->getBrandID());
+					if ($brand_db->isExistID())
+					{
+						$outputError('brand_update_id_exist', sprintf(_("✅ Brand '%s' already exists in the database."), $brand->getName()));
+					}
+					else
+					{
+						try
+						{
+							$data_new = array(
+								'id'		=> $brand->getBrandID(),
+								'name'		=> $brand->getName(),
+								'directory'	=> $brand->getDirectory(),
+								'cfg_ver'	=> $brand->getLastModifiedMax(),
+							);
+							$brand_db->create($data_new, false, false);
+							$outputError('brand_update_check_add_brand', sprintf(_("✅ Brand '%s' added to the database."), $brand->getName()));
+							unset($data_new);
+						}
+						catch (\Exception $e)
+						{
+							$outputError('brand_update_check_add_brand', sprintf(_("❌ Unable to add brand '%s', error: %s"), $brand->getName(), $e->getMessage()));
+							continue;
+						}
+					}
+
+					// Get the maximum last modified date from the family list and the brand
+					$version[$brand_rawname] = $brand->getLastModifiedMax();
+
 					// Update the OUIs for the brand
 					$out( sprintf(_("⚡ Update OUIs for brand '%s' ◾◾◾"), $brand->getName()), false);
 					if ($brand->countOUI() > 0 && $brand->isSetBrandID())
 					{
 						foreach ($brand->getOUI() as $oui)
 						{
-							if (empty($oui))
-							{
-								continue;
-							}
+							if (empty($oui)) { continue; }
+
 							$out("◾", false);
-							$this->epm->set_hw_oui($oui, $brand->getBrandID());
+							$brand_db->setOUI($oui);
 						}
 					}
 					$out(_(" ✔"));
-					
-
-					// Get the maximum last modified date from the family list and the brand
-					$version[$brand_rawname] = $brand->getLastModifiedMax();
-
-					if ($this->epm->is_exist_hw_brand($brand->getBrandID(), 'id'))
-					{
-						$outputError('brand_update_id_exist', sprintf(_("✅ Brand '%s' already exists in the database."), $brand->getName()));
-						$out(" ");
-						continue;
-					}
-					$data_new = array(
-						'id'		=> $brand->getBrandID(),
-						'name'		=> $brand->getName(),
-						'directory'	=> $brand->getDirectory(),
-						'cfg_ver'	=> $version[$brand_rawname]
-					);
-					if (! is_numeric($this->epm->set_hw_brand($brand->getBrandID(), $data_new)))
-					{
-						$outputError('brand_update_check_add_brand', sprintf(_("❌ Unable to add brand '%s' to the database!"), $brand->getName()));
-					}
-					else
-					{
-						
-						$outputError('brand_update_check_add_brand', sprintf(_("✅ Brand '%s' added to the database."), $brand->getName()));
-					}
-					unset($data_new);
 					$out(" ");
 				}
 
@@ -992,30 +1013,45 @@ class Endpointman_Config
 				// $directory 		= $brand->getDirectory();
 				// $brand_name		= $brand->getName();
 				
-				$data_new = array(
-					'id'		=> $brand->getBrandID(),
-					'name'		=> $brand->getName(),
-					'cfg_ver'	=> $brand->getLastModified(),
-					'local' 	=> 1,
-					'installed' => 1,
-				);
-				$data_new_insert = array(
-					'directory'	=> $brand->getDirectory(),
-				);
-				$this->epm->set_hw_brand($brand->getBrandID(), $data_new, 'id', $data_new_insert);
-				unset($data_new);
-				unset($data_new_insert);
-
+				$brand_db = $this->epm->packagesdb->getBrandByID($brand->getBrandID());
+				if ($brand_db->isExistID())
+				{
+					$brand_db->setLocal(true);
+					$brand_db->setInstalled(true);
+					$brand_db->setLastModified($brand->getLastModified());
+				}
+				else
+				{
+					try
+					{
+						$data_new = array(
+							'id'		=> $brand->getBrandID(),
+							'name'		=> $brand->getName(),
+							'directory'	=> $brand->getDirectory(),
+							'cfg_ver'	=> $brand->getLastModified(),
+							'local' 	=> true,
+							'installed' => true,
+						);
+						$brand_db->create($data_new, false, false);
+						$outputError('brand_update_check_add_brand', sprintf(_("✅ Brand '%s' added to the database."), $brand->getName()));
+						unset($data_new);
+					}
+					catch (\Exception $e)
+					{
+						$outputError('brand_update_check_add_brand', sprintf(_("❌ Unable to add brand '%s', error: %s"), $brand->getName(), $e->getMessage()));
+						continue;
+					}
+				}
+				
 				// Update the OUIs for the brand
 				if ($brand->countOUI() > 0 && $brand->isSetBrandID())
 				{
 					foreach ($brand->getOUI() as $oui)
 					{
-						$this->epm->set_hw_oui($oui, $brand->getBrandID());
+						if (empty($oui)) { continue; }
+						$brand_db->setOUI($oui);
 					}
 				}
-
-				
 
 				$last_mod = "";
 				$brand_familys = $brand->getFamilyList();
@@ -1031,7 +1067,7 @@ class Endpointman_Config
 					//If is necessary return more info in the exception (set the second parameter to false)
 					if (! $family->importJSON($family_file_json_path, true))
 					{
-						$outputError('family_update_check_json', sprintf(_("Error: Unable to import JSON file for family %s"), $family->getName()));
+						$outputError('family_update_check_json', sprintf(_("Error: Unable to import JSON file for family %s"), $family->getShortName()));
 						continue;
 					}
 
@@ -1047,72 +1083,111 @@ class Endpointman_Config
 					*
 					*/
 					
-					$data_product = array(
-						'short_name' 	=> $family_short_name,
-						'long_name' 	=> $family->getName(),
-						'cfg_ver' 		=> $family->getLastModified(),
-						'config_files' => $family->getConfigurationFiles()
-					);
-					$data_product_insert = array(
-						'brand_id' 	=> $brand_id,
-						'directory' 	=> $family->getDirectory(),
-					);
-					$this->epm->set_hw_product($family_id, $data_product, 'id', $data_product_insert);
-					
+					$product_db = $brand_db->getProduct($family->getFamilyID());
+					if ($product_db->isExistID())
+					{
+						$product_db->setName($family->getName());
+						$product_db->setShortName($family->getShortName());
+						$product_db->setLastModified($family->getLastModified());
+						$product_db->setConfigFiles($family->getConfigurationFiles());
+					}
+					else
+					{
+						try
+						{
+							$data_new = array(
+								'id'			=> $family->getFamilyID(),
+								'brand'			=> $brand->getBrandID(),
+								'short_name'	=> $family->getShortName(),
+								'long_name'		=> $family->getName(),
+								'cfg_dir'		=> $family->getDirectory(),
+								'cfg_ver'		=> $family->getLastModified(),
+								'config_files'	=> $family->getConfigurationFiles(),
+							);
+							$product_db->create($data_new, false, false);
+							$outputError('family_update_check_add_product', sprintf(_("✅ Product '%s' added to the database."), $family->getShortName()));
+							unset($data_new);
+						}
+						catch (\Exception $e)
+						{
+							$outputError('family_update_check_add_product', sprintf(_("❌ Unable to add product '%s', error: %s"), $family->getShortName(), $e->getMessage()));
+							continue;
+						}
+					}
+
 					$models = $family->getModelList();
 					foreach ($models as &$model)
 					{
 						$model_id = $model->getModelId();
 
-						// $model->getConfigurationFiles() > old system implode(",", $model->getConfigurationFiles());
-						$data_model = array(
-							'model' 		=> $model->getModel(),
-							'max_lines' 	=> $model->getMaxLines(),
-							'template_list'=> $model->getConfigurationFiles()
-						);
-						$data_model_insert = array(
-							'brand' 		=> $brand_id,
-							'product_id' 	=> $family_id,
-							'enabled' 		=> 0,
-							'hidden' 		=> 0
-						);
-						$this->epm->set_hw_model($model_id, $data_model, 'id', $data_model_insert);
-
-						$errsync_modal = array();
-						// if (!$this->sync_model($model_id, $errsync_modal))
-						if (!$this->sync_model($model, $errsync_modal))
+						$model_db = $product_db->getModel($model_id);
+						if ($model_db->isExistID())
 						{
-							foreach ($errsync_modal as $k => $v)
+							$model_db->setModel($model->getModel());
+							$model_db->setMaxLines($model->getMaxLines());
+							$model_db->set_TemplateList($model->getConfigurationFiles());
+							try
 							{
-								$outputError($k, $v);
+								$model_db->setTemplateData($model->importTemplates(12, null, false));
 							}
-							$outputError('sync_module_error', sprintf(_("Error: System Error in Sync Model [%s] Function, Load Failure!"), $model->getModel()));
+							catch (\Exception $e)
+							{
+								$outputError('model_update_check_template_data', sprintf(_("❌ Unable to update model '%s', error: %s"), $model->getModel(), $e->getMessage()));
+							}
 						}
-						unset($errsync_modal);
+						else
+						{
+							try
+							{
+								$data_model = array(
+									'id'			=> $model->getModelId(),
+									'brand' 		=> $brand->getBrandID(),
+									'product_id' 	=> $family->getFamilyID(),
+									'enabled' 		=> false,
+									'hidden' 		=> false,
+									'model' 		=> $model->getModel(),
+									'max_lines' 	=> $model->getMaxLines(),
+									'template_list' => $model->getConfigurationFiles(),
+									'template_data' => $model->importTemplates(12, null, false),
+								);
+								$model_db->create($data_model, false, false);
+							}
+							catch (\Exception $e)
+							{
+								$outputError('model_update_check_add_model', sprintf(_("❌ Unable to add model 11 '%s', error: %s"), $model->getModel(), $e->getMessage()));
+								continue;
+							}
+						}
 					}
 
 					//Phone Models Move Here
-					foreach ($this->epm->get_hw_model_list($family_id, true) as $model)
+					// foreach ($this->epm->get_hw_model_list($family_id, true) as $model)
+					foreach ($product_db->getModelList() as &$model)
 					{
-						if (! $family->isModelExist($model['model']))
+						$model_id   = $model->getID();
+						$model_name = $model->getModel();
+
+						
+						if (! $family->isModelExist($model_name))
 						{
 							if ($echomsg == true )
 							{
-								outn(sprintf(_("Moving/Removing Model '%s' not present in JSON file......"), $model['model']));
+								outn(sprintf(_("Moving/Removing Model '%s' not present in JSON file......"), $model_name));
 							}
 
 							// Remove Brand Product Model
-							if (! $this->epm->del_hw_model($model['id']) )
+							if (! $model->delete())
 							{
 								if ($echomsg == true ) { out(_("Error!")); }
-								$outputError('del_hw_model', sprintf(_("Error: System Error in Delete Brand Product Model [%s] Function, Load Failure!"), $model['model']));
+								$outputError('del_hw_model', sprintf(_("Error: System Error in Delete Brand Product Model [%s] Function, Load Failure!"), $model_name));
 							}
 
 							// Sync MAC Brand By Model
-							if (! $this->epm->sync_mac_brand_by_model($model['model'], $model['id']))
+							// TODO: Move sync_mac_brand_by_model to ProvisionerModelDB class
+							if (! $this->epm->sync_mac_brand_by_model($model_name, $model_id))
 							{
 								if ($echomsg == true ) { out(_("Error!")); }
-								$outputError('sync_mac_brand_by_model', sprintf(_("Error: System Error in Sync MAC Brand By Model [%s] Function, Load Failure!"), $model['model']));
+								$outputError('sync_mac_brand_by_model', sprintf(_("Error: System Error in Sync MAC Brand By Model [%s] Function, Load Failure!"), $model_name));
 							}
 							if ($echomsg == true )
 							{
@@ -1126,112 +1201,6 @@ class Endpointman_Config
     }
 
 
-	/**
-	 * Syncs a model with the database.
-	 * 
-	 * @param ProvisionerModel $model The model to sync.
-	 * @param array $error Reference to an array to store error messages.
-	 * @return bool Returns true if the model was successfully synced, false otherwise.
-	 */
-    public function sync_model(?ProvisionerModel $model, &$error = array()) 
-	{
-		if (empty($model))
-		{
-			$error['sync_model'] = _("Model is empty!");
-			return false;
-		}
-
-		//TODO: Is it necessary to bring all the data configured in the database query?
-		$sql = sprintf('SELECT eml.id, eml.product_id, ebl.id as brand_id, eml.brand, eml.model, epl.cfg_dir, ebl.directory FROM %s as eml
-						JOIN %s as epl ON eml.product_id = epl.id
-    					JOIN %s as ebl ON eml.brand = ebl.id
-    					WHERE eml.id = :id', "endpointman_model_list", "endpointman_product_list", "endpointman_brand_list");
-		$stmt = $this->db->prepare($sql);
-		$stmt->execute([
-			':id' => $model->getModelId()
-		]);
-		if ($stmt->rowCount() === 0)
-		{
-			$error['sync_model'] = _("Model not found!");
-			return false;
-		}
-		$row = $stmt->fetch(\PDO::FETCH_ASSOC);
-
-		$brand_dir = $row['directory'];
-		$model_dir = $row['cfg_dir'];
-
-		if (empty($brand_dir) || empty($model_dir))
-		{
-			$error['sync_model'] = sprintf(_("Brand or Product Directory is empty from the model '%s'!"), $model->getModel());
-			return false;
-		}
-
-		if ($model->isParentSet() === false)
-		{
-			$error['sync_model'] = _("Family Parent not set!");
-			return false;
-		}
-		$family = $model->getParent();
-
-		// if ($family->isParentSet() === false)
-		// {
-		// 	$error['sync_model'] = _("Brand Parent not set!");
-		// 	return false;
-		// }
-		// $brand = $family->getParent();
-
-		if (! $family->isModelExist($row['model']))
-		{
-			$error['sync_model'] = _("Can't locate model in family JSON file");
-			return false;
-		}
-
-		$data_model = array(
-			'model' 		=> $row['model'],
-			'max_lines'		=> $model->getMaxLines(),
-			'template_list'	=> $model->getTemplateList(true)
-		);
-		$this->epm->set_hw_model($row['id'], $data_model);
-		unset($data_model);
-
-		$data_product = array(
-			'short_name' => $family->getShortName(),
-			'long_name'  => $family->getName(),
-			'cfg_ver' 	 => $family->getLastModified(),
-		);
-		$this->epm->set_hw_product($row['product_id'], $data_product);
-		unset($data_product);
-		
-		try
-		{
-			$errorImportTemplates = array();
-			$template_data_array = $model->importTemplates(12, $errorImportTemplates, false);
-			
-			// Important to serialize $template_data_array before saving it to the database
-			$update_model = array('template_data' => serialize($template_data_array));
-			$this->epm->set_hw_model($row['id'], $update_model, 'id');
-			unset($update_model);
-		}
-		catch (\Exception $e)
-		{
-			$error['sync_model'] = sprintf("❌ %s", $e->getMessage());
-			$template_data_array = array();
-		}
-		finally
-		{
-			if (!empty($errorImportTemplates))
-			{
-				foreach ($errorImportTemplates as $errorMsg)
-				{
-					out($errorMsg);
-				}
-			}
-			unset($errorImportTemplates);
-		}
-		return true;
-    }
-
-	
 	/**
 	 * Downloads and installs/updates a brand.
 	 *
@@ -1441,30 +1410,46 @@ class Endpointman_Config
 				return false;
 			}
 
-			if (! $this->epm->is_exist_hw_brand($brand->getDirectory()))
+			$brand_db = $this->epm->packagesdb->getBrandByID($brand->getBrandID());
+			if ($brand_db->isExistID())
 			{
-				outn( sprintf(_("⚡ Inserting Brand '%s' ..."), $brand->getName()));
+				outn( sprintf(_("⚡ Updating Brand '%s' ..."), $brand->getName()));
+				$brand_db->setLocal($remote);
+				$brand_db->setInstalled(true);
+				$brand_db->setLastModified($brand->getLastModified());
 			}
 			else
 			{
-				outn( sprintf(_("⚡ Updating Brand '%s' ..."), $brand->getName()));
+				outn( sprintf(_("⚡ Inserting Brand '%s' ..."), $brand->getName()));
+				try
+				{
+					$data_new = array(
+						'id'		=> $brand->getBrandID(),
+						'name'		=> $brand->getName(),
+						'directory'	=> $brand->getDirectory(),
+						'cfg_ver'	=> $brand->getLastModified(),
+						'local' 	=> $remote,
+						'installed' => true,
+					);
+					$brand_db->create($data_new, false, false);
+					unset($data_new);
+				}
+				catch (\Exception $e)
+				{
+					out(" ❌");
+					out(sprintf(_("❌ Unable to add brand '%s', error: %s"), $brand->getName(), $e->getMessage()));
+					return false;
+				}
 			}
-			$new_brand = array(
-				'id'		=> $brand->getBrandID(),
-				'name'		=> $brand->getName(),
-				'cfg_ver'	=> $brand->getLastModified(),
-				'local' 	=> $remote ? 0 : 1,
-				'installed' => 1,
-			);
-			$new_brand_insert = array(
-				'directory'	=> $brand->getDirectory(),
-			);
-			$this->epm->set_hw_brand($brand->getBrandID(), $new_brand, 'id', $new_brand_insert);
-			unset($new_brand);
-			unset($new_brand_insert);
-
 			out(" ✔");
 
+			outn(_("⚡ Updating OUI list in DB ..."));
+			foreach ($brand->getOUI() as $oui)
+			{
+				if(empty($oui)) { continue; }
+				$brand_db->setOUI($oui);
+			}
+			out(" ✔");
 
 			foreach ($brand->getFamilyList() as &$family)
 			{
@@ -1479,21 +1464,40 @@ class Endpointman_Config
 				// }
 
 
-				
-				outn( sprintf(_("⚡ - Inserting/Updating Family '%s'..."), $family->getShortName()));
-				$new_product = array(
-					'short_name'	=> $family->getShortName(),
-					'long_name'		=> $family->getName(),
-					'cfg_ver'		=> $family->getLastModified(),
-					'config_files'	=> $family->getConfigurationFiles(true),
-				);
-				$new_product_insert = array(
-					'id' 	  => $family->getFamilyId(),
-					'brand'	  => $family->getBrandID(),
-					'cfg_dir' => $family->getDirectory(),
-					'hidden'  => 0,
-				);
-				$this->epm->set_hw_product($family->getFamilyId(), $new_product, 'id', $new_product_insert);
+				$product_db = $brand_db->getProduct($family->getFamilyId());
+				if ($product_db->isExistID())
+				{
+					outn( sprintf(_("⚡ - Updating Family '%s'..."), $family->getShortName()));
+					$product_db->setName($family->getName());
+					$product_db->setShortName($family->getShortName());
+					$product_db->setLastModified($family->getLastModified());
+					$product_db->setConfigFiles($family->getConfigurationFiles());
+				}
+				else
+				{
+					outn( sprintf(_("⚡ - Inserting Family '%s'..."), $family->getShortName()));
+					try
+					{
+						$data_new = array(
+							'id'			=> $family->getFamilyId(),
+							'brand'			=> $family->getBrandID(),
+							'short_name'	=> $family->getShortName(),
+							'long_name'		=> $family->getName(),
+							'cfg_dir'		=> $family->getDirectory(),
+							'cfg_ver'		=> $family->getLastModified(),
+							'config_files'	=> $family->getConfigurationFiles(),
+							'hidden'		=> 0,
+						);
+						$product_db->create($data_new, false, false);
+						unset($data_new);
+					}
+					catch (\Exception $e)
+					{
+						out(" ❌");
+						out(sprintf(_("❌ Unable to add product '%s', error: %s"), $family->getShortName(), $e->getMessage()));
+						continue;
+					}
+				}
 				out(" ✔");
 
 
@@ -1658,35 +1662,52 @@ class Endpointman_Config
 							out(" ✔");
 						}
 					}
-					
 
-					
-					outn( sprintf(_("⚡ - Inserting/Updating Model '%s' ..."), $model->getModel()));
-					$new_model = array(
-						'max_lines'		=> $model->getMaxLines(),
-						'model'			=> $model->getModel(),
-						'template_list'	=> $model->getTemplateList(true),
-					);
-					$new_model_insert = array(
-						'id' 		 => $model->getModelId(),
-						'brand'		 => $model->getBrandID(),
-						'product_id' => $model->getFamilyId(),
-						'enabled'	 => 0,
-						'hidden'	 => 0,
-					);
-
-					$this->epm->set_hw_model($model->getModelId(), $new_model, 'id', $new_model_insert);
-					unset($new_model);
-					unset($new_model_insert);
-					out (" ✔");
-
-					$errlog = array();
-					if (! $this->sync_model($model, $errlog))
+					$model_db = $product_db->getModel($model->getModelId());
+					if ($model_db->isExistID())
 					{
-						out(_("❌ System Error in Sync Model Function, Load Failure!"));
-						out("❌ ".$errlog['sync_model']);
+						outn( sprintf(_("⚡ - Updating Model '%s' ..."), $model->getModel()));
+						$model_db->setModel($model->getModel());
+						$model_db->setMaxLines($model->getMaxLines());
+						$model_db->setTemplateList($model->getTemplateList());
+						try
+						{
+							$model_db->setTemplateData($model->importTemplates(12, null, false));
+							out (" ✔");
+						}
+						catch (\Exception $e)
+						{
+							out(" ❌");
+							out(sprintf(_("❌ Unable to update model '%s', error: %s"), $model->getModel(), $e->getMessage()));
+						}
 					}
-					unset ($errlog);
+					else
+					{
+						outn( sprintf(_("⚡ - Inserting Model '%s' ..."), $model->getModel()));
+						try
+						{
+							$data_model = array(
+								'id' 		 	=> $model->getModelId(),
+								'brand'		 	=> $model->getBrandID(),
+								'model'		 	=> $model->getModel(),
+								'max_lines'		=> $model->getMaxLines(),
+								'template_list'	=> $model->getTemplateList(),
+								'template_data' => $model->importTemplates(12, null, false),
+								'product_id' 	=> $model->getFamilyId(),
+								'enabled'	 	=> false,
+								'hidden'		=> false,
+							);
+							$model_db->create($data_model, false, false);
+							unset($data_model);
+							out (" ✔");
+						}
+						catch (\Exception $e)
+						{
+							out(" ❌");
+							out(sprintf(_("❌ Unable to add model '%s', error: %s"), $model->getModel(), $e->getMessage()));
+							continue;
+						}
+					}
 				}
 				//END Updating Model Lines................
 
@@ -1731,13 +1752,6 @@ class Endpointman_Config
 			}
 			out(_("✅ All Done!"));
 			//END Updating Family Lines
-
-			outn(_("⚡ Updating OUI list in DB ..."));
-			foreach ($brand->getOUI() as $oui)
-			{
-				$this->epm->set_hw_oui($oui, $brand->getBrandID());
-			}
-			out(" ✔");
 		}
     }
 

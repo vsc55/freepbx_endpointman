@@ -33,6 +33,9 @@
 			<field name="installed" type="integer" default="0"/>
 			<field name="local" type="integer" default="0"/>
 			<field name="hidden" type="integer" default="0"/>
+			<key name="directory" type="unique">
+				<column name="directory"/>
+			</key>
 		</table>
 		<table name="endpointman_custom_configs">
 			<field name="id" type="integer" primarykey="true" autoincrement="true"/>
@@ -75,7 +78,7 @@
 		</table>
 		<table name="endpointman_model_list">
 			<field name="id" type="string" length="11" primarykey="true"/>
-			<field name="brand" type="integer"/>
+			<field name="brand" type="string" length="11"/>
 			<field name="model" type="string" length="25"/>
 			<field name="max_lines" type="smallint"/>
 			<field name="template_list" type="text"/>
@@ -87,7 +90,7 @@
 		<table name="endpointman_oui_list">
 			<field name="id" type="integer" primarykey="true" autoincrement="true"/>
 			<field name="oui" type="string" length="30" notnull="false"/>
-			<field name="brand" type="integer"/>
+			<field name="brand" type="string" length="11"/>
 			<field name="custom" type="integer" default="0"/>
 			<key name="oui" type="unique">
 				<column name="oui"/>
@@ -95,7 +98,7 @@
 		</table>
 		<table name="endpointman_product_list">
 			<field name="id" type="string" length="11" primarykey="true"/>
-			<field name="brand" type="integer"/>
+			<field name="brand" type="string" length="11"/>
 			<field name="long_name" type="string" length="255"/>
 			<field name="short_name" type="string" length="255"/>
 			<field name="cfg_dir" type="string" length="255"/>
