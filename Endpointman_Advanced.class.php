@@ -1050,9 +1050,16 @@ class Endpointman_Advanced
 			echo "No send name file!";
 			die();
 		}
+		else if(! mb_ereg_match('^[a-z]+-[0-9]+.tgz$', basename($_REQUEST['file_package']))) {
+			/* File package name format: brandname-1234567890.tgz */
+			header('HTTP/1.0 418 I\'m a teapot', true, 418);
+			echo "<h1>Error 418 I'm a teapot</h1>";
+			echo "Poor file name!";
+			die();
+		}
 		else {
-			$dget['file_package'] = $_REQUEST['file_package'];
-			$path_tmp_file = $this->PHONE_MODULES_PATH."/temp/export/".$_REQUEST['file_package'];
+			$dget['file_package'] = basename($_REQUEST['file_package']);
+			$path_tmp_file = $this->PHONE_MODULES_PATH."/temp/export/".$dget['file_package'];
 
 			if (! file_exists($path_tmp_file)) {
 				header('HTTP/1.0 404 Not Found', true, 404);
