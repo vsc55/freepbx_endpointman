@@ -505,32 +505,40 @@ class ProvisionerBaseDB
         {
             return false;
         }
-        if (empty($where) || (!is_array($where) && !is_string($where)))
-        {
-            return false;
+
+        if (!empty($where))
+        {   
+            if (is_string($where) || is_numeric($where))
+            {
+                $where = [
+                    'id' => [
+                        'operator' => "=", 
+                        'value'    => $where
+                    ],
+                ];
+            }
+            if (! is_array($where))
+            {
+                $where = [];
+            }
         }
-        $sql = sprintf("DELETE FROM %s ", $table);
-        $where_keys = [];
-        if (is_string($where) || is_numeric($where))
+
+        $sql = sprintf("DELETE FROM %s", $table);
+        if (! empty($where))
         {
-            $sql .= "WHERE id = :id";
-            $stmt = $this->parent->db->prepare($sql);
-            $params = [":id" => $where];
-        }
-        else
-        {
+            $where_keys = [];
             foreach ($where as $key => $value)
             {
                 if (empty($value) || !is_array($value))
                 {
                     continue;
                 }
-                $where_keys[] = sprintf("%s %s :%s", $key, $value['operator'], $key);
+                $where_keys[] = sprintf("%s %s :%s", $key, $value['operator'] ?? "=", $key);
                 $params[":$key"] = $value['value'];
             }
             if (! empty($where_keys))
             {
-                $sql .= "WHERE " . implode(" AND ", $where_keys);
+                $sql .= sprintf(" WHERE %s", implode(" AND ", $where_keys));
             }
         }
         $stmt = $this->parent->db->prepare($sql);

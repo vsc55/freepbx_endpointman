@@ -31,48 +31,22 @@ class Endpointman_Advanced
         }
 	}
 
-	// public function myShowPage(&$pagedata)
-	// {
-	// 	if(empty($pagedata))
-	// 	{
-	// 		$pagedata['settings'] = array(
-	// 			"name" => _("Settings"),
-	// 			"page" => '/views/epm_advanced_settings.page.php'
-	// 		);
-	// 		$pagedata['oui_manager'] = array(
-	// 			"name" => _("OUI Manager"),
-	// 			"page" => '/views/epm_advanced_oui_manager.page.php'
-	// 		);
-	// 		$pagedata['poce'] = array(
-	// 			"name" => _("Product Configuration Editor"),
-	// 			"page" => '/views/epm_advanced_poce.page.php'
-	// 		);
-	// 		$pagedata['iedl'] = array(
-	// 			"name" => _("Import/Export My Devices List"),
-	// 			"page" => '/views/epm_advanced_iedl.page.php'
-	// 		);
-	// 		$pagedata['manual_upload'] = array(
-	// 			"name" => _("Package Import/Export"),
-	// 			"page" => '/views/epm_advanced_manual_upload.page.php'
-	// 		);
-	// 	}
-	// }
-
 	public function ajaxRequest($req, &$setting, array $data)
 	{
 		$allowRequest = array(
-			"oui",
-			"oui_add",
-			"oui_del",
-			"poce_list_brands",
-			"poce_select",
-			"poce_select_file",
-			"poce_save_file",
-			"poce_save_as_file",
-			"poce_sendid",
-			"poce_delete_config_custom",
-			"list_files_brands_export",
-			"saveconfig"
+			"oui",							// Tab OUI Manager
+			"oui_add",						// Tab OUI Manager
+			"oui_del",						// Tab OUI Manager
+			"poce_tree", 					// Tab POCE
+			// "poce_list_brands",
+			// "poce_select",
+			"poce_select_file",				// Tab POCE
+			"poce_save_file",				// Tab POCE
+			"poce_save_as_file",			// Tab POCE
+			// "poce_sendid",
+			"poce_delete_config_custom",	// Tab POCE
+			"list_files_brands_export",		// Tab Manual Upload
+			"saveconfig"					// Tab Settings
 		);
 		if (in_array(strtolower($req), $allowRequest))
 		{
@@ -90,8 +64,11 @@ class Endpointman_Advanced
 				'error' 		  => _("Error!"),
 				'save_changes' 	  => _("Saving Changes..."),
 				'save_changes_ok' => _("Saving Changes... Ok!"),
-				'opt_invalid' 	  => _("Invalid Option!")
-			)
+				'opt_invalid' 	  => _("Invalid Option!"),
+			),
+			'poce' => array(
+			 	'load_data_ok' 	  => _("File Content Obtained Successfully"),
+			),
 		);
 
 		if (empty($data) || !is_array($data))
@@ -126,12 +103,21 @@ class Endpointman_Advanced
 					switch ($command)
 					{
 						case "oui":
-							//$sql = 'SELECT endpointman_oui_list.id, endpointman_oui_list.oui , endpointman_brand_list.name, endpointman_oui_list.custom FROM endpointman_oui_list , endpointman_brand_list WHERE endpointman_oui_list.brand = endpointman_brand_list.id ORDER BY endpointman_oui_list.oui ASC';
-							$sql = 'SELECT T1.id, T1.oui, T2.name, T1.custom FROM endpointman_oui_list as T1 , endpointman_brand_list as T2 WHERE T1.brand = T2.id ORDER BY T1.oui ASC';
-							$data = sql($sql, 'getAll', \PDO::FETCH_ASSOC);
 							$ret = array();
-							foreach ($data as $item) {
-								$ret[] = array('id' => $item['id'], 'oui' => $item['oui'], 'brand' => $item['name'], 'custom' => $item['custom']);
+							foreach ($this->epm->packagesdb->getBrands(true, 'name') as $brand)
+							{
+								$brand_id 	= $brand->getId();
+								$brand_name = $brand->getName();
+								foreach($brand->getOUI_All() as $oui)
+								{
+									$ret[] = array(
+										'brand_id' => $brand_id,
+										'id' 	   => $oui['id'], 
+										'oui' 	   => $oui['oui'],
+										'brand'    => $brand_name, 
+										'custom'   => $oui['custom']
+									);
+								}
 							}
 							return $ret;
 							break;
@@ -162,29 +148,36 @@ class Endpointman_Advanced
 				case 'poce':
 					switch ($command)
 					{
-						case "poce_list_brands":
-							$retarr = $this->epm_advanced_poce_list_brands();
+						case 'poce_tree':
+							// Unset txt['pose'] to prevent jstree from generating an error when loading the main tree
+							unset($txt['poce']);
+							$retarr = $this->epm_advanced_poce_tree($data);
 							break;
 
-						case "poce_select":
-							$retarr = $this->epm_advanced_poce_select($data);
-							break;
+						// case "poce_list_brands":
+						// 	$retarr = $this->epm_advanced_poce_list_brands();
+						// 	break;
+
+						// case "poce_select":
+						// 	$retarr = $this->epm_advanced_poce_select($data);
+						// 	break;
 
 						case "poce_select_file":
-							$retarr = $this->epm_advanced_poce_select_file();
+							$retarr = $this->epm_advanced_poce_select_file($data);
 							break;
 
 						case "poce_save_file":
 						case "poce_save_as_file":
-							$retarr = $this->epm_advanced_poce_save_file();
+							$retarr = $this->epm_advanced_poce_save_file($data);
 							break;
 
-						case "poce_sendid":
-							$retarr = $this->epm_advanced_poce_sendid();
+							
+						case "poce_share":
+							$retarr = $this->epm_advanced_poce_share($data);
 							break;
 
 						case "poce_delete_config_custom":
-							$retarr = $this->epm_advanced_poce_delete_config_custom();
+							$retarr = $this->epm_advanced_poce_delete_config_custom($data);
 							break;
 
 						default:
@@ -231,80 +224,579 @@ class Endpointman_Advanced
 		return $retarr;
 	}
 
-	public function doConfigPageInit($module_tab = "", $command = "") {
-		switch ($module_tab)
+	public function doConfigPageInit(array $data)
+	{
+		// Force flush all output buffers, need for AJAX
+		if (!empty($data) && is_array($data))
 		{
-			case "oui_manager":
-				break;
+			$mod_tab = $data['module_tab'] ?? '';
+			$command = $data['command']    ?? '';
+			$request = $data['request']    ?? array();
 
-			case "iedl":
-				switch ($command) {
-					case "export":
-						$this->epm_advanced_iedl_export();
-						break;
+			$endprocess = false;
+			switch ($mod_tab)
+			{
+				case "oui_manager":
+					break;
 
-					case "import":
-						$this->epm_advanced_iedl_import();
-						echo "<br /><hr><br />";
-						exit;
-						break;
-				}
-				break;
+				case "iedl":
+					switch ($command)
+					{
+						case "export":
+							$endprocess = true;
+							$this->activeFlush();
+							$this->epm_advanced_iedl_export();
+							//TODO: Igual tenemos que hacer exit para que no añadia el <br /><hr><br />
+							break;
 
-			case "manual_upload":
-				switch ($command) {
-					case "export_brands_availables":
-						$this->epm_advanced_manual_upload_export_brans_available();
-						echo "<br /><hr><br />";
-						exit;
-						break;
+						case "import":
+							$endprocess = true;
+							$this->activeFlush();
+							$this->epm_advanced_iedl_import();
+							break;
+					}
+					break;
 
-					case "export_brands_availables_file":
-						$this->epm_advanced_manual_upload_export_brans_available_file();
-						exit;
-						break;
+				case "manual_upload":
+					switch ($command)
+					{
+						case "export_brands_availables":
+							$endprocess = true;
+							$this->activeFlush();
+							$this->epm_advanced_manual_upload_export_brans_available();
+							break;
 
-					case "upload_brand":
-						$this->epm_advanced_manual_upload_brand();
-						echo "<br /><hr><br />";
-						exit;
-						break;
+						case "export_brands_availables_file":
+							$endprocess = true;
+							$this->activeFlush();
+							$this->epm_advanced_manual_upload_export_brans_available_file();
+							//TODO: Igual tenemos que hacer exit para que no añadia el <br /><hr><br />
+							break;
 
-					case "upload_provisioner":
-						$this->epm_advanced_manual_upload_provisioner();
-						echo "<br /><hr><br />";
-						exit;
-						break;
-				}
-				break;
+						case "upload_brand":
+							$endprocess = true;
+							$this->activeFlush();
+							$this->epm_advanced_manual_upload_brand();
+							break;
+
+						case "upload_provisioner":
+							$endprocess = true;
+							$this->activeFlush();
+							$this->epm_advanced_manual_upload_provisioner();
+							break;
+					}
+					break;
+			}
+
+			if ($endprocess)
+			{
+				echo "<br /><hr><br />";
+				flush();
+				exit;
+			}
 		}
 	}
 
-	public function getRightNav($request, $params = array()) {
-		return "";
+	private function activeFlush()
+	{
+		ob_implicit_flush(true);
+		while (ob_get_level() > 0)
+		{
+			ob_end_flush();
+		}
 	}
 
-	public function getActionBar($request) {
-		return "";
+	public function myShowPage(array &$pagedata, array $data) { }
+
+	public function getRightNav(array $data) { return ""; }
+
+	public function getActionBar(array $data) { return ""; }
+
+	public function showPage(array &$data)
+	{
+		$tabs = array(
+			'settings' => array(
+				"name" => _("Settings"),
+				"page" => '/views/epm_advanced_settings.page.php'
+			),
+			'oui_manager' => array(
+				"name" => _("OUI Manager"),
+				"page" => '/views/epm_advanced_oui_manager.page.php'
+			),
+			'poce' => array(
+				"name" => _("Product Configuration Editor"),
+				"page" => '/views/epm_advanced_poce.page.php'
+			),
+			'iedl' => array(
+				"name" => _("Import/Export My Devices List"),
+				"page" => '/views/epm_advanced_iedl.page.php'
+			),
+			'manual_upload' => array(
+				"name" => _("Package Import/Export"),
+				"page" => '/views/epm_advanced_manual_upload.page.php'
+			),
+		);
+
+		$data['subpage'] = $data['request']['subpage'] ?? '';
+		if (! in_array($data['subpage'], array_keys($tabs)))
+		{
+			$data['subpage'] = 'settings';
+		}
+
+		foreach($tabs as $key => &$page)
+		{
+			$data_tab = array();
+			switch($key)
+			{
+				case "settings":
+					if (($this->epm->getConfig("server_type") == 'file') AND ($this->epm_advanced_config_loc_is_writable()))
+					{
+						$this->tftp_check();
+					}
+					
+					if ($this->epm->getConfig("use_repo") == "1")
+					{
+						if ($this->epm->has_git())
+						{
+							if (!file_exists($this->system->buildPath($this->epm->PHONE_MODULES_PATH, '.git'))) {
+								$o = getcwd();
+								chdir(dirname($this->epm->PHONE_MODULES_PATH));
+								$this->epm->system->rmrf($this->epm->PHONE_MODULES_PATH);
+								$path = $this->epm->has_git();
+								exec($path . ' clone https://github.com/provisioner/Provisioner.git _ep_phone_modules', $output);
+								chdir($o);
+							}
+						}
+						else
+						{
+							echo  _("Git not installed!");
+						}
+					}
+					else
+					{
+						if (file_exists($this->epm->system->buildPath($this->epm->PHONE_MODULES_PATH, '.git')))
+						{
+							$this->epm->system->rmrf($this->epm->PHONE_MODULES_PATH);
+
+							$sql = "SELECT * FROM  `".self::TABLES['epm_brands_list']."` WHERE  `installed` =1";
+							$result = & sql($sql, 'getAll', \PDO::FETCH_ASSOC);
+							foreach ($result as $row)
+							{
+								$id_product = $row['id'] ?? null;
+								$this->epm_config->remove_brand($id_product, true);
+							}
+						}
+					}
+					
+					$url_provisioning = $this->epm->system->buildUrl(sprintf("%s://%s", $this->epm->getConfig("server_type"), $this->epm->getConfig("srvip")), "provisioning","p.php");
+
+					$data_tab['config']['data'] = array(
+						'setting_provision' => array(
+							'label' => _("Provisioner Settings"),
+							'items' => array(
+								'srvip' => array(
+									'label' 	  => _("IP address of phone server"),
+									'type' 		  => 'text',
+									'value' 	  => $this->epm->getConfig("srvip"),
+									'placeholder' => _("IP Server PBX..."),
+									'help' 		  => _("The IP Address of the Server PBX that will be used to provision the phones."),
+									'button' 	  => array(
+										'id' 	  => 'autodetect',
+										'label'   => _("Use Me!"),
+										'icon'    => 'fa-search',
+										'onclick' => sprintf("epm_advanced_tab_setting_input_value_change_bt('#srvip', sValue = '%s', bSaveChange = true);", $_SERVER["SERVER_ADDR"]),
+									),
+								),
+								'intsrvip' => array(
+									'label' 	  => _("Internal IP address of phone server"),
+									'type' 		  => 'text',
+									'value' 	  => $this->epm->getConfig("intsrvip"),
+									'placeholder' => _("Internal IP Server PBX..."),
+									'help' 		  => _("The Internal IP Address of the Server PBX that will be used to provision the phones."),
+									'button' 	  => array(
+										'id' 	  => 'autodetect',
+										'label'   => _("Use Me!"),
+										'icon'    => 'fa-search',
+										'onclick' => sprintf("epm_advanced_tab_setting_input_value_change_bt('#intsrvip', sValue = '%s', bSaveChange = true);", $_SERVER["SERVER_ADDR"]),
+									),
+								),
+								'cfg_type' => array(
+									'label' 	  => _("Configuration Type"),
+									'type' 		  => 'select',
+									'value' 	  => $this->epm->getConfig("server_type"),
+									'help' 		  => _("The type of server that will be used to provision the phones (TFTP/FTP, HTTP, HTTPS)."),
+									'select_check'=> function ($option, $value) {
+										return (strtolower($value) == strtolower($option['value']));
+									},
+									'options'	  => array(
+										'file'  => array(
+											'text' => _("File (TFTP/FTP)"),
+											'icon'  => 'fa-upload',
+											'value' => 'file',
+										),
+										'http'  => array(
+											'text' => _("HTTP"),
+											'icon'  => 'fa-upload',
+											'value' => 'http',
+										),
+										'https' => array(
+											'text' => _("HTTPS"),
+											'icon'  => 'fa-upload',
+											'value' => 'https',
+										),
+									),
+									'alert' => array(
+										'cfg_type_alert' => array(
+											'msg'   => sprintf(_("<strong>Updated!</strong> - Point your phones to: %s"), sprintf('<a href="%1$s" class="alert-link" target="_blank">%1$s</a>', $url_provisioning)),
+											'types' => array('http', 'https'),
+										)
+									)
+								),
+								'config_loc' => array(
+									'label' 	  => _("Global Final Config & Firmware Directory"),
+									'type' 		  => 'text',
+									'value' 	  => $this->epm->getConfig("config_loc"),
+									'placeholder' => _("Configuration Location..."),
+									'help' 		  => _("Path location root TFTP server."),
+								),
+								'adminpass' => array(
+									'label' 	  => _("Phone Admin Password"),
+									'type' 		  => 'text',
+									'class' 	  => 'confidential',	//'password-meter confidential',
+									'value' 	  => $this->epm->getConfig("adminpass"),
+									'placeholder' => _("Admin Password..."),
+									'help' 		  => _("Enter a admin password for your phones. Must be 6 characters and only nummeric is recommendet!"),
+								),
+								'userpass' => array(
+									'label' 	  => _("Phone User Password"),
+									'type' 		  => 'text',
+									'class' 	  => 'confidential',	//'password-meter confidential',
+									'value' 	  => $this->epm->getConfig("userpass"),
+									'placeholder' => _("User Password..."),
+									'help' 		  => _("Enter a user password for your phones. Must be 6 characters and only nummeric is recommendet!"),
+								),
+							)
+						),
+						'setting_time' => array(
+							'label' => _("Time Settings"),
+							'items' => array(
+								'tz' => array(
+									'label'				 => _("Time Zone"),
+									'type'				 => 'select',
+									'value'				 => $this->epm->getConfig("tz"),
+									'help'				 => _("Time Zone configuration terminasl. Like England/London"),
+									'options'			 => $this->epm->listTZ($this->epm->getConfig("tz")),
+									'search'			 => true,
+									'search_placeholder' => _("Search"),
+									'size'				 => 10,
+									'icon_option'		 => 'fa-clock-o',
+									'select_check'		 => function ($option, $value) {
+										return ($option['selected'] == 1);
+									},
+									'button'			 => array(
+										'id' 	  => 'tzphp',
+										'label'   =>_("Time Zone PBX"),
+										'icon'    => 'fa-clock-o',
+										'onclick' => sprintf("epm_advanced_tab_setting_input_value_change_bt('#tz', sValue = '%s', bSaveChange = true);", $this->config->get('PHPTIMEZONE')),
+									),
+								),
+								'ntp_server' => array(
+									'label' 	  => _("Time Server (NTP Server)"),
+									'type' 		  => 'text',
+									'value' 	  => $this->epm->getConfig("ntp"),
+									'placeholder' => _("NTP Server..."),
+									'help' 		  => _("The NTP Server that will be used to provision the phones."),
+									'button' 	  => array(
+										'id' 	  => 'autodetectntp',
+										'label'   => _("Use Me!"),
+										'icon'    => 'fa-search',
+										'onclick' => sprintf("epm_advanced_tab_setting_input_value_change_bt('#ntp_server', sValue = '%s', bSaveChange = true);", $_SERVER["SERVER_ADDR"]),
+									),
+								),
+							)
+						),
+						'setting_local_paths' => array(
+							'label' => _("Local Paths"),
+							'items' => array(
+								'nmap_loc' => array(
+									'label' 	  => _("NMAP Executable Path"),
+									'type' 		  => 'text',
+									'value' 	  => $this->epm->getConfig("nmap_location"),
+									'placeholder' => _("Nmap Location..."),
+									'help' 		  => _("The location of the Nmap binary."),
+								),
+								'arp_loc' => array(
+									'label' 	  => _("Arp Executable Path"),
+									'type' 		  => 'text',
+									'value' 	  => $this->epm->getConfig("arp_location"),
+									'placeholder' => _("Arp Location..."),
+									'help' 		  => _("The location of the Arp binary."),
+								),
+								'asterisk_loc' => array(
+									'label' 	  => _("Asterisk Executable Path"),
+									'type' 		  => 'text',
+									'value' 	  => $this->epm->getConfig("asterisk_location"),
+									'placeholder' => _("Asterisk Location..."),
+									'help' 		  => _("The location of the Asterisk binary."),
+								),
+								'tar_loc' => array(
+									'label' 	  => _("Tar Executable Path"),
+									'type' 		  => 'text',
+									'value' 	  => $this->epm->getConfig("tar_location"),
+									'placeholder' => _("Tar Location..."),
+									'help' 		  => _("The location of the Tar binary."),
+								),
+								'netstat_loc' => array(
+									'label' 	  => _("Netstat Executable Path"),
+									'type' 		  => 'text',
+									'value' 	  => $this->epm->getConfig("netstat_location"),
+									'placeholder' => _("Netstat Location..."),
+									'help' 		  => _("The location of the Netstat binary."),
+								),
+								'whoami_loc' => array(
+									'label' 	  => _("Whoami Executable Path"),
+									'type' 		  => 'text',
+									'value' 	  => $this->epm->getConfig("whoami_location"),
+									'placeholder' => _("Whoami Location..."),
+									'help' 		  => _("The location of the Whoami binary."),
+								),
+								'nohup_loc' => array(
+									'label' 	  => _("Nohup Executable Path"),
+									'type' 		  => 'text',
+									'value' 	  => $this->epm->getConfig("nohup_location"),
+									'placeholder' => _("Nohup Location..."),
+									'help' 		  => _("The location of the Nohup binary."),
+								),
+								'groups_loc' => array(
+									'label' 	  => _("Groups Executable Path"),
+									'type' 		  => 'text',
+									'value' 	  => $this->epm->getConfig("groups_location"),
+									'placeholder' => _("Groups Location..."),
+									'help' 		  => _("The location of the Groups binary."),
+								),
+							)
+						),
+						'setting_web_directories' => array(
+							'label' => _("Web Directories"),
+							'items' => array(
+								'package_server' => array(
+									'label' 	  => _("Package Server"),
+									'type' 		  => 'text',
+									'value' 	  => $this->epm->getConfig("update_server"),
+									'placeholder' => _("Server Packages..."),
+									'help' 		  => _("URL download files and packages the configuration terminals."),
+									'button' 	  => array(
+										'id' 	  => 'default_package_server',
+										'label'   => _("Default Mirror FreePBX"),
+										'icon'    => 'fa-undo',
+										'onclick' => sprintf("epm_advanced_tab_setting_input_value_change_bt('#package_server', sValue = '%s', bSaveChange = true);", Endpointman::URL_PROVISIONER),
+									),
+								),
+							)
+						),
+						'setting_other' => array(
+							'label' => _("Other Settings"),
+							'items' => array(
+								'disable_endpoint_warning' => array(
+									'label' 	  => _("Disable Endpoint Warning"),
+									'type' 		  => 'radioset',
+									'help' 		  => _("Enable this setting if you dont want to get a warning message anymore if you have the Commercial Endpoint Manager installed together with OSS Endpoint Manager."),
+									'value' 	  => $this->epm->getConfig("disable_endpoint_warning"),
+									'options'	  => array(
+										'No' => array(
+											'label' => _("No"),
+											'value' => '0',
+											'icon'  => 'fa-times',
+										),
+										'Yes' => array(
+											'label' => _("Yes"),
+											'value' => '1',
+											'icon'  => 'fa-check',
+										)
+									),
+								),
+							)
+						),
+						'setting_experimental' => array(
+							'label' => _("Experimental Settings"),
+							'items' => array(
+								'enable_ari' => array(
+									'label' 	  => _("Enable FreePBX ARI Module"),
+									'type' 		  => 'radioset',
+									'help' 		  => sprintf(_('Enable FreePBX ARI Module %s.'), '<a href="http://wiki.provisioner.net/index.php/Endpoint_manager_manual_ari" target="_blank"><i class="fa fa-external-link" aria-hidden="true"></i></a>'),
+									'value' 	  => $this->epm->getConfig("enable_ari"),
+									'options'	  => array(
+										'No' => array(
+											'label' => _("No"),
+											'value' => '0',
+											'icon'  => 'fa-times',
+										),
+										'Yes' => array(
+											'label' => _("Yes"),
+											'value' => '1',
+											'icon'  => 'fa-check',
+										)
+									),
+								),
+								'enable_debug' => array(
+									'label' 	  => _("Debug"),
+									'type' 		  => 'radioset',
+									'help' 		  => _("Enable this setting if you want to see debug messages."),
+									'value' 	  => $this->epm->getConfig("debug"),
+									'disabled'	  => true,
+									'options'	  => array(
+										'No' => array(
+											'label' => _("No"),
+											'value' => '0',
+											'icon'  => 'fa-times',
+										),
+										'Yes' => array(
+											'label' => _("Yes"),
+											'value' => '1',
+											'icon'  => 'fa-check',
+										)
+									),
+								),
+								'disable_help' => array(
+									'label' 	  => _("Disable Tooltips"),
+									'type' 		  => 'radioset',
+									'help' 		  => _("Disable Tooltip popups"),
+									'value' 	  => $this->epm->getConfig("disable_help"),
+									'options'	  => array(
+										'No' => array(
+											'label' => _("No"),
+											'value' => '0',
+											'icon'  => 'fa-times',
+										),
+										'Yes' => array(
+											'label' => _("Yes"),
+											'value' => '1',
+											'icon'  => 'fa-check',
+										)
+									),
+								),
+								'allow_dupext' => array(
+									'label' 	  => _("Allow Duplicate Extensions"),
+									'type' 		  => 'radioset',
+									'help' 		  => _("Assign the same extension to multiple phones (Note: This is not supported by Asterisk)"),
+									'value' 	  => $this->epm->getConfig("show_all_registrations"),
+									'options'	  => array(
+										'No' => array(
+											'label' => _("No"),
+											'value' => '0',
+											'icon'  => 'fa-times',
+										),
+										'Yes' => array(
+											'label' => _("Yes"),
+											'value' => '1',
+											'icon'  => 'fa-check',
+										)
+									),
+								),
+								'allow_hdfiles' => array(
+									'label' 	  => _("Allow Saving Over Default Configuration Files"),
+									'type' 		  => 'radioset',
+									'help' 		  => _("When editing the configuration files allows one to save over the global template default instead of saving directly to the database. These types of changes can and will be overwritten when updating the brand packages from the configuration/installation page."),
+									'value' 	  => $this->epm->getConfig("allow_hdfiles"),
+									'options'	  => array(
+										'No' => array(
+											'label' => _("No"),
+											'value' => '0',
+											'icon'  => 'fa-times',
+										),
+										'Yes' => array(
+											'label' => _("Yes"),
+											'value' => '1',
+											'icon'  => 'fa-check',
+										)
+									),
+								),
+								'tftp_check' => array(
+									'label' 	  => _("Disable TFTP Server Check"),
+									'type' 		  => 'radioset',
+									'help' 		  => _("Disable checking for a valid, working TFTP server which can sometimes cause Apache to crash."),
+									'value' 	  => $this->epm->getConfig("tftp_check"),
+									'options'	  => array(
+										'No' => array(
+											'label' => _("No"),
+											'value' => '0',
+											'icon'  => 'fa-times',
+										),
+										'Yes' => array(
+											'label' => _("Yes"),
+											'value' => '1',
+											'icon'  => 'fa-check',
+										)
+									),
+								),
+								'backup_check' => array(
+									'label' 	  => _("Disable Configuration File Backups"),
+									'type' 		  => 'radioset',
+									'help' 		  => _("Disable backing up the tftboot directory on every phone rebuild or save"),
+									'value' 	  => $this->epm->getConfig("backup_check"),
+									'options'	  => array(
+										'No' => array(
+											'label' => _("No"),
+											'value' => '0',
+											'icon'  => 'fa-times',
+										),
+										'Yes' => array(
+											'label' => _("Yes"),
+											'value' => '1',
+											'icon'  => 'fa-check',
+										)
+									),
+								),
+							)
+						)
+					);
+					break;
+
+				case "manual_upload":
+					$provisioner_ver 						= $this->epm->getConfig("endpoint_vers");
+					$data_tab['config']['provisioner_ver']  = sprintf(_("%s at %s"), date("d-M-Y", $provisioner_ver) , date("g:ia", $provisioner_ver));
+					$data_tab['config']['brands_available'] = $this->epm->brands_available("", false);
+					break;
+
+				case "iedl":
+					$data_tab['config']['url_export'] = "config.php?display=epm_advanced&subpage=iedl&command=export";
+					break;
+
+				case "oui_manager":
+					// $data_tab['config']['brands']   = sql('SELECT * from '. self::TABLES['epm_brands_list'] .' WHERE id > 0 ORDER BY name ASC', 'getAll', \PDO::FETCH_ASSOC);
+
+					$data_tab['config']['brands'] = [];
+					foreach($this->epm->packagesdb->getBrands(true, 'name', 'ASC') as $brand)
+					{
+						$data_tab['config']['brands'][] = array(
+							'id'   => $brand->getId(),
+							'name' => $brand->getName()
+						);
+					}
+
+					// Send the brands list to the view to be used in the select box for the win new OUI is added
+					// $data_tab['config']['brands']   = $this->get_hw_brand_list(true, 'name', 'ASC');
+					$data_tab['config']['url_grid'] = sprintf("ajax.php?module=endpointman&amp;module_sec=epm_advanced&amp;module_tab=%s&amp;command=oui", $key);
+					break;
+
+				case "poce":
+					break;
+			}
+			$data_tab = array_merge($data, $data_tab);
+
+			$page['content'] = load_view($this->epm->system->buildPath(__DIR__, $page['page']), $data_tab);
+		}
+		$data['tabs'] = $tabs;
+		unset($tabs);
 	}
+
 
 
 	/**** FUNCIONES SEC MODULO "epm_advanced\settings" ****/
 	public function epm_advanced_config_loc_is_writable()
 	{
-		$config_loc    = $this->epm->getConfig("config_loc");
-		$tftp_writable = FALSE;
-		if ((isset($config_loc)) AND ($config_loc != ""))
-		{
-			if ((file_exists($config_loc)) AND (is_dir($config_loc)))
-			{
-				if (is_writable($config_loc))
-				{
-					$tftp_writable = TRUE;
-				}
-			}
-		}
-		return $tftp_writable;
+		$config_loc = $this->epm->getConfig("config_loc");
+		return (empty($config_loc) || !file_exists($config_loc) || !is_dir($config_loc) || !is_writable($config_loc)) ? false : true;
 	}
 
 	private function epm_advanced_settings_saveconfig (array $request)
@@ -397,7 +889,7 @@ class Endpointman_Advanced
 				}
 				else
 				{
-					$this->epm->setConfig('config_location', $value);
+					$this->epm->setConfig('config_loc', $value);
 				}
 				break;
 
@@ -491,251 +983,1000 @@ class Endpointman_Advanced
 
 
 	/**** FUNCIONES SEC MODULO "epm_advanced\poce" ****/
-	public function epm_advanced_poce_list_brands()
+	public function epm_advanced_poce_tree(array $data)
 	{
-		//$sql = 'SELECT * FROM endpointman_product_list WHERE hidden = 0 AND id > 0 ORDER BY long_name ASC';
-		//$sql = 'SELECT * FROM endpointman_product_list WHERE hidden = 0 AND id > 0 AND brand IN (SELECT id FROM asterisk.endpointman_brand_list where hidden = 0) ORDER BY long_name ASC';
-		$sql = 'SELECT * FROM endpointman_product_list WHERE hidden = 0 AND id IN (SELECT DISTINCT product_id FROM asterisk.endpointman_model_list where enabled = 1) AND brand IN (SELECT id FROM asterisk.endpointman_brand_list where hidden = 0) ORDER BY long_name ASC';
-		$product_list = sql($sql, 'getAll', \PDO::FETCH_ASSOC);
-		$i = 0;
-		$temp = array();
-		foreach ($product_list as $srow)
-		{
-			$temp[$i]['id'] = $srow['id'];
-			$temp[$i]['name'] = $srow['long_name'];
-			$temp[$i]['name_mini'] = substr($srow['long_name'], 0, 40).(strlen($srow['long_name']) > 40 ? "..." : "");
-			$i++;
-		}
-		return array("status" => true, "message" => _("Ok!"), "ldatos" => $temp);
-	}
+		$request = $data['request'] 	?? array();
+		$tree_id = $request['tree_id'] 	?? '#';
+		$nodes 	 = [];
+		$err_msg = null;
 
-	public function epm_advanced_poce_select(array $data)
-	{
-		$request 		= $data['request'] ?? array();
-		$product_select = $request['product_select'] ?? '';
-		$path_setup 	= $this->epm->system->buildPath($this->epm->PHONE_MODULES_PATH, 'setup.php');
+		if ($tree_id == "#")
+		{
+			// Get only brands with hidden = 0
+			$brands   = $this->epm->packagesdb->getBrands(false);
+			$products = [];
+			foreach ($brands as $brand)
+			{
+				// Get only products with hidden = 0
+				foreach ($brand->getProducts(false) as $product)
+				{
+					// Check if exists models enabled and not hidden
+					if ($product->countModels(false, true) > 0)
+					{
+						$products[] = $product;
+					}
+				}
+			}
 
+			// Sort products by name
+			usort($products, function($a, $b)
+			{
+				return strcmp($a->getName(), $b->getName());
+			});
 
-		if (empty($product_select))
-		{
-			return array("status" => false, "message" => _("No send Product Select!"));
+			// Prepare the data to nodes
+			foreach ($products as $product)
+			{
+				$nodes[] = [
+					'id' 		=> $product->getId(),
+					'text' 		=> substr($product->getName(), 0, 40).(strlen($product->getName()) > 40 ? "..." : ""),
+					'children' 	=> true,
+					'icon' 		=> 'fa fa-cube',
+					'a_attr' 	=> [
+						'title' => $product->getName(),
+					],
+					'data' 		=> [
+						'id' 	=> $product->getId(),
+						'text'  => $product->getName(),
+					]
+				];
+			}
 		}
-		elseif (! is_numeric($product_select))
+		elseif (is_numeric($tree_id))
 		{
-			return array("status" => false, "message" => _("Product Select send is not number!"));
-		}
-		elseif ($product_select < 0)
-		{
-			return array("status" => false, "message" => _("Product Select send is number not valid!"));
-		}
-		elseif (!file_exists($path_setup))
-		{
-			return array("status" => false, "message" => _("File setup.php not found!"));
+			$id_file 	 = $tree_id . '_file';
+			$id_template = $tree_id . '_template';
+			$id_custom 	 = $tree_id . '_custom';
+
+			$nodes[] = [
+				'id' 		=> $id_file,
+				'text' 		=> _("Files Config"),
+				'children' 	=> true,
+				'icon' 		=> 'fa fa-cogs',
+				'data' 		=> [
+					'type'  => 'raw',
+				]
+			];
+			$nodes[] = [
+				'id' 		=> $id_template,
+				'text' 		=> _("Templates"),
+				'children' 	=> true,
+				'icon' 		=> 'fa fa-cogs',
+				'data' 		=> [
+					'type'  => 'xml',
+				]
+			];
+			$nodes[] = [
+				'id' 		=> $id_custom,
+				'text' 		=> _("Custom Files"),
+				'children' 	=> true,
+				'icon' 		=> 'fa fa-cogs',
+				'data' 		=> [
+					'type'  => 'raw',
+				]
+			];
 		}
 		else
 		{
-			// $sql = 'SELECT * FROM `endpointman_product_list` WHERE `hidden` = 0 AND `id` = '.$dget['product_select'];
-			// $product_select_info = sql($sql, 'getRow', \PDO::FETCH_ASSOC);
-			$product_select_info = $this->epm->get_hw_product($product_select);
+			$tree_args = explode("_", $tree_id);
+			$tree_id   = $tree_args[0];
+			$tree_type = $tree_args[1];
 
+			$path_setup = $this->epm->system->buildPath(__DIR__, 'install', 'setup.php');
 
-			$sql			= sprintf("SELECT epl.cfg_dir, ebl.directory, epl.config_files FROM %s as epl, %s as ebl WHERE epl.brand = ebl.id AND epl.id ='%s'", "endpointman_product_list", "endpointman_brand_list", $product_select);
-			$row 			= sql($sql, 'getRow', \PDO::FETCH_ASSOC);
-			$config_files	= explode(",", $row['config_files'] ?? ''); 
-			$file_list		= array();
-			$sql_file_list	= array();
-			
-			foreach ($config_files as $config_files_data)
+			if (empty($tree_id))
 			{
-				$file_list[] = array(
-					'value' => $product_select,
-					'text'  => $config_files_data
-				);
+				$err_msg = _("No send ID Product!");
 			}
-			// if (empty($file_list)) { $file_list = NULL; }
-
-			$sql = sprintf("SELECT * FROM %s WHERE product_id = '%s'", "endpointman_custom_configs", $product_select);
-			$data = sql($sql,'getAll', \PDO::FETCH_ASSOC);
-			foreach ($data as $row2)
+			elseif (! is_numeric($tree_id))
 			{
-				$sql_file_list[] = array(
-					'value' => $row2['id'],
-					'text'	=> $row2['name'],
-					'ref' 	=> $row2['original_name']
-				);
+				$err_msg = _("Ivalid ID Product!");
 			}
-			// if (empty($sql_file_list)) { $sql_file_list = NULL; }
-
-
-			
-
-			require_once($path_setup);
-
-			$class 		  = sprintf("endpoint_%s_%s_phone", $row['directory'], $row['cfg_dir']);
-			$base_class   = sprintf("endpoint_%s_base", $row['directory']);
-			$master_class = "endpoint_base";
-
-			/*********************************************************************************
-			 *** Quick Fix for FreePBX Distro
-			 *** I seriously want to figure out why ONLY the FreePBX Distro can't do autoloads.
-			 **********************************************************************************/
-			if (!class_exists($master_class))
+			elseif ($tree_id < 0)
 			{
-				\ProvisionerConfig::endpointsAutoload($master_class);
+				$err_msg = _("Invalid ID Product (less than 0)!");
 			}
-			if (!class_exists($base_class))
+			elseif (!file_exists($path_setup))
 			{
-				\ProvisionerConfig::endpointsAutoload($base_class);
+				$err_msg = _("File setup.php not found!");
 			}
-			if (!class_exists($class))
+			else
 			{
-				\ProvisionerConfig::endpointsAutoload($class);
+				$product = $this->epm->packagesdb->getProductByID($tree_id);
+				if (empty($product) || $product->isDestory())
+				{
+					$err_msg = _("Product not located in the database!");
+				}
+				else
+				{
+					require_once($path_setup);
+		
+					$brand_raw   = $product->getBrand()->getDirectory();
+					$product_raw = $product->getDirectory();
+		
+					$class 		  = sprintf("endpoint_%s_%s_phone", $brand_raw, $product_raw);
+					$base_class   = sprintf("endpoint_%s_base", $brand_raw);
+					$master_class = "endpoint_base";
+		
+		
+					//TODO: Pending to test in FreePBX 17 Debian (remove is not necessary)
+					/*********************************************************************************
+					 *** Quick Fix for FreePBX Distro
+					*** I seriously want to figure out why ONLY the FreePBX Distro can't do autoloads.
+					**********************************************************************************/
+					if (!class_exists($master_class))
+					{
+						\ProvisionerConfig::endpointsAutoload($master_class);
+					}
+					if (!class_exists($base_class))
+					{
+						\ProvisionerConfig::endpointsAutoload($base_class);
+					}
+					if (!class_exists($class))
+					{
+						\ProvisionerConfig::endpointsAutoload($class);
+					}
+					if (!class_exists($class))
+					{
+						$err_msg = sprintf(_("Class '%s' not found!"), $class);
+					}
+					else
+					{
+						$phone_config = new $class();
+						//end quick fix
+
+						$id_file 	 = $tree_id . '_file';
+						$id_template = $tree_id . '_template';
+						$id_custom 	 = $tree_id . '_custom';
+
+						switch	($tree_type)
+						{
+							case "file":
+								foreach ($product->getConfigurationFiles() as $config_file)
+								{
+									$nodes[] = [
+										'id' 	 	=> sprintf('file_%s_%s', $product->getId() , $config_file),
+										'parent' 	=> $id_file,
+										'text' 	 	=> $config_file,
+										'icon' 	 	=> 'fa fa-file-text-o',
+										'children'  => false,
+										'data' 	 	=> [
+											// 'id' 	=> $product->getId(),
+											// 'type'  => 'raw',
+											// 'src'  	=> 'file',
+											'func'	=> 'epm_advanced_tab_poce_edit_file',
+											'param' => [
+												'product' => $product->getId(),
+												'type' 	  => $tree_type,
+												// 'type_file' => 'raw',
+												'name_file' => $config_file,
+												'id_file' => $product->getId(),
+											],
+										]
+									];
+								}
+								break;
+
+							case "template":
+								//TODO: remove
+								// $nodes[] = [
+								// 	'id' 		=> 'template_data_custom.xml',
+								// 	'parent' 	=> $id_template,
+								// 	'text' 		=> 'template_data_custom.xml',
+								// 	'icon' 		=> 'fa fa-file-text-o',
+								// 	'children' 	=> false,
+								// 	'data' 		=> [
+								// 		'id' 	=> -1,
+								// 		'type'  => 'xml',
+								// 	]
+								// ];
+								foreach ($product->getModels(false, true) as $model)
+								{
+									$nodes[] = [
+										'id' 		=> sprintf('template_%s_%s', $product->getId() , $model->getId()),
+										'parent' 	=> $id_template,
+										'text' 		=> sprintf("template_data_%s_custom.xml", $model->getModel()),
+										'icon' 		=> 'fa fa-file-text-o',
+										'children' 	=> false,
+										'data' 		=> [
+											// 'id' 	 => $model->getId(),
+											// 'type'   => 'xml',
+											// 'src'  	 => 'tfile',
+											'func'  => 'epm_advanced_tab_poce_edit_file',
+											'param' => [
+												'product' 	=> $product->getId(),
+												'type' 	  	=> $tree_type,
+												// 'type_file' => 'xml',
+												'name_file' => sprintf("template_data_%s_custom.xml", $model->getModel()),
+												'id_file' 	=> $model->getId(),
+											],
+										]
+									];
+								}
+								break;
+
+							case "custom":
+								foreach ($product->getConfigurationsCustom() as $config_custom)
+								{
+									$nodes[] = [
+										'id' 		=> sprintf('custom_%s_%s', $product->getId(), $config_custom['id']),
+										'parent'	=> $id_custom,
+										'text' 		=> $config_custom['name'],
+										'icon' 		=> 'fa fa-file-text-o',
+										'children' 	=> false,
+										'data' 		=> [
+											// 'id'    => $config_custom['id'],
+											// 'ref'   => $config_custom['original_name'],
+											// 'type'  => 'raw',
+											// 'src'   => 'sql',
+											'func'  => 'epm_advanced_tab_poce_edit_file',
+											'param' => [
+												'product' 	=> $product->getId(),
+												'type' 	  	=> $tree_type,
+												// 'type_file' => 'raw',
+												'name_file' => $config_custom['original_name'],
+												'id_file'   => $config_custom['id'],
+											],
+										]
+									];
+								}
+								break;
+						}
+
+						if (count($nodes) == 0)
+						{
+							$nodes[] = [
+								'id' 		=>  sprintf('%s_%s_empty', $tree_type,  $product->getId()),
+								'text' 		=> _("There are no files!"),
+								'children' 	=> false,
+								'icon' 		=> 'fa fa-exclamation-triangle',
+								'data' 		=> [
+									'id' => null,
+								],
+								'state' 	=> [
+									'disabled' => true,
+								],
+							];
+						}
+					}
+				}
 			}
-			
-			//end quick fix
-			$phone_config = new $class();
-
-			//TODO: remove
-			$template_file_list = array(
-				array(
-					'value' => 'template_data_custom.xml',
-					'text'  => 'template_data_custom.xml'
-				)
-			);
-
-			$sql = sprintf("SELECT id, model FROM %s WHERE product_id = '%s' AND enabled = 1 AND hidden = 0", "endpointman_model_list", $product_select);
-			$data = sql($sql, 'getAll', \PDO::FETCH_ASSOC);
-			foreach ($data as $list)
-			{
-				$template_file_list[] = array(
-					'value' => $list['id'],
-					'text'  => "template_data_" . $list['model'] . "_custom.xml"
-				);
-			}
-
-			$retarr = array("status" => true, "message" => _("OK"),
-							"product_select" 	  => $product_select,
-							"product_select_info" => $product_select_info,
-							"file_list" 		  => $file_list,
-							"template_file_list"  => $template_file_list,
-							"sql_file_list" 	  => $sql_file_list);
 		}
-		return $retarr;
+
+		if (! is_null($err_msg))
+		{
+			$nodes[] = [
+				'id' 		=> 'empty',
+				'text' 		=> $err_msg,
+				'children' 	=> false,
+				'icon' 		=> 'fa fa-exclamation-triangle',
+				'state' 	=> [
+					'disabled' => true,
+				],
+			];
+		}
+		if (count($nodes) == 0)
+		{
+
+			if ($tree_id == "#")
+			{
+				$nodes = [
+					'id' 		=> 'empty',
+					'text' 		=> _("There are no activated products!"),
+					'children' 	=> false,
+					'icon' 		=> 'fa fa-exclamation-triangle',
+					'state' 	=> [
+						'disabled' => true,
+					],
+				];
+			}
+			else
+			{
+				$nodes = [
+					'id' 		=> 'empty',
+					'text' 		=> _("There are no files!"),
+					'children' 	=> false,
+					'icon' 		=> 'fa fa-exclamation-triangle',
+					'state' 	=> [
+						'disabled' => true,
+					],
+				];
+			}
+		}
+
+		return $nodes;
 	}
 
-	public function epm_advanced_poce_select_file()
+	public function epm_advanced_poce_list_brands()
 	{
-		$arrVal['VAR_REQUEST'] = array("product_select", "file_id", "file_name", "type_file");
-		foreach ($arrVal['VAR_REQUEST'] as $valor) {
-			if (! array_key_exists($valor, $_REQUEST)) {
-				return array("status" => false, "message" => _("No send value!")." [".$valor."]");
+		// Get only brands with hidden = 0
+		$brands   = $this->epm->packagesdb->getBrands(false);
+		$products = [];
+		foreach ($brands as $brand)
+		{
+			// Get only products with hidden = 0
+			foreach ($brand->getProducts(false) as $product)
+			{
+				// Check if exists models enabled and not hidden
+				if ($product->countModels(false, true) == 0)
+				{
+					continue;
+				}
+				
+				$products[] = $product;
 			}
 		}
-		if (! is_numeric($_REQUEST['product_select'])) {
-			return array("status" => false, "message" => _("Product Select send is not number!"));
+
+		// Sort products by name
+		usort($products, function($a, $b)
+		{
+			return strcmp($a->getName(), $b->getName());
+		});
+
+		// Prepare the data to return
+		$products_return = [];
+		foreach ($products as $product)
+		{
+			$new_product = [
+				'id' 		=> $product->getId(),
+				'name' 		=> $product->getName(),
+				'name_mini' => substr($product->getName(), 0, 40).(strlen($product->getName()) > 40 ? "..." : ""),
+			];
+			$products_return[] = $new_product;
 		}
-		elseif ($_REQUEST['product_select'] < 0) {
+		// Reindex the array
+		$products_return = array_values($products_return);
+
+		return array("status" => true, "message" => _("OK!"), "ldatos" => $products_return);
+	}
+
+	// public function epm_advanced_poce_select(array $data)
+	// {
+	// 	$request 		= $data['request'] 			 ?? array();
+	// 	$product_select = $request['product_select'] ?? '';
+	// 	// $path_setup 	= $this->epm->system->buildPath($this->epm->PHONE_MODULES_PATH, 'setup.php');
+	// 	$path_setup = $this->epm->system->buildPath(__DIR__, 'install', 'setup.php');
+
+
+	// 	if (empty($product_select))
+	// 	{
+	// 		return array("status" => false, "message" => _("No send Product Select!"));
+	// 	}
+	// 	elseif (! is_numeric($product_select))
+	// 	{
+	// 		return array("status" => false, "message" => _("Product Select send is not number!"));
+	// 	}
+	// 	elseif ($product_select < 0)
+	// 	{
+	// 		return array("status" => false, "message" => _("Product Select send is number not valid!"));
+	// 	}
+	// 	elseif (!file_exists($path_setup))
+	// 	{
+	// 		return array("status" => false, "message" => _("File setup.php not found!"));
+	// 	}
+	// 	else
+	// 	{
+	// 		$product = $this->epm->packagesdb->getProductByID($product_select);
+	// 		if (empty($product) || $product->isDestory())
+	// 		{
+	// 			return array("status" => false, "message" => _("Product not found!"));
+	// 		}
+
+	// 		require_once($path_setup);
+
+	// 		$brand_raw   = $product->getBrand()->getDirectory();
+	// 		$product_raw = $product->getDirectory();
+
+	// 		$class 		  = sprintf("endpoint_%s_%s_phone", $brand_raw, $product_raw);
+	// 		$base_class   = sprintf("endpoint_%s_base", $brand_raw);
+	// 		$master_class = "endpoint_base";
+
+
+	// 		//TODO: Pending to test in FreePBX 17 Debian (remove is not necessary)
+	// 		/*********************************************************************************
+	// 		 *** Quick Fix for FreePBX Distro
+	// 		 *** I seriously want to figure out why ONLY the FreePBX Distro can't do autoloads.
+	// 		 **********************************************************************************/
+	// 		if (!class_exists($master_class))
+	// 		{
+	// 			\ProvisionerConfig::endpointsAutoload($master_class);
+	// 		}
+	// 		if (!class_exists($base_class))
+	// 		{
+	// 			\ProvisionerConfig::endpointsAutoload($base_class);
+	// 		}
+	// 		if (!class_exists($class))
+	// 		{
+	// 			\ProvisionerConfig::endpointsAutoload($class);
+	// 		}
+	// 		if (!class_exists($class))
+	// 		{
+	// 			return array("status" => false, "message" => sprintf(_("Class '%s' not found!"), $class));
+	// 		}
+	// 		$phone_config = new $class();
+	// 		//end quick fix
+
+	// 		$tree_files = [];
+
+	// 		$tree_files[] = [
+	// 			'id' => 'files',
+	// 			'parent' => '#',
+	// 			'text' => _("Files"),
+	// 		];
+
+	// 		$config_files = [];
+	// 		foreach ($product->getConfigurationFiles() as $config_file)
+	// 		{
+	// 			$config_files[] = [
+	// 				'value' => $product->getId(),
+	// 				'text'  => $config_file
+	// 			];
+	// 			$tree_files[] = [
+	// 				'id' => 'file_' . $product->getId(),
+	// 				'parent' => 'files',
+	// 				'text' => $config_file,
+	// 			];
+	// 		}
+
+	// 		$template_files = [];
+
+	// 		$tree_files[] = [
+	// 			'id' => 'templates',
+	// 			'parent' => '#',
+	// 			'text' => _("Templates"),
+	// 		];
+
+	// 		//TODO: remove
+	// 		$template_files[] = array(
+	// 			'value' => 'template_data_custom.xml',
+	// 			'text'  => 'template_data_custom.xml'
+	// 		);
+	// 		$tree_files[] = [
+	// 			'id' => 'template_data_custom.xml',
+	// 			'parent' => 'templates',
+	// 			'text' => 'template_data_custom.xml',
+	// 		];
+
+	// 		foreach ($product->getModels(false, true) as $model)
+	// 		{
+	// 			$template_files[] = [
+	// 				'value' => $model->getId(),
+	// 				'text'  => sprintf("template_data_%s_custom.xml", $model->getModel())
+	// 			];
+
+	// 			$tree_files[] = [
+	// 				'id' => "template_" . $model->getId(),
+	// 				'parent' => 'templates',
+	// 				'text' => sprintf("template_data_%s_custom.xml", $model->getModel()),
+	// 			];
+	// 		}
+
+	// 		$tree_files[] = [
+	// 			'id' => 'sql',
+	// 			'parent' => '#',
+	// 			'text' => _("Custom"),
+	// 		];
+
+	// 		$config_customs = [];
+	// 		foreach ($product->getConfigurationsCustom() as $config_custom)
+	// 		{
+	// 			$config_customs[] = [
+	// 				'value' => $config_custom['id'],
+	// 				'text'	=> $config_custom['name'],
+	// 				'ref' 	=> $config_custom['original_name']
+	// 			];
+
+	// 			$tree_files[] = [
+	// 				'id' => "custom_".$config_custom['id'],
+	// 				'parent' => 'sql',
+	// 				'text' => $config_custom['name'],
+	// 			];
+	// 		}
+
+	// 		$retarr = array("status" => true, "message" => _("OK"),
+	// 						"product_select" 	  => $product->getId(),
+	// 						"product_select_info" => $product->exportInfo(),
+	// 						"file_list" 		  => $config_files,
+	// 						"template_file_list"  => $template_files,
+	// 						"sql_file_list" 	  => $config_customs,
+	// 						'tree_files' 		  => $tree_files,
+	// 					);
+	// 	}
+	// 	return $retarr;
+	// }
+
+	public function epm_advanced_poce_select_file(array $data)
+	{
+		$request 		  = $data['request'] ?? [];
+		$request_args 	  = array("product_select", "file_id", "file_name", "type_file");
+		$request_args_int = array("product_select");
+		$args_check 	  = $this->epm->system->check_request_args($request, $request_args, $request_args_int);
+
+		switch(true)
+		{
+			case (empty($args_check)):
+			case ($args_check === false):
+				return array("status" => false, "message" => _("Error in the process of checking the request arguments!"));
+
+			case ($args_check === true):
+				break;
+
+			case (is_string($args_check)):
+			default:
+				return array("status" => false, "message" => $args_check);
+		}
+
+		$product_select = $request['product_select'];
+		$file_name 		= $request['file_name'];
+		$file_id   		= $request['file_id'];
+		$type_file 		= $request['type_file'];
+
+		if ($product_select < 0)
+		{
 			return array("status" => false, "message" => _("Product Select send is number not valid!"));
 		}
 
-		$dget['product_select'] = $_REQUEST['product_select'];
-		$dget['file_name'] 		= $_REQUEST['file_name'];
-		$dget['file_id'] 		= $_REQUEST['file_id'];
-		$dget['type_file'] 		= $_REQUEST['type_file'];
-
-		if ($dget['type_file'] == "sql") {
-			$sql = 'SELECT * FROM endpointman_custom_configs WHERE id =' . $dget['file_id'];
-			$row = sql($sql, 'getrow', \PDO::FETCH_ASSOC);
-
-			$type 				= $dget['type_file'];
-			$sendidt 			= $row['id'];
-			$product_select 	= $row['product_id'];
-			$save_as_name_value = $row['name'];
-			$original_name 		= $row['original_name'];
-			$filename 			= $row['name'];
-			$location 			= "SQL: ". $row['name'];
-			$config_data 		= $this->display_htmlspecialchars($row['data']);
-
-		}
-		elseif ($dget['type_file'] == "file") {
-			$sql = "SELECT cfg_dir,directory,config_files FROM endpointman_product_list,endpointman_brand_list WHERE endpointman_product_list.brand = endpointman_brand_list.id AND endpointman_product_list.id = '" . $dget['product_select'] . "'";
-			$row = sql($sql, 'getRow', \PDO::FETCH_ASSOC);
-
-			$config_files = explode(",", $row['config_files']);
-			//TODO: Añadir validacion para ver si $dget['file_name'] esta en el array $config_files
-
-			$filename = $dget['file_name'];
-
-			
-
-			$pathfile = $this->epm->system->buildPath($this->epm->PHONE_MODULES_PATH, 'endpoint', $row['directory'], $row['cfg_dir'] , $filename);
-
-
-			if (is_readable($pathfile)) {
-				if(filesize($pathfile)>0) {
-					$handle   = fopen($pathfile, "rb");
-					$contents = fread($handle, filesize($pathfile));
-					fclose($handle);
-					$contents = $this->display_htmlspecialchars($contents);
-				}
-				else {
-					$contents = "";
-				}
-
-				$type 				= $dget['type_file'];
-				$sendidt 			= $dget['file_id'];
-				$product_select 	= $dget['product_select'];
-				$save_as_name_value = $filename;
-				$original_name 		= $filename;
-				$filename 			= $filename;
-				$location 			= $pathfile;
-				$config_data 		= $contents;
-			}
-			else {
-				$retarr = array("status" => false, "message" => _("File not readable, check the permission! ").$filename);
-			}
-		}
-		elseif ($dget['type_file'] == "tfile")
+		$product = $this->epm->packagesdb->getProductByID($product_select);
+		switch($type_file)
 		{
-			if ($dget['file_id'] == "template_data_custom.xml")
-			{
-				$sendidt = "";
-				$original_name = $dget['file_name'];
-				$config_data = "";
-			}
-			else {
+			case "custom":
+				$config_custom 		= $product->getConfigurationCustom($file_id);
+				$sendidt 			= $config_custom['id'];
+				$save_as_name_value = $config_custom['name'];
+				$original_name 		= $config_custom['original_name'];
+				$filename 			= $config_custom['name'];
+				$location 			= "SQL: ". $config_custom['name'];
+				$config_data 		= $this->display_htmlspecialchars($config_custom['data']);
 
-				$sql = "SELECT * FROM endpointman_model_list WHERE id = '" . $dget['file_id'] . "'";
-				$data = sql($sql, 'getRow', \PDO::FETCH_ASSOC);
+				unset($config_custom);
+				break;
 
-				$sendidt = $data['id'];
-				$original_name = $dget['file_name'];
-				$config_data = unserialize($data['template_data']);
-				$config_data = $this->epm->generate_xml_from_array ($config_data, 'node');
-			}
+			case "file":
+				$config_files = $product->getConfigurationFiles($file_name);
+				if (!in_array($file_name, $config_files))
+				{
+					return array("status" => false, "message" => sprintf(_("File '%s' not found!"), $file_name));
+				}
+				$product_json = $this->epm->packages->getProductByProductID($product_select);
+				try
+				{
+					$contents = $product_json->getConfigurationFile($file_name, false);
+				}
+				catch(\Exception $e)
+				{
+					return array("status" => false, "message" => $e->getMessage());
+				}
 
-			$type = $dget['type_file'];
-			$product_select = $dget['product_select'];
-			$save_as_name_value = $dget['file_name'];
-			$filename = $dget['file_name'];
-			$location = $dget['file_name'];
+				// $contents = "prueba
+				// algo";
+				$sendidt 			= $file_id;
+				$save_as_name_value = $file_name;
+				$original_name 		= $file_name;
+				$filename 			= $file_name;
+				$location 			= $product_json->getConfigurationFilePath($file_name);
+				// $config_data 		= $this->display_htmlspecialchars($contents);
+				$config_data 		= $contents;
+
+				$config_data = str_replace('\n', "\n\r", $config_data);
+
+				unset($config_files);
+				break;
+
+			case "template":
+				if ($file_id == "template_data_custom.xml")
+				{
+					$sendidt		= "";
+					$original_name	= $file_name;
+					$config_data	= "";
+				}
+				else
+				{
+					$model 			  = $product->getModel($file_id);
+					$sendidt 		  = $model->getId();
+					$original_name 	  = $file_name;
+					// $config_data	  = $this->epm->generate_xml_from_array ($model->getTemplateData(), 'node');
+					// // $config_data_json = json_encode($model->getTemplateData(), JSON_PRETTY_PRINT);
+					// $config_data_json = $model->getTemplateData();
+					$config_data = $model->getTemplateData();
+					
+				}
+
+				$save_as_name_value = $file_name;
+				$filename 			= $file_name;
+				$location 			= $file_name;
+				break;
+
+			default:
+				return array("status" => false, "message" => sprintf(_("Type File invalid: %s"), $type_file));
 		}
 
 		$retarr = array("status" 			 => true,
 						"message" 			 => _("OK"),
-						"type" 				 => $type,
+						"type" 				 => $type_file,
 						"sendidt" 			 => $sendidt,
 						"product_select" 	 => $product_select,
 						"save_as_name_value" => $save_as_name_value,
 						"original_name" 	 => $original_name,
 						"filename" 			 => $filename,
 						"location" 			 => $location,
-						"config_data" 		 => $config_data
+						"config_data" 		 => $config_data ?? '',
+						// "config_data_json"	 => $config_data_json ?? '',
 					);
-
-		unset($dget);
 		return $retarr;
 	}
+
+	public function epm_advanced_poce_delete_config_custom(array $data)
+	{
+		$request 		  = $data['request'] ?? [];
+		$request_args 	  = array("product_select", "type_file", "sql_select");
+		$request_args_int = array("sql_select");
+		$args_check 	  = $this->epm->system->check_request_args($request, $request_args, $request_args_int);
+		$retarr  		  = null;
+		$err_msg 		  = null;
+		switch(true)
+		{
+			case (empty($args_check)):
+			case ($args_check === false):
+				$err_msg = _("Error in the process of checking the request arguments!");
+
+			case ($args_check === true):
+				break;
+
+			case (is_string($args_check)):
+			default:
+				$err_msg = $args_check;
+		}
+		if (! empty($err_msg))
+		{
+			$retarr =  array("status" => false, "message" => $err_msg);
+		}
+		else
+		{
+			$product_select = $request['product_select'];
+			$type_file 		= $request['type_file'];
+			$sql_select   	= $request['sql_select'];
+
+			$product = $this->epm->packagesdb->getProductByID($product_select);
+			if (empty($product) || $product->isDestory())
+			{
+				$retarr = array("status" => false, "message" => _("Product not found!"));
+			}
+			else
+			{
+				switch ($type_file)
+				{
+					case "custom":
+						try
+						{
+							if ($product->delConfigurationCustom($sql_select))
+							{
+								$retarr = array("status" => true, "message" => _("File delete ok!"));
+							}
+							else
+							{
+								$retarr = array("status" => false, "message" => _("File not delete!"));
+							}
+						}
+						catch(\Exception $e)
+						{
+							$retarr =  array("status" => false, "message" => $e->getMessage());
+						}
+						break;
+
+					default:
+						$retarr = array("status" => false, "message" => sprintf(_("Type File [%s] not valid!"), $type_file));
+				}
+			}
+		}
+		return $retarr;
+	}
+
+	public function epm_advanced_poce_save_file(array $data)
+	{
+		$request 		  = $data['request'] 	?? [];
+		$params 		  = $request['params']  ?? [];
+		$request_args 	  = array(
+			"type_file", 		// Type of file: file, template, custom
+			"product_select", 	// ID Product
+			"config_data",		// Configuration data
+			"filename_new",		// New name of file to save
+			"filename_now",		// Now name of file is editing
+			"filename_src"		// Original name of file
+		);
+		$args_check = $this->epm->system->check_request_args($params, $request_args);
+		$err_msg 	= null;
+		switch(true)
+		{
+			case (empty($args_check)):
+			case ($args_check === false):
+				$err_msg = _("Error in the process of checking the request arguments!");
+
+			case ($args_check === true):
+				break;
+
+			case (is_string($args_check)):
+			default:
+				$err_msg = $args_check;
+		}
+		if (! empty($err_msg))
+		{
+			return array(
+				"status"  => false,
+				"message" => $err_msg
+			);
+		}
+
+		$product_select = $params['product_select'];
+		$product_db 	= $this->epm->packagesdb->getProductByID($product_select);
+
+		if (!$product_db->isExistID())
+		{
+			return array(
+				"status"  => false,
+				"message" => sprintf(_("Product '%s' not found!"), $product_select)
+			);
+		}
+		
+
+		// $iddb 		= $params['iddb'];
+		$type_file 	  = $params['type_file'];
+		$filename_new = $params['filename_new'];
+		$filename_now = $params['filename_now'];
+		$filename_src = $params['filename_src'];
+		$config_data  = $params['config_data'];
+
+		// Is $overwrite is true, then the file is saved with the same name
+		// Is $overwrite is false, then the file is saved with a new name
+		$overwrite 	 = empty($filename_new);
+		$error_check = null;
+
+		switch(true)
+		{
+			case $overwrite:
+				// Is true, not is necessary check
+				break;
+
+			case empty($filename_new):
+				$error_check = _("The name of the file to save is empty!");
+				break;
+
+			case $filename_new == $filename_src:
+			case $filename_new == $filename_now:
+				$error_check = _("The name of the file to save must be different from the original name!");
+				break;
+			
+			case !in_array($type_file, array('file', 'template', 'custom')):
+				$error_check = sprintf(_("Type File '%s' not valid!"), $type_file);
+				break;
+		}
+		if (! is_null($error_check))
+		{
+			return array(
+				"status"  => false,
+				"message" => $error_check
+			);
+		}
+
+		// Set Default values
+		$tree_reload   	= false; // false > no reload tree
+		$tree_node_find	= null;  // null  > no find node in tree
+		try
+		{
+			switch($type_file)
+			{
+				case 'file':
+					if ($overwrite)
+					{
+						$product_json = $this->epm->packages->getProductByProductID($product_select);
+						$config_files = $product_db->getConfigurationFiles($filename_now);
+						if (!in_array($filename_now, $config_files))
+						{
+							return array(
+								"status"  => false,
+								"message" => sprintf(_("File '%s' not found!"), $filename_now)
+							);
+						}
+						$product_json->setConfigurationFile($filename_now, $config_data, true, false);
+					}
+					else
+					{
+						$newid 			= $product_db->setConfigurationCustom($filename_src, $filename_new, $config_data, false, false);
+						$tree_reload   	= true;
+						$tree_node_find = sprintf("custom_%s_%s", $product_select, $newid);
+					}
+				break;
+
+				case 'template':
+					//TODO: Pending save template
+					/*
+					$db = $this->db;
+					$sql = 'INSERT INTO endpointman_custom_configs (name, original_name, product_id, data) VALUES (?,?,?,?)';
+					$q = $db->prepare($sql);
+					@ -790,7 +790,7 @@ class Endpointman_Advanced
+					$retarr['type_file'] = "sql";
+					$retarr['location'] = "SQL: ". $dget['save_as_name'];
+					$retarr['sendidt'] = $newidinsert;
+					*/
+				break;
+
+				case 'custom':
+					if ($overwrite)
+					{
+						$filename_new = $filename_now;
+					}
+
+					$newid			= $product_db->setConfigurationCustom($filename_src, $filename_new, $config_data, $overwrite, false);
+					$tree_reload	= !$overwrite;
+					$tree_node_find = $overwrite ? null : sprintf("custom_%s_%s", $product_select, $newid);
+				break;
+			}
+		}
+		catch(\Exception $e)
+		{
+			return array(
+				"status"  => false,
+				"message" => sprintf(_("Error Saving, Type '%s': %s"), $type_file, $e->getMessage())
+			);
+		}
+		return [
+			"status"		 => true,
+			"message"		 => _("Saved data successfully!"),
+			"tree_reload"	 => $tree_reload,
+			"tree_node_find" => $tree_node_find,
+		];
+	}
+
+	function epm_advanced_poce_share(array $data)
+	{
+		$request 		  = $data['request'] 	?? [];
+		$params 		  = $request['params']  ?? [];
+		$request_args 	  = array(
+			"type_file", 		// Type of file: file, template, custom
+			"product_select", 	// ID Product
+			"iddb",				// ID File in DB
+			"filename_src",		// Original name of file
+			"filename_now",		// Now name of file is editing
+		);
+		// $request_args_int = array("sendid");
+		// $args_check 	  = $this->epm->system->check_request_args($request, $request_args, $request_args_int);
+		$args_check 	  = $this->epm->system->check_request_args($params, $request_args);
+		$retarr  		  = null;
+		$err_msg 		  = null;
+		switch(true)
+		{
+			case (empty($args_check)):
+			case ($args_check === false):
+				$err_msg = _("Error in the process of checking the request arguments!");
+
+			case ($args_check === true):
+				break;
+
+			case (is_string($args_check)):
+			default:
+				$err_msg = $args_check;
+		}
+		if (! empty($err_msg))
+		{
+			return array(
+				"status"  => false,
+				"message" => $err_msg
+			);
+		}
+
+		$product_select = $params['product_select'];
+		$type_file 		= $params['type_file'];
+		$iddb 			= $params['iddb'];
+		$filename_src 	= $params['filename_src'];
+		$filename_now 	= $params['filename_now'];
+
+		if (!in_array(strtolower($type_file), array('file', 'custom')))
+		{
+			return array(
+				"status"  => false,
+				"message" => sprintf(_("Type File '%s' not valid!"), $type_file)
+			);
+		}
+
+		$product_db   = $this->epm->packagesdb->getProductByID($product_select);
+		$product_json = $this->epm->packages->getProductByProductID($product_select);
+		if (empty($product_db) || $product_db->isDestory() || empty($product_json) || $product_json->isDestory())
+		{
+			return array(
+				"status"  => false,
+				"message" => _("Product not found!")
+			);
+		}
+
+		switch($type_file)
+		{
+			case "file":
+				$brand_raw	   = $product_json->getBrand()->getDirectory();
+				$product_raw   = $product_json->getDirectory();
+				$content_raw   = $product_json->getConfigurationFile($filename_src, false);
+			break;
+
+			case "custom":
+				$brand_raw 	  = $product_db->getBrand()->getDirectory();
+				$product_raw  = $product_db->getDirectory();
+				$content_raw  = $product_db->getConfigurationCustom($iddb);
+			break;
+		}
+
+		$return_submit = $this->epm_advanced_poce_submit_config($brand_raw, $product_raw, $filename_src, $content_raw);
+		$retarr = array(
+			"status"  => true,
+			"message" => "Sent! Thanks :-)",
+			'submit'  => $return_submit,
+		);
+		return $retarr;
+	}
+
+
+    /**
+     * Used to send sample configurations to provisioner.net
+     * NOTE: The user has to explicitly click a link that states they are sending the configuration to the project
+     * We don't take configs on our own accord!!
+     * @param <type> $brand Brand Directory
+     * @param <type> $product Product Directory
+     * @param <type> $orig_name The file's original name we are sending
+     * @param <type> $data The config file's data
+	*/
+	private function epm_advanced_poce_submit_config($brand, $product, $orig_name, $data)
+	{
+		$posturl = 'http://www.provisioner.net/submit_config.php';
+
+		$file_name_with_full_path = $this->epm->system->buildPath(sys_get_temp_dir(), 'data.txt');
+
+		$fp = fopen( $file_name_with_full_path, 'w');
+		fwrite($fp, $data);
+		fclose($fp);
+		
+
+		$postvars = array(
+			'brand' 		=> $brand,
+			'product' 		=> $product,
+			'origname' 		=> htmlentities(addslashes($orig_name)),
+			'file_contents' => '@' . $file_name_with_full_path
+		);
+
+		$ch = curl_init($posturl);
+		curl_setopt($ch, CURLOPT_POST, 1);
+		curl_setopt($ch, CURLOPT_POSTFIELDS, $postvars);
+		curl_setopt($ch, CURLOPT_FOLLOWLOCATION, 1);
+		curl_setopt($ch, CURLOPT_HEADER, 0);  // DO NOT RETURN HTTP HEADERS
+		curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);  // RETURN THE CONTENTS OF THE CALL, probably not needed
+		$Rec_Data = curl_exec($ch);
+
+		ob_start();
+		header("Content-Type: text/html");
+		$Final_Out = ob_get_clean();
+		curl_close($ch);
+		unlink($file_name_with_full_path);
+
+		return($Final_Out);
+	}
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -744,194 +1985,17 @@ class Endpointman_Advanced
 
 
 	//TODO: PENDIENTE REVISAR
-	function epm_advanced_poce_sendid()
-	{
-		if (! isset($_REQUEST['product_select'])) {
-			$retarr = array("status" => false, "message" => _("No send Product Select!"));
-		}
-		elseif (! isset($_REQUEST['type_file'])) {
-			$retarr = array("status" => false, "message" => _("No send Type File!"));
-		}
-		elseif (! isset($_REQUEST['sendid'])) {
-			$retarr = array("status" => false, "message" => _("No send SendID!"));
-		}
-		else {
-			$dget['product_select'] = $_REQUEST['product_select'];
-			$dget['type_file'] = $_REQUEST['type_file'];
-			$dget['sendid'] = $_REQUEST['sendid'];
-			$dget['original_name'] = $_REQUEST['original_name'];
-			$dget['config_text'] = $_REQUEST['config_text'];
-
-
-
-			//DEBUGGGGGGGGGGGGG
-			return;
-			if ($dget['type_file'] == "sql") {
-				$sql = "SELECT cfg_dir,directory,config_files FROM endpointman_product_list,endpointman_brand_list WHERE endpointman_product_list.brand = endpointman_brand_list.id AND endpointman_product_list.id = '" . $dget['product_select'] . "'";
-				$row = sql($sql, 'getrow', \PDO::FETCH_ASSOC);
-				$this->submit_config($row['directory'], $row['cfg_dir'], $dget['original_name'], $dget['config_text']);
-				$retarr = array("status" => true, "message" => "Sent! Thanks :-)");
-			}
-			elseif ($dget['type_file'] == "file") {
-				$sql = "SELECT cfg_dir,directory,config_files FROM endpointman_product_list,endpointman_brand_list WHERE endpointman_product_list.brand = endpointman_brand_list.id AND endpointman_product_list.id = '" . $dget['product_select'] . "'";
-				$row = sql($sql, 'getRow', \PDO::FETCH_ASSOC);
-				$error = $this->submit_config($row['directory'], $row['cfg_dir'], $dget['original_name'], $dget['config_text']);
-				$retarr = array("status" => true, "message" => "Sent! Thanks :-)");
-			}
-			else {
-				$retarr = array("status" => false, "message" => "Type not valid!");
-			}
-			unset ($dget);
-		}
-		return $retarr;
-	}
-
-
-
-
-
-
-
-	function epm_advanced_poce_save_file()
-	{
-		$arrVal['VAR_REQUEST'] = array("product_select", "sendid", "type_file", "config_text", "save_as_name", "file_name", "original_name");
-		foreach ($arrVal['VAR_REQUEST'] as $valor) {
-			if (! array_key_exists($valor, $_REQUEST)) {
-				return array("status" => false, "message" => _("No send value!")." [".$valor."]");
-			}
-		}
-
-		$dget['command'] = $_REQUEST['command'];
-		$dget['type_file'] = $_REQUEST['type_file'];
-		$dget['sendid'] = $_REQUEST['sendid'];
-		$dget['product_select'] = $_REQUEST['product_select'];
-		$dget['save_as_name'] = $_REQUEST['save_as_name'];
-		$dget['original_name'] = $_REQUEST['original_name'];
-		$dget['file_name'] = $_REQUEST['file_name'];
-		$dget['config_text'] = $_REQUEST['config_text'];
-
-		if ($dget['type_file'] == "file") {
-			if ($dget['command'] == "poce_save_file")
-			{
-				$sql = "SELECT cfg_dir,directory,config_files FROM endpointman_product_list,endpointman_brand_list WHERE endpointman_product_list.brand = endpointman_brand_list.id AND endpointman_product_list.id = '" . $dget['product_select'] . "'";
-				$row = sql($sql, 'getRow', \PDO::FETCH_ASSOC);
-				$config_files = explode(",", $row['config_files']);
-
-				if ((is_array($config_files)) AND (in_array($dget['file_name'], $config_files)))
-				{
-					$pathdir = $this->epm->system->buildPath($this->epm->PHONE_MODULES_PATH, 'endpoint', $row['directory'], $row['cfg_dir']);
-
-
-					$pathfile = $this->epm->system->buildPath($pathdir, $dget['file_name']);
-					if ((! file_exists($pathfile)) AND (! is_writable($pathdir))) {
-						$retarr = array("status" => false, "message" => "Directory is not Writable (".$pathdir.")!");
-					}
-					elseif (! is_writable($pathfile)) {
-						$retarr = array("status" => false, "message" => "File is not Writable (".$pathfile.")!");
-					}
-					else
-					{
-						$wfh = fopen($pathfile, 'w');
-						fwrite($wfh, $dget['config_text']);
-						fclose($wfh);
-						$retarr = array("status" => true, "message" => "Saved to Hard Drive!");
-					}
-				}
-				else {
-					$retarr = array("status" => false, "message" => "The File no existe in the DataBase!");
-				}
-			}
-			elseif ($dget['command'] == "poce_save_as_file")
-			{
-				$db = $this->db;
-				$sql = 'INSERT INTO endpointman_custom_configs (name, original_name, product_id, data) VALUES (?,?,?,?)';
-				$q = $db->prepare($sql);
-				$ob = $q->execute(array(addslashes($dget['save_as_name']), addslashes($dget['original_name']), $dget['product_select'], addslashes($dget['config_text'])));
-				$newidinsert = $db->lastInsertId();
-				$retarr = array("status" => true, "message" => "Saved to Database!");
-
-				$retarr['type_file'] = "sql";
-				$retarr['location'] = "SQL: ". $dget['save_as_name'];
-				$retarr['sendidt'] = $newidinsert;
-			}
-			else {
-				$retarr = array("status" => false, "message" => "Command not valid!");
-			}
-		}
-		elseif ($dget['type_file'] == "sql")
-		{
-			if ($dget['command'] == "poce_save_file")
-			{
-				$sql = "UPDATE endpointman_custom_configs SET data = '" . addslashes($dget['config_text']) . "' WHERE id = " . $dget['sendid'];
-				sql($sql);
-				$retarr = array("status" => true, "message" => "Saved to Database!");
-			}
-			elseif ($dget['command'] == "poce_save_as_file")
-			{
-				$db = $this->db;
-				$sql = 'INSERT INTO endpointman_custom_configs (name, original_name, product_id, data) VALUES (?,?,?,?)';
-				$q = $db->prepare($sql);
-				$ob = $q->execute(array(addslashes($dget['save_as_name']), addslashes($dget['original_name']), $dget['product_select'], addslashes($dget['config_text'])));
-				$newidinsert = $db->lastInsertId();
-				$retarr = array("status" => true, "message" => "Saved to Database!");
-
-				$retarr['type_file'] = "sql";
-				$retarr['location'] = "SQL: ". $dget['save_as_name'];
-				$retarr['sendidt'] = $newidinsert;
-			}
-			else {
-				$retarr = array("status" => false, "message" => "Command not valid!");
-			}
-		}
-		elseif ($dget['type_file'] == "tfile")
-		{
-			/*
-			
-			$db = $this->db;
-			$sql = 'INSERT INTO endpointman_custom_configs (name, original_name, product_id, data) VALUES (?,?,?,?)';
-			$q = $db->prepare($sql);
-@ -790,7 +790,7 @@ class Endpointman_Advanced
-			$retarr['type_file'] = "sql";
-			$retarr['location'] = "SQL: ". $dget['save_as_name'];
-			$retarr['sendidt'] = $newidinsert;
-			*/
-		}
-		else {
-			$retarr = array("status" => false, "message" => "Type not valid!");
-		}
-
-		$retarr['original_name'] = $dget['original_name'];
-		$retarr['file_name'] = $dget['file_name'];
-		$retarr['save_as_name'] = $dget['save_as_name'];
-
-		unset($dget);
-		return $retarr;
-	}
 	
-	function epm_advanced_poce_delete_config_custom()
-	{
-		$arrVal['VAR_REQUEST'] = array("product_select", "type_file", "sql_select");
-		foreach ($arrVal['VAR_REQUEST'] as $valor) {
-			if (! array_key_exists($valor, $_REQUEST)) {
-				return array("status" => false, "message" => _("No send value!")." [".$valor."]");
-			}
-		}
 
-		$dget['type_file'] = $_REQUEST['type_file'];
-		$dget['product_select'] = $_REQUEST['product_select'];
-		$dget['sql_select'] = $_REQUEST['sql_select'];
 
-		if ($dget['type_file'] == "sql") {
-			$sql = "DELETE FROM endpointman_custom_configs WHERE id =" . $dget['sql_select'];
-			sql($sql);
-			unset ($sql);
-			$retarr = array("status" => true, "message" => "File delete ok!");
-		}
-		else { $retarr = array("status" => false, "message" => _("Type File not valid!")); }
 
-		unset($dget);
-		return $retarr;
-	}
+
+
+
+
+	
+	
+
 
 
 	/**** FUNCIONES SEC MODULO "epm_advanced\manual_upload" ****/
@@ -1413,7 +2477,74 @@ FreePBX::Endpointman()->add_device($mac, $model_id, $ext, 0, $line_id, $descript
 
 
 
+	public function tftp_check(bool $noException = true)
+	{
+        //create a simple block here incase people have strange issues going on as we will kill http
+        //by running this if the server isn't really running!
 
+		$tfp_check = $this->epm->getConfig('tftp_check');
+        if ($tfp_check != 1)
+		{
+			$this->epm->setConfig('tftp_check', 1);
+			$config_location 	  = $this->epm->getConfig('config_location');
+			$config_location_test = $this->epm->system->buildPath($config_location, 'TEST');
+			$netstat_path 		  = $this->epm->getConfig('netstat_location');
+            
+            $return_shell = shell_exec(sprintf("%s -luan --numeric-ports", $netstat_path));
+            if (preg_match('/:69\s/i', $return_shell))
+			{
+                $rand = md5(rand(10, 2000));
+                if (file_put_contents($config_location_test, $rand))
+				{
+					$test_file = ($this->epm->system->tftp_fetch('127.0.0.1', 'TEST') != $rand);
+                    if (file_exists($config_location_test))
+					{
+						unlink($config_location_test);
+					}
+					if (!$test_file)
+					{
+						$msg_error = _('Local TFTP Server is not correctly configured!');
+						if ($noException) { return false; }
+						throw new \Exception($msg_error);
+					}
+					return true;
+                }
+				else
+				{
+					$msg_error = sprintf(_("Unable to write to '%s'!"), $config_location);
+					if ($noException) { return false; }
+					throw new \Exception($msg_error);
+                }
+            }
+			else
+			{
+                // $dis = false;
+                if (file_exists('/etc/xinetd.d/tftp'))
+				{
+                    $contents = file_get_contents('/etc/xinetd.d/tftp');
+                    if (preg_match('/disable.*=.*yes/i', $contents))
+					{
+						$msg_error = _('Disabled is set to "yes" in /etc/xinetd.d/tftp. Please fix <br />Then restart your TFTP service');
+						if ($noException) { return false; }
+						throw new \Exception($msg_error);
+                    }
+                }
+                // if (!$dis)
+				// {
+					$msg_error = _('TFTP Server is not running. <br />See here for instructions on how to install one: <a href="http://wiki.provisioner.net/index.php/Tftp" target="_blank">http://wiki.provisioner.net/index.php/Tftp</a>');
+					if ($noException) { return false; }
+					throw new \Exception($msg_error);
+                // }
+            }
+			$this->epm->setConfig('tftp_check', 0);
+        }
+		else
+		{
+			$msg_error = _('TFTP Server check failed on last past. Skipping');
+			if ($noException) { return false; }
+			throw new \Exception($msg_error);
+        }
+    }
 
 
 

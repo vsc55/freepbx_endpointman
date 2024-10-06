@@ -58,19 +58,34 @@ class PackagesDB
      * 
      * @return array Return an array with all brands
      */
-    public function getBrands()
+    public function getBrands(bool $showAll = true, string $orderby = "id", string $order = "ASC")
     {
         $brands = [];
-        $query = "SELECT id FROM endpointman_brand_list";
-        $result = $this->db->query($query);
-        if ($result)
+        $sql  = sprintf("SELECT id FROM %s", "endpointman_brand_list");
+        if ($showAll == false)
         {
-            while ($row = $this->db->fetch($result))
+            $sql .= " WHERE hidden = 0";
+        }
+        if (!empty($orderby))
+        {
+            $orderby = in_array($orderby, ['id', 'name', 'directory']) ? $orderby : "id";
+            $order   = strtoupper($order) == "DESC" ? "DESC" : "ASC";
+
+            $sql .= sprintf(" ORDER BY %s %s", $orderby, $order);
+        }
+
+        $stmt = $this->epm->db->prepare($sql);
+        $stmt->execute();
+        $rows = $stmt->fetchAll(\PDO::FETCH_ASSOC);
+        foreach ($rows as $row)
+        {
+            if (empty($row['id']))
             {
-                $brand = new Provisioner\ProvisionerBrandDB($this->epm);
-                $brand->findBy('id', $row['id']);
-                $brands[$row['id']] = $brand;
+                continue;
             }
+            $brand = new Provisioner\ProvisionerBrandDB($this->epm);
+            $brand->findBy('id', $row['id']);
+            $brands[] = $brand;
         }
         return $brands;
     }
@@ -221,5 +236,14 @@ class PackagesDB
     }
 
 
+
+
+    public function getModelsEnabled()
+    {
+        $models = [];
+        
+        return $models;
+        
+    }
 
 }

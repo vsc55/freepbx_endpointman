@@ -18,7 +18,6 @@ require_once('lib/epm_system.class.php');
 require_once('lib/epm_data_abstraction.class.php');
 require_once('lib/epm_packages.class.php');
 require_once('lib/epm_packages_db.class.php');
-//require_once("lib/RainTPL.class.php");
 
 require_once('Endpointman_Config.class.php');
 require_once('Endpointman_Advanced.class.php');
@@ -45,8 +44,6 @@ class Endpointman extends FreePBX_Helpers implements BMO {
 	public $packagesdb	= null;
 	
 	private $endpoint = null;
-
-	// public $tpl; //Template System Object (RAIN TPL)
 
     public $error   = array(); //error construct
     public $message = array(); //message construct
@@ -78,12 +75,11 @@ class Endpointman extends FreePBX_Helpers implements BMO {
 		'epm_global_vars'   => 'endpointman_global_vars',
 	);
 
-	
-	private $pagedata;
-
-	// final public const ASTERISK_SECTION = 'app-queueprio';
-
-
+	/**
+	 * Constructor
+	 * 
+	 * @param object $freepbx The FreePBX object
+	 */
 	public function __construct($freepbx = null)
 	{
 		if ($freepbx == null) {
@@ -187,7 +183,13 @@ class Endpointman extends FreePBX_Helpers implements BMO {
 		$this->epm_placeholders = new Endpointman_Devices($this);
 	}
 
-	private function checkPathsFiles()
+	/**
+	 * Check paths and files needed for the module and create them if they don't exist
+	 * 
+	 * @param bool $install If true, it will delete the setup.php file
+	 * @return bool True if all paths and files are created, false otherwise
+	 */
+	private function checkPathsFiles(bool $install = false)
 	{
 		$return_data = true;
 		$operations = [
@@ -198,10 +200,6 @@ class Endpointman extends FreePBX_Helpers implements BMO {
 				'action'		=> 'check',
 				'action_error'	=> 'break'
 			],
-			// [
-			// 	'path'	 => $this->system->buildPath($this->PHONE_MODULES_PATH, "setup.php"),
-			// 	'action' => 'del'
-			// ],
 			[
 				'path' 		  => $this->system->buildPath($this->PHONE_MODULES_PATH, "endpoint"),
 				'permissions' => 0755,
@@ -227,6 +225,15 @@ class Endpointman extends FreePBX_Helpers implements BMO {
 				'action' 	  => 'check'
 			],
 		];
+
+		if ($install)
+		{
+			$operations[] = [
+				'path'	 => $this->system->buildPath($this->PHONE_MODULES_PATH, "setup.php"),
+				'action' => 'del'
+			];
+		}
+
 		foreach ($operations as $operation)
 		{
 			$path 			= $operation['path'] 				?? '';
@@ -299,6 +306,10 @@ class Endpointman extends FreePBX_Helpers implements BMO {
 		return $return_data;
 	}
 
+	/**
+	 * Set the permissions of the files and directories needed by the module.
+	 * This function is called when the freePBX run the chown command
+	 */
 	public function chownFreepbx()
 	{
 		$files = array();
@@ -621,7 +632,7 @@ class Endpointman extends FreePBX_Helpers implements BMO {
 				'panasonic-check-cfg' 	 => ['Event' => 'check-sync', 'Content-Length' => '0'],
 				'snom-check-cfg' 		 => ['Event' => 'check-sync', 'Content-Length' => '0'],
 			];
-		
+
 			foreach ($sipNotifications as $name => $params)
 			{
 				$core_conf->addSipNotify($name, $params);
@@ -638,14 +649,14 @@ class Endpointman extends FreePBX_Helpers implements BMO {
 	public function doGuiHook(&$cc)
 	{
 		$request = freepbxGetSanitizedRequest();
-		$display = $request['display'] 	 ?? '';
+		$display = $request['display'] ?? '';
 
-		if ($display != "extensions" && $display != "devices")
+
+		if (!in_array($display, array('extensions', 'devices')))
 		{
 			return;
 		}
-
-
+		
 		$action     = $request['action'] 	 	?? null;
 		$extdisplay = $request['extdisplay'] 	?? null;
 		$tech		= $request['tech_hardware'] ?? null;
@@ -928,7 +939,7 @@ class Endpointman extends FreePBX_Helpers implements BMO {
 				break;
 
 			case "epm_advanced":
-				$this->epm_advanced->doConfigPageInit($data['module_tab'], $data['command']);
+				$this->epm_advanced->doConfigPageInit($data);
 				break;
 			
 			case "extensions":
@@ -1307,473 +1318,7 @@ class Endpointman extends FreePBX_Helpers implements BMO {
 			break;
 
 			case "main.advanced":
-				$data['subpage'] = $request['subpage'] ?? 'settings';
-
-				$tabs = array(
-					'settings' => array(
-						"name" => _("Settings"),
-						"page" => '/views/epm_advanced_settings.page.php'
-					),
-					'oui_manager' => array(
-						"name" => _("OUI Manager"),
-						"page" => '/views/epm_advanced_oui_manager.page.php'
-					),
-					'poce' => array(
-						"name" => _("Product Configuration Editor"),
-						"page" => '/views/epm_advanced_poce.page.php'
-					),
-					'iedl' => array(
-						"name" => _("Import/Export My Devices List"),
-						"page" => '/views/epm_advanced_iedl.page.php'
-					),
-					'manual_upload' => array(
-						"name" => _("Package Import/Export"),
-						"page" => '/views/epm_advanced_manual_upload.page.php'
-					),
-				);
-				foreach($tabs as $key => &$page)
-				{
-					$data_tab = array();
-					switch($key)
-					{
-						case "settings":
-							if (($this->getConfig("server_type") == 'file') AND ($this->epm_advanced->epm_advanced_config_loc_is_writable()))
-							{
-								$this->tftp_check();
-							}
-							
-							if ($this->getConfig("use_repo") == "1")
-							{
-								if ($this->has_git())
-								{
-									if (!file_exists($this->system->buildPath($this->PHONE_MODULES_PATH, '.git'))) {
-										$o = getcwd();
-										chdir(dirname($this->PHONE_MODULES_PATH));
-										$this->rmrf($this->PHONE_MODULES_PATH);
-										$path = $this->has_git();
-										exec($path . ' clone https://github.com/provisioner/Provisioner.git _ep_phone_modules', $output);
-										chdir($o);
-									}
-								}
-								else
-								{
-									echo  _("Git not installed!");
-								}
-							}
-							else
-							{
-								if (file_exists($this->system->buildPath($this->PHONE_MODULES_PATH, '.git')))
-								{
-									$this->rmrf($this->PHONE_MODULES_PATH);
-
-									$sql = "SELECT * FROM  `".self::TABLES['epm_brands_list']."` WHERE  `installed` =1";
-									$result = & sql($sql, 'getAll', \PDO::FETCH_ASSOC);
-									foreach ($result as $row)
-									{
-										$id_product = $row['id'] ?? null;
-										$this->epm_config->remove_brand($id_product, true);
-									}
-								}
-							}
-							
-							$url_provisioning = $this->system->buildUrl(sprintf("%s://%s", $this->getConfig("server_type"), $this->getConfig("srvip")), "provisioning","p.php");
-
-							$data_tab['config']['data'] = array(
-								'setting_provision' => array(
-									'label' => _("Provisioner Settings"),
-									'items' => array(
-										'srvip' => array(
-											'label' 	  => _("IP address of phone server"),
-											'type' 		  => 'text',
-											'value' 	  => $this->getConfig("srvip"),
-											'placeholder' => _("IP Server PBX..."),
-											'help' 		  => _("The IP Address of the Server PBX that will be used to provision the phones."),
-											'button' 	  => array(
-												'id' 	  => 'autodetect',
-												'label'   => _("Use Me!"),
-												'icon'    => 'fa-search',
-												'onclick' => sprintf("epm_advanced_tab_setting_input_value_change_bt('#srvip', sValue = '%s', bSaveChange = true);", $_SERVER["SERVER_ADDR"]),
-											),
-										),
-										'intsrvip' => array(
-											'label' 	  => _("Internal IP address of phone server"),
-											'type' 		  => 'text',
-											'value' 	  => $this->getConfig("intsrvip"),
-											'placeholder' => _("Internal IP Server PBX..."),
-											'help' 		  => _("The Internal IP Address of the Server PBX that will be used to provision the phones."),
-											'button' 	  => array(
-												'id' 	  => 'autodetect',
-												'label'   => _("Use Me!"),
-												'icon'    => 'fa-search',
-												'onclick' => sprintf("epm_advanced_tab_setting_input_value_change_bt('#intsrvip', sValue = '%s', bSaveChange = true);", $_SERVER["SERVER_ADDR"]),
-											),
-										),
-										'cfg_type' => array(
-											'label' 	  => _("Configuration Type"),
-											'type' 		  => 'select',
-											'value' 	  => $this->getConfig("server_type"),
-											'help' 		  => _("The type of server that will be used to provision the phones (TFTP/FTP, HTTP, HTTPS)."),
-											'select_check'=> function ($option, $value) {
-												return (strtolower($value) == strtolower($option['value']));
-											},
-											'options'	  => array(
-												'file'  => array(
-													'text' => _("File (TFTP/FTP)"),
-													'icon'  => 'fa-upload',
-													'value' => 'file',
-												),
-												'http'  => array(
-													'text' => _("HTTP"),
-													'icon'  => 'fa-upload',
-													'value' => 'http',
-												),
-												'https' => array(
-													'text' => _("HTTPS"),
-													'icon'  => 'fa-upload',
-													'value' => 'https',
-												),
-											),
-											'alert' => array(
-												'cfg_type_alert' => array(
-													'msg'   => sprintf(_("<strong>Updated!</strong> - Point your phones to: %s"), sprintf('<a href="%1$s" class="alert-link" target="_blank">%1$s</a>', $url_provisioning)),
-													'types' => array('http', 'https'),
-												)
-											)
-										),
-										'config_loc' => array(
-											'label' 	  => _("Global Final Config & Firmware Directory"),
-											'type' 		  => 'text',
-											'value' 	  => $this->getConfig("config_location"),
-											'placeholder' => _("Configuration Location..."),
-											'help' 		  => _("Path location root TFTP server."),
-										),
-										'adminpass' => array(
-											'label' 	  => _("Phone Admin Password"),
-											'type' 		  => 'text',
-											'class' 	  => 'confidential',	//'password-meter confidential',
-											'value' 	  => $this->getConfig("adminpass"),
-											'placeholder' => _("Admin Password..."),
-											'help' 		  => _("Enter a admin password for your phones. Must be 6 characters and only nummeric is recommendet!"),
-										),
-										'userpass' => array(
-											'label' 	  => _("Phone User Password"),
-											'type' 		  => 'text',
-											'class' 	  => 'confidential',	//'password-meter confidential',
-											'value' 	  => $this->getConfig("userpass"),
-											'placeholder' => _("User Password..."),
-											'help' 		  => _("Enter a user password for your phones. Must be 6 characters and only nummeric is recommendet!"),
-										),
-
-
-									)
-								),
-								'setting_time' => array(
-									'label' => _("Time Settings"),
-									'items' => array(
-										'tz' => array(
-											'label'				 => _("Time Zone"),
-											'type'				 => 'select',
-											'value'				 => $this->getConfig("tz"),
-											'help'				 => _("Time Zone configuration terminasl. Like England/London"),
-											'options'			 => $this->listTZ($this->getConfig("tz")),
-											'search'			 => true,
-											'search_placeholder' => _("Search"),
-											'size'				 => 10,
-											'icon_option'		 => 'fa-clock-o',
-											'select_check'		 => function ($option, $value) {
-												return ($option['selected'] == 1);
-											},
-											'button'			 => array(
-												'id' 	  => 'tzphp',
-												'label'   =>_("Time Zone PBX"),
-												'icon'    => 'fa-clock-o',
-												'onclick' => sprintf("epm_advanced_tab_setting_input_value_change_bt('#tz', sValue = '%s', bSaveChange = true);", $this->config->get('PHPTIMEZONE')),
-											),
-										),
-										'ntp_server' => array(
-											'label' 	  => _("Time Server (NTP Server)"),
-											'type' 		  => 'text',
-											'value' 	  => $this->getConfig("ntp"),
-											'placeholder' => _("NTP Server..."),
-											'help' 		  => _("The NTP Server that will be used to provision the phones."),
-											'button' 	  => array(
-												'id' 	  => 'autodetectntp',
-												'label'   => _("Use Me!"),
-												'icon'    => 'fa-search',
-												'onclick' => sprintf("epm_advanced_tab_setting_input_value_change_bt('#ntp_server', sValue = '%s', bSaveChange = true);", $_SERVER["SERVER_ADDR"]),
-											),
-										),
-									)
-								),
-								'setting_local_paths' => array(
-									'label' => _("Local Paths"),
-									'items' => array(
-										'nmap_loc' => array(
-											'label' 	  => _("NMAP Executable Path"),
-											'type' 		  => 'text',
-											'value' 	  => $this->getConfig("nmap_location"),
-											'placeholder' => _("Nmap Location..."),
-											'help' 		  => _("The location of the Nmap binary."),
-										),
-										'arp_loc' => array(
-											'label' 	  => _("Arp Executable Path"),
-											'type' 		  => 'text',
-											'value' 	  => $this->getConfig("arp_location"),
-											'placeholder' => _("Arp Location..."),
-											'help' 		  => _("The location of the Arp binary."),
-										),
-										'asterisk_loc' => array(
-											'label' 	  => _("Asterisk Executable Path"),
-											'type' 		  => 'text',
-											'value' 	  => $this->getConfig("asterisk_location"),
-											'placeholder' => _("Asterisk Location..."),
-											'help' 		  => _("The location of the Asterisk binary."),
-										),
-										'tar_loc' => array(
-											'label' 	  => _("Tar Executable Path"),
-											'type' 		  => 'text',
-											'value' 	  => $this->getConfig("tar_location"),
-											'placeholder' => _("Tar Location..."),
-											'help' 		  => _("The location of the Tar binary."),
-										),
-										'netstat_loc' => array(
-											'label' 	  => _("Netstat Executable Path"),
-											'type' 		  => 'text',
-											'value' 	  => $this->getConfig("netstat_location"),
-											'placeholder' => _("Netstat Location..."),
-											'help' 		  => _("The location of the Netstat binary."),
-										),
-										'whoami_loc' => array(
-											'label' 	  => _("Whoami Executable Path"),
-											'type' 		  => 'text',
-											'value' 	  => $this->getConfig("whoami_location"),
-											'placeholder' => _("Whoami Location..."),
-											'help' 		  => _("The location of the Whoami binary."),
-										),
-										'nohup_loc' => array(
-											'label' 	  => _("Nohup Executable Path"),
-											'type' 		  => 'text',
-											'value' 	  => $this->getConfig("nohup_location"),
-											'placeholder' => _("Nohup Location..."),
-											'help' 		  => _("The location of the Nohup binary."),
-										),
-										'groups_loc' => array(
-											'label' 	  => _("Groups Executable Path"),
-											'type' 		  => 'text',
-											'value' 	  => $this->getConfig("groups_location"),
-											'placeholder' => _("Groups Location..."),
-											'help' 		  => _("The location of the Groups binary."),
-										),
-									)
-								),
-								'setting_web_directories' => array(
-									'label' => _("Web Directories"),
-									'items' => array(
-										'package_server' => array(
-											'label' 	  => _("Package Server"),
-											'type' 		  => 'text',
-											'value' 	  => $this->getConfig("update_server"),
-											'placeholder' => _("Server Packages..."),
-											'help' 		  => _("URL download files and packages the configuration terminals."),
-											'button' 	  => array(
-												'id' 	  => 'default_package_server',
-												'label'   => _("Default Mirror FreePBX"),
-												'icon'    => 'fa-undo',
-												'onclick' => sprintf("epm_advanced_tab_setting_input_value_change_bt('#package_server', sValue = '%s', bSaveChange = true);", self::URL_PROVISIONER),
-											),
-										),
-									)
-								),
-								'setting_other' => array(
-									'label' => _("Other Settings"),
-									'items' => array(
-										'disable_endpoint_warning' => array(
-											'label' 	  => _("Disable Endpoint Warning"),
-											'type' 		  => 'radioset',
-											'help' 		  => _("Enable this setting if you dont want to get a warning message anymore if you have the Commercial Endpoint Manager installed together with OSS Endpoint Manager."),
-											'value' 	  => $this->getConfig("disable_endpoint_warning"),
-											'options'	  => array(
-												'No' => array(
-													'label' => _("No"),
-													'value' => '0',
-													'icon'  => 'fa-times',
-												),
-												'Yes' => array(
-													'label' => _("Yes"),
-													'value' => '1',
-													'icon'  => 'fa-check',
-												)
-											),
-										),
-									)
-								),
-								'setting_experimental' => array(
-									'label' => _("Experimental Settings"),
-									'items' => array(
-										'enable_ari' => array(
-											'label' 	  => _("Enable FreePBX ARI Module"),
-											'type' 		  => 'radioset',
-											'help' 		  => sprintf(_('Enable FreePBX ARI Module %s.'), '<a href="http://wiki.provisioner.net/index.php/Endpoint_manager_manual_ari" target="_blank"><i class="fa fa-external-link" aria-hidden="true"></i></a>'),
-											'value' 	  => $this->getConfig("enable_ari"),
-											'options'	  => array(
-												'No' => array(
-													'label' => _("No"),
-													'value' => '0',
-													'icon'  => 'fa-times',
-												),
-												'Yes' => array(
-													'label' => _("Yes"),
-													'value' => '1',
-													'icon'  => 'fa-check',
-												)
-											),
-										),
-										'enable_debug' => array(
-											'label' 	  => _("Debug"),
-											'type' 		  => 'radioset',
-											'help' 		  => _("Enable this setting if you want to see debug messages."),
-											'value' 	  => $this->getConfig("debug"),
-											'disabled'	  => true,
-											'options'	  => array(
-												'No' => array(
-													'label' => _("No"),
-													'value' => '0',
-													'icon'  => 'fa-times',
-												),
-												'Yes' => array(
-													'label' => _("Yes"),
-													'value' => '1',
-													'icon'  => 'fa-check',
-												)
-											),
-										),
-										'disable_help' => array(
-											'label' 	  => _("Disable Tooltips"),
-											'type' 		  => 'radioset',
-											'help' 		  => _("Disable Tooltip popups"),
-											'value' 	  => $this->getConfig("disable_help"),
-											'options'	  => array(
-												'No' => array(
-													'label' => _("No"),
-													'value' => '0',
-													'icon'  => 'fa-times',
-												),
-												'Yes' => array(
-													'label' => _("Yes"),
-													'value' => '1',
-													'icon'  => 'fa-check',
-												)
-											),
-										),
-										'allow_dupext' => array(
-											'label' 	  => _("Allow Duplicate Extensions"),
-											'type' 		  => 'radioset',
-											'help' 		  => _("Assign the same extension to multiple phones (Note: This is not supported by Asterisk)"),
-											'value' 	  => $this->getConfig("show_all_registrations"),
-											'options'	  => array(
-												'No' => array(
-													'label' => _("No"),
-													'value' => '0',
-													'icon'  => 'fa-times',
-												),
-												'Yes' => array(
-													'label' => _("Yes"),
-													'value' => '1',
-													'icon'  => 'fa-check',
-												)
-											),
-										),
-										'allow_hdfiles' => array(
-											'label' 	  => _("Allow Saving Over Default Configuration Files"),
-											'type' 		  => 'radioset',
-											'help' 		  => _("When editing the configuration files allows one to save over the global template default instead of saving directly to the database. These types of changes can and will be overwritten when updating the brand packages from the configuration/installation page."),
-											'value' 	  => $this->getConfig("allow_hdfiles"),
-											'options'	  => array(
-												'No' => array(
-													'label' => _("No"),
-													'value' => '0',
-													'icon'  => 'fa-times',
-												),
-												'Yes' => array(
-													'label' => _("Yes"),
-													'value' => '1',
-													'icon'  => 'fa-check',
-												)
-											),
-										),
-										'tftp_check' => array(
-											'label' 	  => _("Disable TFTP Server Check"),
-											'type' 		  => 'radioset',
-											'help' 		  => _("Disable checking for a valid, working TFTP server which can sometimes cause Apache to crash."),
-											'value' 	  => $this->getConfig("tftp_check"),
-											'options'	  => array(
-												'No' => array(
-													'label' => _("No"),
-													'value' => '0',
-													'icon'  => 'fa-times',
-												),
-												'Yes' => array(
-													'label' => _("Yes"),
-													'value' => '1',
-													'icon'  => 'fa-check',
-												)
-											),
-										),
-										'backup_check' => array(
-											'label' 	  => _("Disable Configuration File Backups"),
-											'type' 		  => 'radioset',
-											'help' 		  => _("Disable backing up the tftboot directory on every phone rebuild or save"),
-											'value' 	  => $this->getConfig("backup_check"),
-											'options'	  => array(
-												'No' => array(
-													'label' => _("No"),
-													'value' => '0',
-													'icon'  => 'fa-times',
-												),
-												'Yes' => array(
-													'label' => _("Yes"),
-													'value' => '1',
-													'icon'  => 'fa-check',
-												)
-											),
-										),
-									)
-								)
-							);
-							break;
-
-						case "manual_upload":
-							$provisioner_ver 						= $this->getConfig("endpoint_vers");
-							$data_tab['config']['provisioner_ver']  = sprintf(_("%s at %s"), date("d-M-Y", $provisioner_ver) , date("g:ia", $provisioner_ver));
-							$data_tab['config']['brands_available'] = $this->brands_available("", false);
-							break;
-
-						case "iedl":
-							$data_tab['config']['url_export'] = "config.php?display=epm_advanced&subpage=iedl&command=export";
-							break;
-
-						case "oui_manager":
-							// $data_tab['config']['brands']   = sql('SELECT * from '. self::TABLES['epm_brands_list'] .' WHERE id > 0 ORDER BY name ASC', 'getAll', \PDO::FETCH_ASSOC);
-
-							// Send the brands list to the view to be used in the select box for the win new OUI is added
-							$data_tab['config']['brands']   = $this->get_hw_brand_list(true, 'name', 'ASC');
-							$data_tab['config']['url_grid'] = "ajax.php?module=endpointman&amp;module_sec=epm_advanced&amp;module_tab=oui_manager&amp;command=oui";
-							break;
-
-						case "poce":
-							break;
-					}
-					$data_tab = array_merge($data, $data_tab);
-
-					// ob_start();
-					// include($page['page']);
-					// $page['content'] = ob_get_contents();
-					// ob_end_clean();
-					$page['content'] = load_view(__DIR__ . '/' . $page['page'], $data_tab);
-				}
-				$data['tabs'] = $tabs;
-				unset($tabs);
-
+				$this->epm_advanced->showPage($data);
 				$data_return = load_view(__DIR__."/views/page.main.advanced.php", $data);
 				break;
 
@@ -1850,7 +1395,7 @@ class Endpointman extends FreePBX_Helpers implements BMO {
 				break;
 
 			case "epm_advanced":
-				$data_return = $this->epm_advanced->getActionBar($request);
+				$data_return = $this->epm_advanced->getActionBar($data);
 				break;
 
 			case "epm_templates":
@@ -2586,29 +2131,6 @@ class Endpointman extends FreePBX_Helpers implements BMO {
 
 
 
-	public function del_hw_brand_any_list(?int $id = null)
-	{
-		if (empty($id) || !is_numeric($id))
-		{
-			return false;
-		}
-		$tables = [
-			self::TABLES['epm_model_list']	 => 'brand',
-			self::TABLES['epm_product_list'] => 'brand',
-			self::TABLES['epm_oui_list']	 => 'brand',
-			self::TABLES['epm_brands_list']	 => 'id'
-		];
-		foreach ($tables as $table => $where)
-		{
-			$sql = sprintf('DELETE FROM %s WHERE %s = :id', $table, $where);
-			$stmt = $this->db->prepare($sql);
-			$stmt->execute([
-				':id' => $id
-			]);
-		}
-		return true;
-	}
-
 	/**
 	 * Sets the database data for a brand.
 	 *
@@ -2871,35 +2393,6 @@ class Endpointman extends FreePBX_Helpers implements BMO {
 
 
 	
-	/**
-	 * Sets the hardware model data in the database.
-	 *
-	 * @param mixed $find The value to search for in the database.
-	 * @param array $data An array of data to be set.
-	 * @param string $where The column to search for the value.
-	 * @param array $data_insert An array of data to be inserted.
-	 * @param array $data_update An array of data to be updated.
-	 * @return mixed The result of setting the database data.
-	 */
-	public function set_hw_model($find = null, $data = array(), $where = "id", $data_insert = array(), $data_update = array())
-	{
-		// Set true for debug mode to show the generated SQL query
-		$debug 				  = false;
-
-		$data 				  = is_array($data)			? $data 		: [];
-		$data_insert  		  = is_array($data_insert)	? $data_insert	: [];
-		$data_update  		  = is_array($data_update)	? $data_update	: [];
-		$data_default 		  = [];
-		$data_insert_defaults = [
-			// 'hidden' => $data['hidden'] ?? 0,
-		];
-		$data_update_defaults = [];
-		$data 		 = array_merge($data_default, $data);
-		$data_insert = array_merge($data_insert_defaults, $data_insert);
-		$data_update = array_merge($data_update_defaults, $data_update);
-		
-		return $this->set_database_data(self::TABLES['epm_model_list'], $find, $data, $where, $data_insert, $data_update, $debug);
-	}
 
 	/**
 	 * Retrieves the hardware model list based on the given ID.
@@ -3221,94 +2714,7 @@ class Endpointman extends FreePBX_Helpers implements BMO {
         echo !empty($matches[0]) ? 'installed' : 'nope';
     }
 
-	function tftp_check() {
-        //create a simple block here incase people have strange issues going on as we will kill http
-        //by running this if the server isn't really running!
-        $sql = 'SELECT value FROM endpointman_global_vars WHERE var_name = \'tftp_check\'';
-        if (sql($sql, 'getOne') != 1) {
-            $sql = 'UPDATE endpointman_global_vars SET value = \'1\' WHERE var_name = \'tftp_check\'';
-            sql($sql);
-            $subject = shell_exec("netstat -luan --numeric-ports");
-            if (preg_match('/:69\s/i', $subject))
-			{
-                $rand = md5(rand(10, 2000));
-                if (file_put_contents($this->getConfig('config_location') . 'TEST', $rand))
-				{
-                    if ($this->system->tftp_fetch('127.0.0.1', 'TEST') != $rand) {
-                        $this->error['tftp_check'] = _('Local TFTP Server is not correctly configured');
-echo $this->error['tftp_check'];
-                    }
-                    unlink($this->getConfig('config_location') . 'TEST');
-                }
-				else
-				{
-                    $this->error['tftp_check'] = sprintf(_('Unable to write to %s'), $this->getConfig('config_location'));
-echo $this->error['tftp_check'];
-                }
-            } else {
-                $dis = FALSE;
-                if (file_exists('/etc/xinetd.d/tftp')) {
-                    $contents = file_get_contents('/etc/xinetd.d/tftp');
-                    if (preg_match('/disable.*=.*yes/i', $contents)) {
-                        $this->error['tftp_check'] = _('Disabled is set to "yes" in /etc/xinetd.d/tftp. Please fix <br />Then restart your TFTP service');
-echo $this->error['tftp_check'];
-                        $dis = TRUE;
-                    }
-                }
-                if (!$dis)
-				{
-                    $this->error['tftp_check'] = _('TFTP Server is not running. <br />See here for instructions on how to install one: <a href="http://wiki.provisioner.net/index.php/Tftp" target="_blank">http://wiki.provisioner.net/index.php/Tftp</a>');
-echo $this->error['tftp_check'];
-                }
-            }
-            $sql = 'UPDATE endpointman_global_vars SET value = \'0\' WHERE var_name = \'tftp_check\'';
-            sql($sql);
-        }
-		else
-		{
-            $this->error['tftp_check'] = _('TFTP Server check failed on last past. Skipping');
-echo $this->error['tftp_check'];
-        }
-    }
-
-
-    /**
-     * Used to send sample configurations to provisioner.net
-     * NOTE: The user has to explicitly click a link that states they are sending the configuration to the project
-     * We don't take configs on our own accord!!
-     * @param <type> $brand Brand Directory
-     * @param <type> $product Product Directory
-     * @param <type> $orig_name The file's original name we are sending
-     * @param <type> $data The config file's data
-*/
-    function submit_config($brand, $product, $orig_name, $data) {
-    	$posturl = 'http://www.provisioner.net/submit_config.php';
-
-		$file_name_with_full_path = $this->system->buildPath($this->MODULE_PATH, 'data.txt');
-
-    	$fp = fopen( $file_name_with_full_path, 'w');
-    	fwrite($fp, $data);
-    	fclose($fp);
-    	
-
-    	$postvars = array('brand' => $brand, 'product' => $product, 'origname' => htmlentities(addslashes($orig_name)), 'file_contents' => '@' . $file_name_with_full_path);
-
-    	$ch = curl_init($posturl);
-    	curl_setopt($ch, CURLOPT_POST, 1);
-    	curl_setopt($ch, CURLOPT_POSTFIELDS, $postvars);
-    	curl_setopt($ch, CURLOPT_FOLLOWLOCATION, 1);
-    	curl_setopt($ch, CURLOPT_HEADER, 0);  // DO NOT RETURN HTTP HEADERS
-    	curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);  // RETURN THE CONTENTS OF THE CALL, probably not needed
-    	$Rec_Data = curl_exec($ch);
-
-    	ob_start();
-    	header("Content-Type: text/html");
-    	$Final_Out = ob_get_clean();
-    	curl_close($ch);
-    	unlink($file_name_with_full_path);
-
-    	return($Final_Out);
-    }
+	
 
 
 

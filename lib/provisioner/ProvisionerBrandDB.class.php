@@ -136,13 +136,39 @@ class ProvisionerBrandDB extends ProvisionerBaseDB
         {
             return false;
         }
-        $result = $this->deleteQuery("endpointman_brand_list", $this->id);
-        if ($result === false)
+
+        foreach ($this->getProducts() as &$product)
         {
-            return false;
+            $product->delete();
         }
+        $countProducts = $this->countProducts();
+        if ($countProducts > 0)
+        {
+            $msg = sprintf(_("The brand has %s products. You must delete the products before deleting the brand."), $countProducts);
+            throw new \Exception($msg);
+        }
+
+        foreach ($this->getOUI_All(true) as $oui)
+        {
+            $this->deleteQuery("endpointman_oui_list", $oui['id']);
+        }
+        $countOUI = $this->countOUI();
+        if ($countOUI > 0)
+        {
+            $msg = sprintf(_("The brand has %s OUIs. You must delete the OUIs before deleting the brand."), $countOUI);
+            throw new \Exception($msg);
+        }
+
+        if (! $this->deleteQuery("endpointman_brand_list", $this->id))
+        {
+            $msg = _("Delete Query Failed!");
+            throw new \Exception($msg);
+        }
+        
         $this->id      = null;
         $this->destory = true;
+        
+        return true;
     }
 
     /**
@@ -501,9 +527,9 @@ class ProvisionerBrandDB extends ProvisionerBaseDB
      * $brand->countOUI();
      * Returns the number of OUIs of the brand with the ID 1.
      */
-    public function countOUI()
+    public function countOUI(bool $custom = true)
     {
-        $oui = $this->getOUI_All();
+        $oui = $this->getOUI_All($custom);
         if (empty($oui) || ! is_array($oui))
         {
             return 0;
@@ -526,7 +552,14 @@ class ProvisionerBrandDB extends ProvisionerBaseDB
     }
 
 
-    public function getProductsList(string $select = "*")
+    /**
+     * Get the list of products of the brand.
+     * 
+     * @param string $select The columns to select in the query. Default is '*'.
+     * @param bool $showAll If true, it will show all the products otherwise only the products that are not hidden.
+     * @return array An array with the list of products of the brand.
+     */
+    public function getProductsList(string $select = "*", bool $showAll = true)
     {
         if (! $this->isExistID())
         {
@@ -542,17 +575,46 @@ class ProvisionerBrandDB extends ProvisionerBaseDB
                 'value'    => $this->id
             ],
         ];
+        if (! $showAll)
+        {
+            $where['hidden'] = [
+                'operator' => "=", 
+                'value'    => 0
+            ];
+        }
         return $this->querySelect("endpointman_product_list", $select, $where);
     }
 
-    public function getProducts()
+    /**
+     * Count the number of products of the brand.
+     * 
+     * @param bool $showAll If true, it will show all the products otherwise only the products that are not hidden.
+     * @return int The number of products of the brand.
+     */
+    public function countProducts(bool $showAll = true)
+    {
+        $products = $this->getProductsList("id", $showAll);
+        if (empty($products) || ! is_array($products))
+        {
+            return 0;
+        }
+        return count($products);
+    }
+
+    /**
+     * Get the products of the brand.
+     * 
+     * @param bool $showAll If true, it will show all the products otherwise only the products that are not hidden.
+     * @return array An array with the products of the brand as ProvisionerFamilyDB objects.
+     */
+    public function getProducts(bool $showAll = true)
     {
         if (! $this->isExistID())
         {
             return false;
         }
         $products = [];
-        foreach ($this->getProductsList("id") as $value)
+        foreach ($this->getProductsList("id", $showAll) as $value)
         {
             $id = $value['id'] ?? null;
             if (empty($id))
@@ -566,6 +628,12 @@ class ProvisionerBrandDB extends ProvisionerBaseDB
         return $products;        
     }
 
+    /**
+     * Get the product by the ID.
+     * 
+     * @param int $product_id The ID of the product to get.
+     * @return ProvisionerFamilyDB|bool The product as ProvisionerFamilyDB object if found, false otherwise.
+     */
     public function getProduct(int $product_id)
     {
         if (! $this->isExistID())
@@ -609,7 +677,7 @@ class ProvisionerBrandDB extends ProvisionerBaseDB
             'installed' => $this->getInstalled(),
             'local'     => $this->getLocal(),
             'hidden'    => $this->getHidden(),
-            'oui'       => $this->getOUI_All(),
+            'oui'       => $this->getOUI_All(true),
             'oui_count' => $this->countOUI(),
             'isDestory' => array (
                 'get' => $this->isDestory(),

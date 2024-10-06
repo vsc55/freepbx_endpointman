@@ -1,16 +1,193 @@
 "use strict";
 var cmeditor = null;
+var jsoneditor = null;
 
 function epm_advanced_document_ready () {
 
-	var arrayJs = ['assets/endpointman/js/addon/simplescrollbars.js', 'assets/endpointman/js/mode/xml.js', 'assets/endpointman/js/addon/fullscreen.js'];
+	var arrayJs = [
+		'assets/endpointman/js/addon/simplescrollbars.js',
+		'assets/endpointman/js/mode/xml.js',
+		'assets/endpointman/js/addon/fullscreen.js'
+	];
 	arrayJs.forEach(function (item, index, array) {
 		var x = document.createElement('script');
 		x.src = item;
 		document.getElementsByTagName("head")[0].appendChild(x);
 	});
 	
+	//TAB POCE
+	epm_advanced_tab_poce_unselect();
+	window.addEventListener('resize', epm_advanced_tab_poce_resize);
 	
+	$('#poceReloadTree').on('click', function()
+	{
+        $('#poce_tree_files').jstree(true).refresh();
+    });
+
+	$('#poceExpandTree').on('click', function()
+	{
+        $('#poce_tree_files').jstree('open_all');
+    });
+
+    $('#poceCollapseTree').on('click', function()
+	{
+        $('#poce_tree_files').jstree('close_all');
+    });
+
+	$('#tab_poce_bt_src_full_screen').on('click', function()
+	{
+		if (cmeditor === null) return;
+        cmeditor.setOption('fullScreen', !cmeditor.getOption('fullScreen'));
+    });
+
+	$('#tab_poce_bt_delete').on('click', function() {
+		epm_advanced_tab_poce_delete();
+	});
+
+	$('#tab_poce_bt_save').on('click', function() {
+		epm_advanced_tab_poce_save();
+	});
+
+	$('#tab_poce_bt_save_as').on('click', function() {
+		epm_advanced_tab_poce_save(true);
+	});
+		
+	$('#tab_poce_bt_share').on('click', function() {
+		epm_advanced_tab_poce_share();
+	});
+
+	$('#poce_tree_files').jstree({
+		'core': {
+			'themes': {
+                'dots': false
+            },
+			'data': {
+				'url': window.FreePBX.ajaxurl,
+				'data': function(node) {
+					return { 
+						'module'	: "endpointman",
+						'module_sec': "epm_advanced",
+						'module_tab': "poce",
+						'command'	: "poce_tree",
+						'tree_id'	: node.id
+					};
+				}
+			},
+		},
+		'checkbox': {
+            'keep_selected_style': false,
+			'three_state': false,
+			'cascade': 'undetermined'
+        },
+		'plugins': ['checkbox', 'search', 'sort', 'wholerow'],
+		'search': {
+            'input': 'search_poce_tree',
+			'case_insensitive': true,
+            'show_only_matches': true
+        }
+
+	}).on('deselect_node.jstree', function(e, data) {
+
+		var tree = $(this).jstree(true);
+		var node = data.node;
+
+		epm_advanced_tab_poce_unselect();
+
+    }).on('select_node.jstree', function(e, data) {
+
+		var tree 	  = $(this).jstree(true);
+		var NodeId	  = data.node.id;
+		var nodeData  = data.node.data || {};
+		var node 	  = data.node;
+		var returnVal = true;
+
+		// console.log("NodeID: " + NodeId);
+		// console.log(data.node);
+
+		// Break if the node is disabled
+		if (tree.is_disabled(node)) return;
+
+		//Fix to avoid infinite loop when deselect_all() is called
+		if ($(this).data('isSelecting')) return;
+		$(this).data('isSelecting', true);
+		
+		if (node.parents.length <= 2)
+		{
+			if (!tree.is_loaded(node))
+			{
+				tree.load_node(node);
+			}
+
+			// Expand or collapse the node
+			// tree.is_open(node) ? tree.close_node(node) : tree.open_node(node);
+
+			// Block the selection of the node
+			tree.deselect_node(node);
+
+			// Block the checkboxk of the node
+			returnVal = false;
+		}
+		else if (typeof nodeData.func === 'string' && typeof window[nodeData.func] === 'function')
+		{
+			// Is necessary set isSelecting to true before call function to avoid infinite loop. Remember set isSelecting to false after call function.
+			//tree.deselect_all();
+			tree.uncheck_all();
+
+			tree.check_node(node);
+			
+			var params = nodeData.param !== undefined ? nodeData.param : null;
+			window[nodeData.func](node, params);			
+		}
+		else if (nodeData.func)
+		{
+			console.log('Function Not Found: ' + nodeData.func);
+		}
+
+		$(this).data('isSelecting', false);
+		return returnVal;
+    }).on('search.jstree', function (nodes, str, res) {
+		// if (str.nodes.length===0) {
+		// 	$('#poce_tree_files').jstree(true).hide_all();
+		// }
+	}).on('refresh.jstree open_all.jstree close_all.jstree', function (e, data) {
+		switch (e.type) {
+			case 'refresh':
+			case 'open_all':
+			case 'close_all':
+				epm_advanced_tab_poce_resize();
+				break;
+		}
+	});
+
+	$('#poce_tree_files_search, #poce_tree_files_search_show_only').on('keyup change', function(event) {
+
+		var treeContainerId = 'poce_tree_files';
+		var searchInputId 	= 'poce_tree_files_search';
+		var checkboxId 		= 'poce_tree_files_search_show_only';
+
+		switch (event.type)
+		{ 
+			case 'keyup':
+				if (event.target.id !== searchInputId) {
+					return;
+				}
+				break;
+			case 'change':
+				if (event.target.id !== checkboxId) {
+					return;
+				}
+				break;
+		}
+
+		var treeInstance 	= $('#' + treeContainerId).jstree(true);
+		var searchString    = $('#' + searchInputId).val();
+		var showOnlyMatches = $('#' + checkboxId).is(':checked');
+		
+		treeInstance.settings.search.show_only_matches = showOnlyMatches;
+		treeInstance.search(searchString);		
+	});
+
+
 	//TAB SETTING
 	$('#settings input[type=text]').change(function(){ epm_advanced_tab_setting_input_change(this); });
 	$('#settings input[type=radio]').change(function(){ epm_advanced_tab_setting_input_change(this); });
@@ -44,14 +221,18 @@ function epm_advanced_select_tab_ajax(idtab = "")
 	
 	if (idtab === "poce")
 	{
-		epm_advanced_tab_poce_update_list_brand_bootnav();
-		if (cmeditor === null) {
-			cmeditor = CodeMirror.fromTextArea(document.getElementById("config_textarea"), {
-				lineNumbers: true,
-				matchBrackets: true,
-				readOnly: true,
-				viewportMargin: Infinity,
-				scrollbarStyle: "simple",
+		// $('#poce_tree_files').jstree(true).refresh();
+
+		// Create the editor CodeMirror if it does not exist
+		if (cmeditor === null)
+		{
+			const options_cmeditor = {
+				lineNumbers: true,				// show line numbers
+				matchBrackets: true,			// highlight matching brackets
+				mode: "xml",             		// set the mode to JavaScript or the mode of the editor
+				readOnly: true,					// do not allow editing
+				viewportMargin: Infinity,		// set the viewport margin
+				scrollbarStyle: "simple",		// set the scrollbar style
 				extraKeys: {
 					"F11": function(cm) {
 						cm.setOption("fullScreen", !cm.getOption("fullScreen"));
@@ -60,15 +241,30 @@ function epm_advanced_select_tab_ajax(idtab = "")
 						if (cm.getOption("fullScreen")) cm.setOption("fullScreen", false);
 					}
 				}
-			});
+			}
+			cmeditor = new CodeMirror(document.getElementById("config_textarea"), options_cmeditor);
 		}
+
+		// Create the editor JSON if it does not exist
+		if (jsoneditor === null)
+		{
+			const options_jsoneditor = {
+				animation: 100,
+				mode: 'tree',
+				modes: ['code', 'form', 'text', 'tree', 'view', 'preview'], // allowed modes
+				onModeChange: function (newMode, oldMode) {
+					// console.log('Mode switched from', oldMode, 'to', newMode)
+				}
+			}
+			jsoneditor = new JSONEditor(document.getElementById("config_jsoneditor"), options_jsoneditor)
+		}
+		epm_advanced_tab_poce_resize();
 	}
 	else if (idtab === "manual_upload") {
 		epm_advanced_tab_manual_upload_list_files_brand_expor();
 	}
 	return true;
 }
-
 
 function close_module_actions_epm_advanced(goback, acctionname = "")
 {
@@ -249,388 +445,582 @@ function epm_advanced_tab_iedl_bt_import()
 
 // INI: FUNCTION TAB POCE
 
-function epm_advanced_tab_poce_update_list_brand_bootnav(forzar=false)
-{
-	var nListO = $("#lista_brand_bootnav").children('a').get().length;
-	var nListL = $("#lista_brand_bootnav").children('a.bootnavloadingajax').get().length;
-	var nListT = nListO - nListL
+function epm_advanced_tab_poce_resize() {
+    var footer 	  = document.getElementById("footer");
+	var footerTop = footer.getBoundingClientRect().top;
+	var footerH   = footer.getBoundingClientRect().height;
+	var boxSrc 	  = document.getElementById("poce_box_sec_source");
+	var boxSrcTop = boxSrc.getBoundingClientRect().top;
 	
+	// Calculate the available height
+	var availableHeight = footerTop - boxSrcTop;
 
-	if (nListT > 0) {
-		if (frozar !== true) { return; }
+	// Calculate the maximum height of the window
+	var maxWindowHeight = window.innerHeight - boxSrcTop - footerH; 
+
+	// If the available height is greater than the maximum height of the window, set the maximum height of the window
+	if (availableHeight > maxWindowHeight) {
+		availableHeight = maxWindowHeight;
 	}
-	
-	if ((nListL === 0) && (nListO > 0)) {
-		$("#lista_brand_bootnav")
-		.empty()
-		.append(
-			$('<a/>', { 'href' : '#', 'class' : 'list-group-item bootnavloadingajax text-center' })
-			.append(
-				$('<i/>', { 'class' : 'fa fa-spinner fa-spin' }),
-				$('<span/>', {}).text(" " + "Loading...")
-			)
-		);
+
+	// If the available height is less than 200, set the height to 200
+	if (availableHeight < 200) {
+	 	availableHeight = 200;
 	}
-	
-	// waitingDialog.show();
-	epm_advanced_tab_poce_clear_select();
-	$.ajax({
-		type: 'POST',
-		url: window.FreePBX.ajaxurl,
-		data: {
-			module: "endpointman",
-			module_sec: "epm_advanced",
-			module_tab: "poce",
-			command: "poce_list_brands",
-		},
-		dataType: 'json',
-		timeout: 60000,
-		error: function(xhr, ajaxOptions, thrownError) {
-			fpbxToast('ERROR AJAX:' + thrownError,'ERROR (' + xhr.status + ')!','error');
-			return false;
-		},
-		success: function(data) {
-			if (data.status == true) {
-				if (data.ldatos.length == 0) {
-					$("#lista_brand_bootnav")
-					.append(
-						$('<a/>', { 'href' : '#', 'class' : 'list-group-item' })
-						.append(
-							$('<i/>', { 'class' : 'fa fa-phone fa-fw fa-lg' }),
-							$('<span/>', {}).text(" " + "List Product's Empty")
-						)
-					);
-				}
-				else 
-				{
-					$(data.ldatos).each(function(index, itemData) {
-						$("#lista_brand_bootnav")
-						.append(
-							$('<a/>', { 
-								'href' 	: 'javascript:epm_advanced_tab_poce_select_product(' + itemData.id + ');', 
-								'class' : 'list-group-item',
-								'id'	: 'list_product_' + itemData.id,
-								'title' : itemData.name
-							})
-							.append(
-								$('<i/>', { 'class' : 'fa fa-phone fa-fw fa-lg' }),
-								$('<span/>', {}).text(" " + itemData.name_mini)
-							)
-						);
-					});
-				}
-				
-				
-				$("#lista_brand_bootnav a.bootnavloadingajax").remove();
-//				fpbxToast('Load date Done!', '', 'success');
-				return true;
-			} 
-			else {
-				$("#lista_brand_bootnav a.bootnavloadingajax").text("Error get data!");
-				fpbxToast(data.message, data.txt.error, 'error');
-				return false;
-			}
-		},
-	});
-	// setTimeout(function () {waitingDialog.hide();}, 500);
-	
+
+	boxSrc.style.height = availableHeight + "px";
 }
 
-function epm_advanced_tab_poce_clear_select()
+/**
+ * Refresh the parent node of the node to the specified number of levels
+ * 
+ * @param {string|object} treeInstanceOrId - The tree instance or the id of the tree 
+ * @param {string|object|null} startNode  - The node to start refreshing, default is the selected node. If null, the selected node is used and if there is no selected node, the all tree is refreshed
+ * @param {string|number} levels - The number of levels to go up the tree, default is 2
+ * @param {function} [beforeRefreshCallback] - (Optional) The callback function to call before refreshing the node
+ * @param {function} [afterRefreshCallback] - (Optional) The callback function to call after refreshing the node
+ * @returns {void} true if the node was refreshed, false if the node was not found
+ * 
+ * @example
+ * epm_advanced_tab_poce_refresh_tree_nodes('#poce_tree_files');
+ * epm_advanced_tab_poce_refresh_tree_nodes('#poce_tree_files', null, 2);
+ * epm_advanced_tab_poce_refresh_tree_nodes('#poce_tree_files', null, 2, function(node) { console.log('Before Refresh: ' + node.id); }, function(node) { console.log('After Refresh: ' + node.id); });
+ * epm_advanced_tab_poce_refresh_tree_nodes('#poce_tree_files', 'node_1', 2);
+ * epm_advanced_tab_poce_refresh_tree_nodes('#poce_tree_files', 'node_1', 2, function(node) { console.log('Before Refresh: ' + node.id); }, function(node) { console.log('After Refresh: ' + node.id); });
+ * 
+ * @example 
+ * var jstree = $('#poce_tree_files').jstree(true);
+ * epm_advanced_tab_poce_refresh_tree_nodes(jstree, 'node_1', 2);
+ * epm_advanced_tab_poce_refresh_tree_nodes(jstree, 'node_1', 2, function(node) { console.log('Before Refresh: ' + node.id); }, function(node) { console.log('After Refresh: ' + node.id); });
+ * 
+ */
+function epm_advanced_tab_poce_refresh_tree_nodes(treeInstanceOrId, startNode = null , levels = 2, beforeRefreshCallback = null, afterRefreshCallback = null)
 {
-	$("#poce_NameProductSelect").text("No Selected");
-	$("#poce_file_name_path").text("No Selected");
-	$('#config_textarea').prop('disabled', true);
-	if (cmeditor !== null) {
-		cmeditor.setValue("Select file to config...");
-		cmeditor.setOption("readOnly",true);
-	}
-	$("#box_sec_source button").prop('disabled', true);
-	$("#box_bt_save button").prop('disabled', true);
-	$("#box_bt_share button").prop('disabled', true);
-	$("#box_bt_save_as button").prop('disabled', true);
-	$("#box_bt_save_as input").prop('disabled', true).val("");
-	$('form[name=form_config_text_sec_button] input[name=datosok]').val("false");
-
-	epm_advanced_tab_poce_create_file_list("#select_product_list_files_config", "");
-	epm_advanced_tab_poce_create_file_list("#select_product_list_files_template_custom", "");
-	epm_advanced_tab_poce_create_file_list("#select_product_list_files_user_config", "");
-}
-
-function epm_advanced_tab_poce_select_product(idsel = null, bclear = true)
-{
-	if ($.isNumeric(idsel) === false) { return; }
-	$("div.list-group>a.active").removeClass("active");
-	$("#list_product_"+idsel).addClass("active").blur();
-
-	// waitingDialog.show();
-	$.ajax({
-		type: 'POST',
-		url: window.FreePBX.ajaxurl,
-		data: {
-			module: "endpointman",
-			module_sec: "epm_advanced",
-			module_tab: "poce",
-			command: "poce_select",
-			product_select:  idsel
-		},
-		dataType: 'json',
-		timeout: 60000,
-		error: function(xhr, ajaxOptions, thrownError) {
-			fpbxToast('ERROR AJAX:' + thrownError,'ERROR (' + xhr.status + ')!','error');
-			return false;
-		},
-		success: function(data) {
-			if (bclear == true) {
-				epm_advanced_tab_poce_clear_select();
-			}
-			
-			if (data.status == true) {
-				epm_advanced_tab_poce_create_file_list("#select_product_list_files_config", data.file_list, data.product_select, "file");
-				epm_advanced_tab_poce_create_file_list("#select_product_list_files_template_custom", data.template_file_list, data.product_select, "tfile");
-				epm_advanced_tab_poce_create_file_list("#select_product_list_files_user_config", data.sql_file_list, data.product_select, "sql");
-				
-				if (bclear == true) {
-					$("#poce_NameProductSelect").text(data.product_select_info.long_name);
-				}
-//				fpbxToast('Load date Done!', '', 'success');
-				return true;
-			} 
-			else {
-				epm_advanced_tab_poce_create_file_list("#select_product_list_files_config", "Error");
-				epm_advanced_tab_poce_create_file_list("#select_product_list_files_template_custom", "Error");
-				epm_advanced_tab_poce_create_file_list("#select_product_list_files_user_config", "Error");
-				
-				$("#poce_NameProductSelect").text("Error get data!");
-				
-				fpbxToast(data.message, data.txt.error, 'error');
-				return false;
-			}
-		},
-	});	
-	// setTimeout(function () {waitingDialog.hide();}, 500);
-}
-
-function epm_advanced_tab_poce_create_file_list(idname, data = "", product_select = "", typefile = "") 
-{
-	$(idname + " div.dropdown-menu").empty();
-	if (Array.isArray(data) === false)
+	var treeInstance;
+	if (typeof treeInstanceOrId === 'string')
 	{
-		$(idname + " span.label").text(0);
-		if (data === null) { data = "Emtry"; }
-		$(idname + " div.dropdown-menu")
-		.append(
-			$('<a/>', { 'href' : '#', 'class' : 'dropdown-item disable' }).text(data)
-		);
-		return;
-	}
-	$(idname + " span.label").text(data.length);
-	$(data).each(function(index, itemData) 
+        treeInstance = $(treeInstanceOrId).jstree(true);
+    }
+	else if (treeInstanceOrId && typeof treeInstanceOrId.refresh_node === 'function')
 	{
-		$(idname + " div.dropdown-menu")
-		.append(
-			$('<a/>', { 
-				'href' 	: 'javascript:epm_advanced_tab_poce_select_file_edit("'+ product_select +'", "'+ itemData.text +'", "'+ itemData.value +'", "'+ typefile +'");', 
-				'class' : 'dropdown-item bt',
-				'id'	: typefile + '_' +  product_select + '_' + itemData.text +'_'+ itemData.value 
-			})
-			.text(itemData.text)
-		);
-	});
-	return;
-}
-
-function epm_advanced_tab_poce_select_file_edit (idpro_select, txtnamefile, idnamefile, typefile)
-{
-	// waitingDialog.show();
-	$.ajax({
-		type: 'POST',
-		url: window.FreePBX.ajaxurl,
-		data: {
-			module: "endpointman",
-			module_sec: "epm_advanced",
-			module_tab: "poce",
-			command: "poce_select_file",
-			product_select:  idpro_select,
-			file_id : idnamefile,
-			file_name : txtnamefile,
-			type_file : typefile
-		},
-		dataType: 'json',
-		timeout: 60000,
-		error: function(xhr, ajaxOptions, thrownError) {
-			fpbxToast('ERROR AJAX:' + thrownError,'ERROR (' + xhr.status + ')!','error');
-			$("#poce_file_name_path").text("Error ajax!");
-			
-			$('#config_textarea').prop('disabled', true);
-			if (cmeditor !== null) {
-				cmeditor.setValue("");
-				cmeditor.setOption("readOnly",true);
-			}
-			$("#box_sec_source button").prop('disabled', true);
-			$("#box_bt_save button").prop('disabled', true);
-			$("#box_bt_share button").prop('disabled', true);
-			$("#box_bt_save_as button").prop('disabled', true);
-			$("#box_bt_save_as input").prop('disabled', true).val("");
-			$('form[name=form_config_text_sec_button] input[name=datosok]').val("false");
-			return false;
-		},
-		success: function(data) {
-			if (data.status == true) {
-				$("#poce_file_name_path").text(data.location);
-				$('#config_textarea').prop('disabled', false);
-				if (cmeditor !== null) {
-					$("#box_sec_source button").prop('disabled', false);
-					cmeditor.setValue(data.config_data);
-					cmeditor.setOption("readOnly",false);
-				}
-				
-				if (data.type === "file") {
-					$("#box_bt_save button[name=button_save]").prop('disabled', false);
-					$("#box_bt_save button[name=button_delete]").prop('disabled', true);
-					
-					$("#box_bt_save_as button").prop('disabled', false);
-					$("#box_bt_save_as input").prop('disabled', false).val(data.save_as_name_value);
-					
-					$("#box_bt_share button").prop('disabled', true);
-				}
-				else if (data.type === "tfile") {
-					$("#box_bt_save button").prop('disabled', true);
-					$("#box_bt_share button").prop('disabled', true);
-				
-					$("#box_bt_save_as button").prop('disabled', true);
-					$("#box_bt_save_as input").prop('disabled', true).val(data.save_as_name_value);
-				}
-				else if (data.type === "sql") {
-					$("#box_bt_save button[name=button_save]").prop('disabled', false);
-					$("#box_bt_save button[name=button_delete]").prop('disabled', false);
-					
-					$("#box_bt_save_as button").prop('disabled', false);
-					$("#box_bt_save_as input").prop('disabled', false).val(data.save_as_name_value);
-					
-					$("#box_bt_share button").prop('disabled', true);
-				}
-				
-				$('form[name=form_config_text_sec_button] input[name=type_file]').val(data.type);
-				$('form[name=form_config_text_sec_button] input[name=sendid]').val(data.sendidt);
-				$('form[name=form_config_text_sec_button] input[name=product_select]').val(data.product_select);
-				$('form[name=form_config_text_sec_button] input[name=save_as_name]').val(data.save_as_name_value);
-				$('form[name=form_config_text_sec_button] input[name=original_name]').val(data.original_name);
-				$('form[name=form_config_text_sec_button] input[name=filename]').val(data.filename);
-				$('form[name=form_config_text_sec_button] input[name=location]').val(data.location);
-				$('form[name=form_config_text_sec_button] input[name=datosok]').val("true");
-				
-//				fpbxToast('File Load date Done!', '', 'success');
-				return true;
-			} 
-			else {
-				$("#poce_file_name_path").text("Error obteniendo datos!");
-				$('#config_textarea').prop('disabled', true);ff
-				if (cmeditor !== null) {
-					cmeditor.setValue("");
-					cmeditor.setOption("readOnly",true);
-				}
-				$("#box_sec_source button").prop('disabled', true);
-				$("#box_bt_save button").prop('disabled', true);
-				$("#box_bt_share button").prop('disabled', true);
-				$("#box_bt_save_as button").prop('disabled', true);
-				$("#box_bt_save_as input").prop('disabled', true).val("");
-				$('form[name=form_config_text_sec_button] input[name=datosok]').val("false");
-				fpbxToast(data.message, "Error!", 'error');
-				return false;
-			}
-		},
-	});	
-	// setTimeout(function () {waitingDialog.hide();}, 500);
-}
-
-function epm_advanced_tab_poce_bt_acction (command)
-{
-	if (command === "") { return; }
-	var obj_name = $(command).attr("name").toLowerCase();
-	
-	if (obj_name === "bt_source_full_screen")
+        treeInstance = treeInstanceOrId;
+    }
+	else
 	{
-		cmeditor.setOption('fullScreen', !cmeditor.getOption('fullScreen'));
-		return true;
-	}
-	
-	if (epm_global_get_value_by_form("form_config_text_sec_button","datosok") === false)
-	{
-		fpbxToast("The form is not ready!", "Error!", 'error');
 		return false;
 	}
 	
-	var cfg_data = "";
-	switch(obj_name) {
-    	case "button_save":
-    		if (confirm("Are you sure to save your changes will be overwritten irreversibly?") === false) { return; }
-    		
-    		cfg_data = {
-    			module: "endpointman",
-    			module_sec: "epm_advanced",
-    			module_tab: "poce",
-    			command: "poce_save_file",
-    			type_file: epm_global_get_value_by_form("form_config_text_sec_button","type_file"),
-    			sendid : epm_global_get_value_by_form("form_config_text_sec_button","sendid"),
-    			product_select: epm_global_get_value_by_form("form_config_text_sec_button","product_select"),
-    			save_as_name: epm_global_get_value_by_form("form_config_text_sec_button","save_as_name"),
-    			original_name: epm_global_get_value_by_form("form_config_text_sec_button","original_name"),
-    			file_name: epm_global_get_value_by_form("form_config_text_sec_button","filename"),
-    			config_text: cmeditor.getValue()
-    		};
-    		break;
-    	
-    	case "button_save_as":
-    		cfg_data = {
-    			module: "endpointman",
-    			module_sec: "epm_advanced",
-    			module_tab: "poce",
-    			command: "poce_save_as_file",
-    			type_file: epm_global_get_value_by_form("form_config_text_sec_button","type_file"),
-    			sendid : epm_global_get_value_by_form("form_config_text_sec_button","sendid"),
-    			product_select: epm_global_get_value_by_form("form_config_text_sec_button","product_select"),
-    			save_as_name: epm_global_get_value_by_form("form_config_text_sec_button","save_as_name"),
-    			original_name: epm_global_get_value_by_form("form_config_text_sec_button","original_name"),
-    			file_name: epm_global_get_value_by_form("form_config_text_sec_button","filename"),
-    			config_text: cmeditor.getValue()
-    		};
-    		break;
-    		
-    	case "button_delete":
-    		if (confirm("Are you sure you want to delete this file from the database?") === false) { return; }
-    		
-    		cfg_data = {
-    			module: "endpointman",
-    			module_sec: "epm_advanced",
-    			module_tab: "poce",
-    			command: "poce_delete_config_custom",
-    			type_file : epm_global_get_value_by_form("form_config_text_sec_button","type_file"),
-    			product_select: epm_global_get_value_by_form("form_config_text_sec_button","product_select"),
-    			sql_select: epm_global_get_value_by_form("form_config_text_sec_button","sendid"),
-    		};
-    		break;
-    	
-    	case "button_share":
-    		cfg_data = {
-    			module: "endpointman",
-    			module_sec: "epm_advanced",
-    			module_tab: "poce",
-    			command: "poce_sendid",
-    			type_file : epm_global_get_value_by_form("form_config_text_sec_button","type_file"),
-    			sendid : epm_global_get_value_by_form("form_config_text_sec_button","sendid"),
-    			product_select: epm_global_get_value_by_form("form_config_text_sec_button","product_select"),
-    			original_name: epm_global_get_value_by_form("form_config_text_sec_button","original_name"),
-    			file_name: epm_global_get_value_by_form("form_config_text_sec_button","filename"),
-    			config_text : cmeditor.getValue()
-    		};
-    		break;
-    		
-    	default:
-    		alert ("Command not found!");
-        	return false;
+	if (startNode === null || startNode === undefined)
+	{
+		var selectedNodes = treeInstance.get_selected(true);
+		if (selectedNodes.length > 0)
+		{
+            startNode = selectedNodes[0];
+        }
+		else
+		{
+			treeInstance.refresh();
+            return true;
+        }
+	}
+	if (typeof startNode === 'string' || typeof startNode === 'number')
+	{
+        startNode = treeInstance.get_node(startNode);
+		if (!startNode || startNode.id === undefined)
+		{
+            return false;
+        }
+    }
+
+    var currentNode = startNode;
+    for (var i = 0; i < levels; i++)
+	{
+        if (!currentNode || currentNode.parent === "#")
+		{
+            break;	// Is the root node or there are no more parent nodes, stop the cycle
+        }
+        var parentNode = treeInstance.get_node(currentNode.parent);
+		if (parentNode)
+		{
+            currentNode = parentNode;
+        }
+    }
+
+	if (typeof beforeRefreshCallback === 'function') { beforeRefreshCallback(currentNode); }
+	if (currentNode) 								 { treeInstance.refresh_node(currentNode); }
+	if (typeof afterRefreshCallback === 'function')  { afterRefreshCallback(currentNode); }
+	return true;
+}
+
+function epm_advanced_tab_poce_unselect(showImg = false)
+{
+	$('#poce_box_sec_source').removeClass('poce_box_sec_source_loading poce_box_sec_source_loaderr');
+	$("#poce_file_name_path, #poce_NameProductSelect").text(_("No Selected"));
+
+	var form = $('form[name=form_config_text_sec_button]');
+
+	form.find('input, button').each(function() {
+		$(this).prop('disabled', true);
+
+		if ($(this).is(':text')) {
+			$(this).val('');
+		}
+		if ($(this).is(':hidden')) {
+			$(this).val('');
+		}
+	});
+	form.find('input[name=datosok]').val("false");
+
+	if (jsoneditor !== null)
+	{
+		jsoneditor.setMode('text');
+		jsoneditor.set('');
+	}
+	$('#config_jsoneditor').hide();
+
+	if (cmeditor !== null)
+	{
+		cmeditor.setValue('');
+		cmeditor.setOption("readOnly", true);
+		cmeditor.setOption("mode", "text/plain");
+	}
+	$('#config_textarea').hide();
+
+
+	switch (showImg)
+	{
+		case "error":
+			$('.poce_box_sec_source').addClass('poce_box_sec_source_loaderr');
+			break;
+		case "loading":
+			$('.poce_box_sec_source').addClass('poce_box_sec_source_loading');
+			break;
+	}
+}
+
+function epm_advanced_tab_poce_edit_file(node, params)
+{
+	epm_advanced_tab_poce_unselect("loading");
+
+	var msgErrInit = null;
+	switch (true)
+	{
+		case (params.product == null || params.type == null || params.name_file == null || params.id_file == null):
+		
+			msgErrInit = "Params invalid!";
+			break;
+
+		case (cmeditor === null):
+			msgErrInit = "Editor Code is null!";
+			break;
+
+		case (jsoneditor === null):
+			msgErrInit = "JSON editor is null!";
+			break;
+	}
+	if (msgErrInit !== null)
+	{
+		fpbxToast(msgErrInit, '', 'warning');
+		epm_advanced_tab_poce_unselect("error");
+		return false;
+	}
+
+	var id			= params.product;								// Number id product
+	var type		= params.type;									// Types: file, template, custom
+	// var type_file = params.type_file;							// Type file: raw, xml
+	var name_file	= params.name_file;								// Name file: mac.cfg, aastra.cfg
+	var id_file		= params.id_file;								// Id file in database or name file: aastra.cfg or 1121
+	var parentNode	= $('#poce_tree_files').jstree('get_node', id);	// Parent node
+	var form		= $('form[name=form_config_text_sec_button]');	// Form to data
+	
+	// waitingDialog.show();
+	// $('.poce_box_sec_source').addClass('poce_box_sec_source_loading');
+	// epm_advanced_tab_poce_unselect("loading");
+	$.ajax({
+		type: 'POST',
+		url: window.FreePBX.ajaxurl,
+		data: {
+			'module'		: "endpointman",
+			'module_sec'	: "epm_advanced",
+			'module_tab'	: "poce",
+			'command'		: "poce_select_file",
+			'product_select': id,
+			'file_id' 		: id_file,
+			'file_name' 	: name_file,
+			'type_file' 	: type
+		},
+		dataType: 'json',
+		timeout: 60000,
+		error: function(xhr, ajaxOptions, thrownError)
+		{
+			epm_advanced_tab_poce_unselect("error");
+			fpbxToast( sprintf(_('ERROR AJAX (%s): %s'), xhr.status, thrownError), '', 'error');
+			return false;
+		},
+		success: function(data)
+		{
+			if (data.status == true)
+			{
+				if (parentNode && parentNode.data)
+				{
+					$("#poce_NameProductSelect").text(parentNode.data.text);
+				}
+				else
+				{
+					$("#poce_NameProductSelect").text("???");
+				}
+				$("#poce_file_name_path").text(data.location);
+
+				var filename = data.location.split('/').pop().toLowerCase();
+				var cmmode = "text/plain";
+				switch (true)
+				{
+					case filename.endsWith(".js"):
+						cmmode = "javascript";
+						break;
+
+					case filename.endsWith(".json"):
+						cmmode = "json";
+						break;
+
+					case filename.endsWith(".xml"):
+						cmmode = "xml";
+						break;
+					
+					case filename.endsWith(".php"):
+						cmmode = "php";
+						break;
+
+					case filename.endsWith(".sql"):
+						cmmode = "sql";
+						break;
+					
+					case filename.endsWith(".cfg"):
+					case filename.endsWith(".ini"):
+						cmmode = "ini";
+						break;
+					
+					case filename.endsWith(".yml"):
+						cmmode = "yaml";
+						break;
+				}
+				cmeditor.setOption("mode", cmmode);
+
+
+				var save_as_off 	= true;
+				var full_screen_off = true;
+				var delete_off 		= true;
+				var share_off 		= true;
+				var save_off 		= true;
+
+				switch(data.type)
+				{
+					case "file":
+						//share_off 		= false; // Disable, because the provisioner.net is down
+						save_off 		= false;
+						save_as_off 	= false;
+						full_screen_off = false;
+
+						$('#config_textarea').show();
+						cmeditor.setOption("readOnly", false);
+						cmeditor.setValue(data.config_data ?? ' ');
+						break;
+
+					case "template":
+						// save_as_off = false;
+
+						$('#config_jsoneditor').show();
+						jsoneditor.setMode('tree')
+						jsoneditor.set(data.config_data ?? '')
+						break;
+					
+					case "custom":
+						//share_off 		= false; // Disable, because the provisioner.net is down
+						delete_off 		= false;
+						save_off 		= false;
+						save_as_off 	= false;
+						full_screen_off = false;
+
+						$('#config_textarea').show();
+						cmeditor.setValue(data.config_data ?? ' ');
+						cmeditor.setOption("readOnly", false);
+						break;
+					
+					default:
+						break;
+				}
+
+				form.find('button[name=bt_source_full_screen]').prop('disabled', full_screen_off);
+				form.find('button[name=button_share]').prop('disabled', share_off);
+				form.find('button[name=button_delete]').prop('disabled', delete_off);
+				form.find('button[name=button_save]').prop('disabled', save_off);
+				form.find('button[name=button_save_as]').prop('disabled', save_as_off);
+				form.find('input[name=save_as_name]').prop('disabled', save_as_off).val(data.save_as_name_value);
+
+				Object.entries(data).forEach(function([key, value])
+				{
+					switch (key) {
+						case 'type':
+							form.find('input[name=type_file]').val(value);
+							break;
+						case 'sendidt':
+							form.find('input[name=sendid]').val(value);
+							break;
+						case 'product_select':
+							form.find('input[name=product_select]').val(value);
+							break;
+						case 'save_as_name_value':
+							form.find('input[name=save_as_name]').val(value);
+							break;
+						case 'original_name':
+							form.find('input[name=original_name]').val(value);
+							break;
+						case 'filename':
+							form.find('input[name=filename]').val(value);
+							break;
+						case 'location':
+							form.find('input[name=location]').val(value);
+							break;
+					}
+				});
+				form.find('input[name=datosok]').val("true");
+				fpbxToast(data.txt.load_data_ok, '', 'success');
+				return true;
+			} 
+			else
+			{
+				epm_advanced_tab_poce_unselect("error");
+				fpbxToast(data.message, '', 'error');
+				return false;
+			}
+		},
+	});	
+	setTimeout(function () {waitingDialog.hide();}, 500);
+}
+
+function epm_advanced_tab_poce_delete()
+{
+	var form = $('form[name=form_config_text_sec_button]');
+	if (form.find('input[name=datosok]').val() === "false")
+	{
+		fpbxToast(_("The form is not ready!"), '', 'error');
+		return false;
+	}
+
+	var file_name = form.find('input[name=filename]').val();
+
+	fpbxConfirm(
+		sprintf( _("Are you sure to delete the file [%s]?"), file_name),
+		_("YES"), _("NO"),
+		function()
+		{
+			var cfg_data = {
+				'module'		: "endpointman",
+				'module_sec'	: "epm_advanced",
+				'module_tab'	: "poce",
+				'command'		: "poce_delete_config_custom",
+				'type_file' 	: form.find('input[name=type_file]').val(),
+				'product_select': form.find('input[name=product_select]').val(),
+				'sql_select'	: form.find('input[name=sendid]').val(),
+			};
+
+			$.ajax({
+				type: 'POST',
+				url: window.FreePBX.ajaxurl,
+				data: cfg_data,
+				dataType: 'json',
+				timeout: 60000,
+				error: function(xhr, ajaxOptions, thrownError) {
+					fpbxToast( sprintf(_('ERROR AJAX (%s): %s'), xhr.status, thrownError), '', 'error');
+					return false;
+				},
+				success: function(data) {
+					if (data.status == true)
+					{
+						epm_advanced_tab_poce_unselect();
+						fpbxToast(data.message, '', 'success');
+
+						var treeInstance = $('#poce_tree_files').jstree(true);
+						if (! epm_advanced_tab_poce_refresh_tree_nodes(treeInstance))
+						{
+							// If the node is not found, refresh the entire tree
+							treeInstance.refresh();
+						}
+						return true;
+					} 
+					else
+					{
+						fpbxToast(data.message, '', 'error');
+						return false;
+					}
+				},
+			});
+		}
+	);
+}
+
+function epm_advanced_tab_poce_save(save_as = false)
+{
+	var form = $('form[name=form_config_text_sec_button]');
+	if (form.find('input[name=datosok]').val() === "false")
+	{
+		fpbxToast(_("The form is not ready!"), '', 'error');
+		return false;
+	}
+	else if (!$('#config_textarea').is(':visible') && !$('#config_jsoneditor').is(':visible'))
+	{
+		fpbxToast(_("The editor is not activated!"), '', 'error');
+		return false;
+	}
+	else if ($('#config_textarea').is(':visible') && $('#config_jsoneditor').is(':visible'))
+	{
+		fpbxToast(_("The editor is duplicated!"), '', 'error');
+		return false;
 	}
 	
+	var type_file 		= form.find('input[name=type_file]').val();
+	var product_select 	= form.find('input[name=product_select]').val();
+	var iddb 			= form.find('input[name=sendid]').val();
+	var filename_new 	= form.find('input[name=save_as_name]').val();
+	var filename_src 	= form.find('input[name=original_name]').val();
+	var filename_now 	= form.find('input[name=filename]').val();
+	var stringConfirm	= "";
+
+	switch (true)
+	{
+		case ($('#config_textarea').is(':visible')):
+			var config_data = cmeditor.getValue();
+			break;
+
+		case ($('#config_jsoneditor').is(':visible')):
+			// var config_data = JSON.stringify(jsoneditor.get(), null, 2); //Prey to the bug of the JSONEditor
+			var config_data = jsoneditor.getText();
+			break;
+
+		default:
+			var config_data = null;
+	}
+
+	if (save_as)
+	{
+		if (filename_new === "")
+		{
+			fpbxToast(_("The new file name is empty!"), '', 'error');
+			return false;
+		}
+		else if (filename_new === filename_src || filename_new === filename_now )
+		{
+			fpbxToast(_("The new file name is the same as the original!"), '', 'error');
+			return false;
+		}
+		stringConfirm = sprintf(_("Are you sure to create a new file '%s'?"), filename_new);
+	}
+	else
+	{
+		filename_new  = "";
+		stringConfirm = sprintf(_("Are you sure to save your changes in '%s'? Will be overwritten irreversibly!"), filename_now);
+	}
+
+	fpbxConfirm(
+		sprintf(stringConfirm),
+		_("YES"), _("NO"),
+		function()
+		{
+			var cfg_data = {
+				'module'		: "endpointman",
+				'module_sec'	: "epm_advanced",
+				'module_tab'	: "poce",
+				'command'		: save_as ? "poce_save_as_file" : "poce_save_file",
+				'params'	: {
+					'type_file' 	: type_file,
+					'product_select': product_select,
+					// 'iddb'			: iddb,
+					'filename_new'	: filename_new,
+					'filename_src'	: filename_src,
+					'filename_now'	: filename_now,
+					'config_data'	: config_data
+				},
+			};
+			$.ajax({
+				type: 'POST',
+				url: window.FreePBX.ajaxurl,
+				data: cfg_data,
+				dataType: 'json',
+				timeout: 60000,
+				error: function(xhr, ajaxOptions, thrownError) {
+					fpbxToast( sprintf(_('ERROR AJAX (%s): %s'), xhr.status, thrownError), '', 'error');
+					return false;
+				},
+				success: function(data) {
+					if (data.status == true)
+					{
+						fpbxToast(data.message, '', 'success');
+
+						if (data.tree_reload ?? false)
+						{
+							// epm_advanced_tab_poce_unselect();
+
+							var treeObj 	 = $('#poce_tree_files');
+							var treeInstance = treeObj.jstree(true);
+
+							if (data.tree_node_find && data.tree_node_find.trim() !== "")
+							{
+								// Is needed used ono to wait for the tree to be loaded before selecting the node
+								treeObj.one('refresh_node.jstree', function ()
+								{
+									var treeInstanceOne = $(this).jstree(true);
+									treeInstanceOne.select_node(data.tree_node_find);
+								});
+							}
+							if (! epm_advanced_tab_poce_refresh_tree_nodes(treeInstance, null, 2, function() { epm_advanced_tab_poce_unselect(); }))
+							{
+								// If the node is not found, refresh the entire tree
+								treeInstance.refresh();
+							}
+						}
+						return true;
+					} 
+					else {
+						fpbxToast(data.message, '', 'error');
+						return false;
+					}
+				},
+			});
+		}
+	);
+
+}
+
+function epm_advanced_tab_poce_share()
+{
+	var form = $('form[name=form_config_text_sec_button]');
+	if (form.find('input[name=datosok]').val() === "false")
+	{
+		fpbxToast(_("The form is not ready!"), '', 'error');
+		return false;
+	}
+
+	var type_file 		= form.find('input[name=type_file]').val();
+	var product_select 	= form.find('input[name=product_select]').val();
+	var iddb 			= form.find('input[name=sendid]').val();
+	var filename_now	= form.find('input[name=filename]').val();
+	var filename_src	= form.find('input[name=original_name]').val();
+
+	var cfg_data = {
+		'module'	: "endpointman",
+		'module_sec': "epm_advanced",
+		'module_tab': "poce",
+		'command'	: "poce_share",
+		'params'	: {
+			'type_file' 	: type_file,
+			'iddb' 			: iddb,
+			'product_select': product_select,
+			'filename_src'	: filename_src,
+			'filename_now'	: filename_now
+		}
+	};
+
+	fpbxToast("Sharing Info...", '', 'info');
 	$.ajax({
 		type: 'POST',
 		url: window.FreePBX.ajaxurl,
@@ -638,56 +1028,21 @@ function epm_advanced_tab_poce_bt_acction (command)
 		dataType: 'json',
 		timeout: 60000,
 		error: function(xhr, ajaxOptions, thrownError) {
-			fpbxToast('ERROR AJAX:' + thrownError,'ERROR (' + xhr.status + ')!','error');
-			$("#poce_file_name_path").text("Error ajax!");
+			fpbxToast( sprintf(_('ERROR AJAX (%s): %s'), xhr.status, thrownError), '', 'error');
 			return false;
 		},
 		success: function(data) {
-			if (data.status == true) {
-				switch(obj_name) {
-			    	case "button_save":
-			    		
-			    		epm_advanced_tab_poce_select_product(epm_global_get_value_by_form("form_config_text_sec_button","product_select"), false);
-			    		fpbxToast(data.message, 'Save!', 'success');
-			    		break;
-			    	
-			    	case "button_save_as":
-			    		$('form[name=form_config_text_sec_button] input[name=type_file]').val(data.type_file);
-						$('form[name=form_config_text_sec_button] input[name=sendid]').val(data.sendidt);
-						$('form[name=form_config_text_sec_button] input[name=location]').val(data.location);
-						
-						$("#poce_file_name_path").text(data.location);
-						$("#box_bt_save button").prop('disabled', false);
-						$("#box_bt_share button").prop('disabled', false);
-						$("#box_bt_save_as button").prop('disabled', false);
-						$("#box_bt_save_as input").prop('disabled', false);
-						
-						epm_advanced_tab_poce_select_product(epm_global_get_value_by_form("form_config_text_sec_button","product_select"), false);
-						fpbxToast(data.message, 'Save as!', 'success');
-			    		break;
-			    		
-			    	case "button_delete":
-			    		
-			    		epm_advanced_tab_poce_select_product(epm_global_get_value_by_form("form_config_text_sec_button","product_select"));
-			    		fpbxToast(data.message, 'Delete!', 'success');
-			    		break;
-			    	
-			    	case "button_share":
-			    		fpbxToast(data.message, 'Share!', 'success');
-			    		break;
-			    		
-			    	default:
-			    		fpbxToast(data.message, '', 'success');
-				}
-				return true;
+			if (data.status == true)
+			{
+			    fpbxToast(data.message, '', 'success');
 			} 
-			else {
-				fpbxToast(data.message, "Error!", 'error');
+			else
+			{
+				fpbxToast(data.message, "", 'error');
 				return false;
 			}
 		},
-	});	
-	
+	});
 }
 // END: FUNCTION TAB POCE
 

@@ -5,6 +5,7 @@
     "jquery-colorbox": "^1.6.4",
     "jquery-touchswipe": "^1.6.19",
     "jquery.easing": "^1.4.1",
+    "jsoneditor": "^10.1.0",
     "jstree": "^3.3.16"
   }
 }

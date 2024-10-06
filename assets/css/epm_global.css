@@ -1,4 +1,4 @@
-@CHARSET "ISO-8859-1";
+@charset "ISO-8859-1";
 
 #epm_templates option[value=""], #epm_advanced option[value=""], #epm_config option[value=""] {
 	background-color: #E5FFCC;
@@ -33,6 +33,6 @@
 }
 
 /* Usage as a mixin */
-.element {
+/* .element {
   @include center-block;
-}
+} */

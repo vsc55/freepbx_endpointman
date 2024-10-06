@@ -10,6 +10,7 @@
 namespace FreePBX\modules;
 
 use FreePBX\modules\Endpointman\Provisioner\ProvisionerBrand;
+use FreePBX\modules\Endpointman\Provisioner\ProvisionerFamilyDB;
 use FreePBX\modules\Endpointman\Provisioner\ProvisionerModel;
 
 require_once('lib/epm_system.class.php');
@@ -305,11 +306,23 @@ class Endpointman_Config
 		{
 			case "fw_install":
 			case "fw_update":
-				$this->install_firmware($id);
+				if (empty($id) || !is_numeric($id))
+				{
+					out(sprintf(_("❌ Install Firmware Error, ID '%s' is invalid!"), $id));
+					return false;
+				}
+				$product_db = $this->epm->packagesdb->getProductByID($id);
+				$this->install_firmware($product_db);
 				break;
 
 			case "fw_uninstall":
-				$this->remove_firmware($id);
+				if (empty($id) || !is_numeric($id))
+				{
+					out(sprintf(_("❌ Remove Firmware Error, ID '%s' is invalid!"), $id));
+					return false;
+				}
+				$product_db = $this->epm->packagesdb->getProductByID($id);
+				$this->remove_firmware($product_db);
 				break;
 
 			default:
@@ -359,7 +372,6 @@ class Endpointman_Config
 			switch($idtype)
 			{
 				case 'modelo':
-					// $this->epm->set_hw_model($id, array("enabled" => $value), 'id');
 					$model = $this->epm->packagesdb->getModelByID($id);
 					if (! $model->setEnabled($value))
 					{
@@ -399,7 +411,6 @@ class Endpointman_Config
 					{
 						return array("status" => false, "message" => _("Error in the process of hiding the model!"));
 					}
-					// $this->epm->set_hw_model($id, array("hidden" => $value), 'id');
 					break;
 
 				default:
@@ -420,57 +431,49 @@ class Endpointman_Config
 	public function epm_config_manager_hardware_get_list_all_hide_show()
 	{
 		$row_out	= [];
-		$brand_list = $this->epm->get_hw_brand_list(true, "name");
-		foreach ($brand_list as $brand)
+		foreach($this->epm->packagesdb->getBrands() as $brand)
 		{
-			// if ($brand['hidden'] == 1) { continue; }
-
+			// if ($brand->isHidden()) { continue; }
 			$brand_item = [
-				'id' 		=> $brand['id'],
-				'name' 		=> $brand['name'],
-				'directory' => $brand['directory'],
-				'installed' => $brand['installed'],
-				'hidden' 	=> $brand['hidden'],
-				'count' 	=> count($row_out),
+				'id' 		=> $brand->getID(),
+				'name' 		=> $brand->getName(),
+				'directory' => $brand->getDirectory(),
+				'installed' => $brand->getInstalled(),
+				'hidden' 	=> $brand->getHidden(),
+				'count' 	=> count($row_out) + 1, // Add +1 to not start at 0
 				'products' 	=> []
 			];
-	
-			$product_list = $this->epm->get_hw_product_list($brand['id'], true);
-			foreach ($product_list as $product)
+			foreach($brand->getProducts() as $product)
 			{
-				// if ($product['hidden'] == 1) { continue; }
-
+				// if ($product->isHidden()) { continue; }
 				$product_item = [
-					'id' 		 => $product['id'],
-					'brand'		 => $product['brand'],
-					'long_name'  => $product['long_name'],
-					'short_name' => $product['short_name'],
-					'hidden'	 => $product['hidden'],
-					'count'		 => count($brand_item['products']),
+					'id' 		 => $product->getID(),
+					'brand'		 => $product->getBrandId(),
+					'long_name'  => $product->getName(),
+					'short_name' => $product->getShortName(),
+					'hidden'	 => $product->getHidden(),
+					'count'		 => count($brand_item['products']) + 1, // Add +1 to not start at 0
 					'models'	 => []
 				];
-	
-				$model_list = $this->epm->get_hw_model_list($product['id'], true);
-				foreach ($model_list as $model)
+
+				foreach($product->getModels() as $model)
 				{
 					$model_item = [
-						'id' 		 => $model['id'],
-						'brand' 	 => $model['brand'],
-						'model' 	 => $model['model'],
-						'product_id' => $model['product_id'],
-						'enabled' 	 => $model['enabled'],
-						'hidden' 	 => $model['hidden'],
-						'count' 	 => count($product_item['models']),
+						'id' 		 => $model->getID(),
+						'brand' 	 => $model->getFamily()->getBrandId(),
+						'model' 	 => $model->getModel(),
+						'product_id' => $model->getFamilyId(),
+						'enabled' 	 => $model->getEnabled(),
+						'hidden' 	 => $model->getHidden(),
+						'count' 	 => count($product_item['models']) + 1, // Add +1 to not start at 0
 					];
 					$product_item['models'][] = $model_item;
 				}
-	
+
 				$brand_item['products'][] = $product_item;
 			}
-	
 			$row_out[] = $brand_item;
 		}
-	
 		return $row_out;
 	}
 
@@ -485,71 +488,132 @@ class Endpointman_Config
 	public function epm_config_manager_hardware_get_list_all()
 	{
 		$row_out 	= [];
-		$brand_list = $this->epm->get_hw_brand_list(true, "name");
-		//FIX: https://github.com/FreePBX-ContributedModules/endpointman/commit/2ad929d0b38f05c9da1b847426a4094c3314be3b
-	
-		foreach ($brand_list as $i => $brand)
+
+		foreach($this->epm->packagesdb->getBrands(true, 'name') as $brand)
 		{
-			if ($brand['hidden'] == 1)
+			if ($brand->getHidden()) { continue; }
+			$row_mod = $this->brand_update_check($brand->getDirectory());
+			$brand_item = [
+				'id' 					=> $brand->getID(),
+				'name' 					=> $brand->getName(),
+				'directory' 			=> $brand->getDirectory(),
+				'installed' 			=> $brand->getInstalled(),
+				'local' 				=> $brand->getLocal(),
+				'hidden' 				=> $brand->getHidden(),
+				'count'					=> count($row_out) + 1, // Add +1 to not start at 0
+				'cfg_ver_datetime' 		=> $brand->getLastModified(),
+				'cfg_ver_datetime_txt' 	=> date("c", $brand->getLastModified()),
+				'update_vers'			=> $row_mod['update_vers']		?? $brand->getLastModified(),
+				'update_vers_txt'		=> $row_mod['update_vers_txt']	?? date("c", $brand->getLastModified()),
+				'update'				=> $row_mod['update']			?? false,
+				'products'				=> []
+			];
+
+			foreach($brand->getProducts() as $product)
 			{
-				continue;
+				if ($product->getHidden()) { continue; }
+				$product_item = [
+					'id' 				=> $product->getID(),
+					'brand'				=> $product->getBrandId(),
+					'long_name' 		=> $product->getName(),
+					'short_name' 		=> $product->getShortName(),
+					'cfg_dir' 			=> $product->getDirectory(),
+					'cfg_ver' 			=> $product->getLastModified(),
+					'hidden' 			=> $product->getHidden(),
+					'firmware_vers' 	=> $product->getFirmwareVer(),
+					'firmware_files' 	=> $product->getFirmwareFiles(),
+					'count' 			=> count($brand_item['products']) + 1, // Add +1 to not start at 0
+					'update_fw' 		=> $product->getFirmwareVer() ? true : false,
+					'update_vers_fw' 	=> $product->getFirmwareVer() ? $this->firmware_update_check($product->getID()) : "",
+					'fw_type' 			=> $this->firmware_local_check($product->getID()),
+					'models' 			=> []
+				];
+				foreach($product->getModels() as $model)
+				{
+					if ($model->getHidden()) { continue; }
+					$model_item = [
+						'id' 				=> $model->getID(),
+						'brand' 			=> $model->getFamily()->getBrandId(),
+						'model' 			=> $model->getModel(),
+						'max_lines' 		=> $model->getMaxLines(),
+						'product_id' 		=> $model->getFamilyId(),
+						'enabled' 			=> $model->getEnabled(),
+						'hidden' 			=> $model->getHidden(),
+						'count' 			=> count($product_item['models']) + 1, // Add +1 to not start at 0
+						'enabled_checked' 	=> $model->getEnabled() ? 'checked' : '',
+					];
+
+					$product_item['models'][] = $model_item;
+				}
+				$brand_item['products'][] = $product_item;
 			}
-
-			$brand['count'] 			   = count($row_out);
-			$brand['cfg_ver_datetime']	   = $brand['cfg_ver'];
-			$brand['cfg_ver_datetime_txt'] = date("c", $brand['cfg_ver']);
-	
-			$row_mod = $this->brand_update_check($brand['directory']);
-			
-			$brand['update_vers']	  = $row_mod['update_vers']		?? $brand['cfg_ver_datetime'];
-			$brand['update_vers_txt'] = $row_mod['update_vers_txt'] ?? $brand['cfg_ver_datetime_txt'];
-			$brand['update'] 		  = $row_mod['update']			?? false;
-			$brand['products'] 		  = [];
-
-			$product_list = $this->epm->get_hw_product_list($brand['id'], true);
-			foreach ($product_list as $j => $product)
-			{
-				if ($product['hidden'] == 1)
-				{
-					continue;
-				}
-
-				// $product_json = $this->epm->packages->getProductByProductID($product['id']);
-				// $product['firmware_pkg'] = $product_json !== null ? $product_json->getFirmwarePkg() ?? '' : '';
-
-				$product['count'] 		  = count($brand['products']);
-				$product['firmware_vers'] = $product['firmware_vers'] ?? 0;
-
-				if ($product['firmware_vers'] > 0)
-				{
-					$product['update_fw'] = 1;
-					$product['update_vers_fw'] = $this->firmware_update_check($product['id']);
-				}
-				else
-				{
-					$product['update_fw'] = 0;
-					$product['update_vers_fw'] = "";
-				}
-	
-				$product['fw_type'] = $this->firmware_local_check($product['id']);
-				$product['models']  = [];
-					
-				$model_list = $this->epm->get_hw_model_list($product['id'], true);
-				foreach ($model_list as $k => $model)
-				{
-					$model['count'] 		  = count($product['models']);
-					$model['enabled_checked'] = $model['enabled'] ? 'checked' : '';
-	
-					unset($model['template_list'], $model['template_data']);
-	
-					$product['models'][] = $model;
-				}
-				$brand['products'][] = $product;
-			}
-			$row_out[] = $brand;
+			$row_out[] = $brand_item;
 		}
-	
 		return $row_out;
+		
+		// $row_out 	= [];
+		// $brand_list = $this->epm->get_hw_brand_list(true, "name");
+		// //FIX: https://github.com/FreePBX-ContributedModules/endpointman/commit/2ad929d0b38f05c9da1b847426a4094c3314be3b
+	
+		// foreach ($brand_list as $i => $brand)
+		// {
+		// 	if ($brand['hidden'] == 1)
+		// 	{
+		// 		continue;
+		// 	}
+
+		// 	$brand['count'] 			   = count($row_out);
+		// 	$brand['cfg_ver_datetime']	   = $brand['cfg_ver'];
+		// 	$brand['cfg_ver_datetime_txt'] = date("c", $brand['cfg_ver']);
+	
+		// 	$row_mod = $this->brand_update_check($brand['directory']);
+			
+		// 	$brand['update_vers']	  = $row_mod['update_vers']		?? $brand['cfg_ver_datetime'];
+		// 	$brand['update_vers_txt'] = $row_mod['update_vers_txt'] ?? $brand['cfg_ver_datetime_txt'];
+		// 	$brand['update'] 		  = $row_mod['update']			?? false;
+		// 	$brand['products'] 		  = [];
+
+		// 	$product_list = $this->epm->get_hw_product_list($brand['id'], true);
+		// 	foreach ($product_list as $j => $product)
+		// 	{
+		// 		if ($product['hidden'] == 1)
+		// 		{
+		// 			continue;
+		// 		}
+
+		// 		$product['count'] 		  = count($brand['products']);
+		// 		$product['firmware_vers'] = $product['firmware_vers'] ?? 0;
+
+		// 		if ($product['firmware_vers'] > 0)
+		// 		{
+		// 			$product['update_fw'] = 1;
+		// 			$product['update_vers_fw'] = $this->firmware_update_check($product['id']);
+		// 		}
+		// 		else
+		// 		{
+		// 			$product['update_fw'] = 0;
+		// 			$product['update_vers_fw'] = "";
+		// 		}
+	
+		// 		$product['fw_type'] = $this->firmware_local_check($product['id']);
+		// 		$product['models']  = [];
+					
+		// 		$model_list = $this->epm->get_hw_model_list($product['id'], true);
+		// 		foreach ($model_list as $k => $model)
+		// 		{
+		// 			$model['count'] 		  = count($product['models']);
+		// 			$model['enabled_checked'] = $model['enabled'] ? 'checked' : '';
+	
+		// 			unset($model['template_list'], $model['template_data']);
+	
+		// 			$product['models'][] = $model;
+		// 		}
+		// 		$brand['products'][] = $product;
+		// 	}
+		// 	$row_out[] = $brand;
+		// }
+	
+		// return $row_out;
 	}
 
 
@@ -971,9 +1035,6 @@ class Endpointman_Config
             chdir($o);
 
 
-
-
-
 			try
 			{
 				$master_json = $this->epm->packages->readMasterJSON();
@@ -1058,9 +1119,8 @@ class Endpointman_Config
 
 				foreach ($brand_familys as &$family)
 				{
+					$product_db 		   = $brand_db->getProduct($family->getFamilyID());
 					$last_mod 			   = max($last_mod, $family->getLastModified());
-					$family_id 			   = $family->getFamilyID();
-					$family_short_name 	   = $family->getShortName();
 					$family_dir 		   = $family->getDirectory();
 					$family_file_json_path = $this->system->buildPath($local_endpoint, $brand_dir, $family_dir, "family_data.json");	// $local_family_data
 					
@@ -1071,19 +1131,6 @@ class Endpointman_Config
 						continue;
 					}
 
-					
-					
-
-					/* DONT DO THIS YET
-					$require_firmware = NULL;
-					if ((key_exists('require_firmware', $family_line['data'])) && ($remote) && ($family_line['data']['require_firmware'] == "TRUE")) {
-					echo "Firmware Requirment Detected!..........<br/>";
-					$this->install_firmware($family_line['data']['id']);
-					}
-					*
-					*/
-					
-					$product_db = $brand_db->getProduct($family->getFamilyID());
 					if ($product_db->isExistID())
 					{
 						$product_db->setName($family->getName());
@@ -1179,7 +1226,7 @@ class Endpointman_Config
 							if (! $model->delete())
 							{
 								if ($echomsg == true ) { out(_("Error!")); }
-								$outputError('del_hw_model', sprintf(_("Error: System Error in Delete Brand Product Model [%s] Function, Load Failure!"), $model_name));
+								$outputError('delete_model', sprintf(_("Error: System Error in Delete Model [%s] Function, Load Failure!"), $model_name));
 							}
 
 							// Sync MAC Brand By Model
@@ -1195,6 +1242,14 @@ class Endpointman_Config
 							}
 						}
 					}
+
+					/* DONT DO THIS YET
+					if ($family->isFirmwareRequired())
+					{
+						out(_("Firmware Requirment Detected, Initiating Firmware Installation..."));
+						$this->install_firmware($product_db);
+					}
+					*/
 				}
 			}
         }
@@ -1209,16 +1264,9 @@ class Endpointman_Config
 	 */
     public function download_brand($id)
 	{
-    	out(_("⚡ Install/Update Brand..."));
-		
-		if (!is_numeric($id))
+		if (!is_numeric($id) || $id < 1)
 		{
-			out(_("❌ No Brand ID Given!"));
-			return false;
-		}
-		elseif (! $this->epm->is_exist_hw_brand($id, 'id'))
-		{
-			out(sprintf(_("❌ Brand with id '%s' not found!"), $id));
+			out(sprintf(_("❌ Invalid Brand ID '%s'!"), $id));
 			return false;
 		}
 		elseif ($this->epm->getConfig('use_repo'))
@@ -1227,16 +1275,21 @@ class Endpointman_Config
 			return false;
 		}
 
+		$brand_db = $this->epm->packagesdb->getBrandByID($id);
+		if (! $brand_db->isExistID())
+		{
+			out(sprintf(_("❌ Brand with id '%s' not found in the database!"), $id));
+			return false;
+		}
 
-		$row = $this->epm->get_hw_brand($id, 'id', '*', true);
-		if (empty($row['directory']))
+		out(sprintf(_("⚡ Install/Update Brand '%s' ..."), $brand_db->getName()));
+		if (empty($brand_db->getDirectory()))
 		{
 			out(_("❌ Brand Directory Is Not Set!"));
 			return false;
 		}
 
-
-		$brand = $this->epm->packages->getBrandByDirectory($row['directory']);
+		$brand = $this->epm->packages->getBrandByDirectory($brand_db->getDirectory());
 		if(empty($brand))
 		{
 			out(_("❌ Brand Object is Empty!"));	
@@ -1453,18 +1506,9 @@ class Endpointman_Config
 
 			foreach ($brand->getFamilyList() as &$family)
 			{
-				out(_("⚡ Updating Family Lines ..."));
-
-				
-				//TODO: Code obsolete not present in new system
-				// if (($remote) && ($family_line['data']['require_firmware'] == "TRUE"))
-				// {
-				// 	out(_("Firmware Requirment Detected!.........."));
-				// 	$this->install_firmware($family_line['data']['id']);
-				// }
-
-
 				$product_db = $brand_db->getProduct($family->getFamilyId());
+
+				out(_("⚡ Updating Family Lines ..."));
 				if ($product_db->isExistID())
 				{
 					outn( sprintf(_("⚡ - Updating Family '%s'..."), $family->getShortName()));
@@ -1507,7 +1551,7 @@ class Endpointman_Config
 				}
 				foreach ($family->getModelList() as &$model)
 				{
-
+					//TODO: Pending the migrate of the class ProvisionerModelDB
 					foreach ($this->epm->get_hw_mac($model->getModelId(), 'model', 'id, global_custom_cfg_data, global_user_cfg_data') as $mac_list_item)
 					{
 						$global_custom_cfg_data = unserialize($mac_list_item['global_custom_cfg_data'] ?? '');
@@ -1541,16 +1585,6 @@ class Endpointman_Config
 							);
 							$this->epm->set_hw_mac($mac_list_item['id'], $update_hw_mac, 'id');
 							unset($update_hw_mac);
-
-
-							// $sql  = sprintf("UPDATE %s SET global_custom_cfg_data = :cfg_data WHERE id = :id", "endpointman_mac_list");
-							// $stmt = $this->db->prepare($sql);
-							// $stmt->execute([
-							// 	':cfg_data' => serialize(array('data' => $new_data, 'ari'  => $new_ari)),
-							// 	':id'	    => $data['id']
-							// ]);
-
-							// out(_("Done!"));
 							out(" ✔");
 						}
 
@@ -1603,17 +1637,6 @@ class Endpointman_Config
 							);
 							$this->epm->set_hw_mac($mac_list_item['id'], $update_hw_mac, 'id');
 							unset($update_hw_mac);
-
-
-
-							// $sql  = sprintf("UPDATE %s SET global_user_cfg_data = :cfg_data WHERE id = :id", "endpointman_mac_list");
-							// $stmt = $this->db->prepare($sql);
-							// $stmt->execute([
-							// 	':cfg_data' => serialize($new_data),
-							// 	':id'	    => $data['id'],
-							// ]);
-
-							// out(_("Done!"));
 							out(" ✔");
 						}
 					}
@@ -1749,6 +1772,14 @@ class Endpointman_Config
 						out(_(" ✔"));
 					}
 				}
+
+				/* DONT DO THIS YET
+				if ($family->isFirmwareRequired() && $remote)
+				{
+					out(_("Firmware Requirment Detected, Initiating Firmware Installation..."));
+					$this->install_firmware($product_db);
+				}
+				*/
 			}
 			out(_("✅ All Done!"));
 			//END Updating Family Lines
@@ -1765,51 +1796,60 @@ class Endpointman_Config
 	 */
     public function remove_brand($id = null, $force = false)
 	{
-		out(_("⚡ Uninstalla Brand ..."));
-
-		if (!is_numeric($id))
+		if (!is_numeric($id) || $id < 1)
 		{
-			out(_("❌ No ID Given!"));
+			out(sprintf(_("❌ Uninstall Brand Error, Brand ID '%s' is invalid!"), $id));
 			return false;
 		}
 		elseif ($this->epm->getConfig('use_repo') && !$force)
 		{
-			out(_("❌ Not allowed in repo mode!!"));
+			out(_("❌ Uninstalling brands is disabled while in repo mode!"));
 			return false;
         }
-		elseif (! $this->epm->is_exist_hw_brand($id, 'id'))
+
+		$brand_db = $this->epm->packagesdb->getBrandByID($id);
+		$brand 	  = $this->epm->packages->getBrandByDirectory($brand_db->getDirectory());
+		if (! $brand_db->isExistID())
 		{
-			out(sprintf(_("❌ Brand with id '%s' not found!"), $id));
+			out(sprintf(_("❌ Uninstall Brand Error, Brand ID '%s' not found in the database!"), $id));
+			return false;
+		}
+		else if(empty($brand))
+		{
+			out(_("❌ Failed to get data from the json file!"));
 			return false;
 		}
 
+		out(sprintf(_("⚡ Uninstalla Brand '%s' ..."), $brand_db->getName()));
         if (!$this->epm->getConfig('use_repo') && !$force)
 		{
-			$row = $this->epm->get_hw_brand($id, 'id', '*', true);
-			if (empty($row['directory'] || empty($row['id'])))
+			if (empty($brand_db->getDirectory()))
 			{
-				out(_("❌ Brand Directory or ID Is Not Set!"));
+				out(_("❌ Brand Directory Is Not Set!"));
 				return false;
 			}
-			$brand = $this->epm->packages->getBrandByDirectory($row['directory']);
-			if(empty($brand))
+		
+			foreach ($brand_db->getProducts() as &$product)
 			{
-				out(_("❌ Brand Object is Empty!"));	
-				return false;
-			}
-
-            foreach ($this->epm->get_hw_product($id, 'brand', 'id, firmware_vers') as $product)
-			{
-				if (empty($product['firmware_vers'])) {
+				if (!$product->isSetFirmwareVer())
+				{
 					continue;
 				}
-                $this->remove_firmware($product['id']);
+				$this->remove_firmware($product);
 			}
 			$brand->uninstall();
 		}
 
-		$this->epm->del_hw_brand_any_list($id);
-		
+		try
+		{
+			$brand_db->delete();
+		}
+		catch (\Exception $e)
+		{
+			out(sprintf(_("❌ %s"), $e->getMessage()));
+			return false;
+		}
+
 		out(_("✅ Uninstall Brand Success!"));
 		return true;
     }
@@ -1819,52 +1859,49 @@ class Endpointman_Config
 	/**
 	 * Installs firmware for a specific product.
 	 *
-	 * @param int $product_id The ID of the product to install the firmware for.
+	 * @param ProvisionerFamilyDB|null $product_db The product object to install the firmware for.
 	 * @return bool Returns true if the firmware is successfully installed, false otherwise.
 	 */
-    public function install_firmware($product_id)
+    public function install_firmware(?ProvisionerFamilyDB $product_db = null)
 	{
-    	out(_("⚡ Installa frimware..."));
-
-		if (empty($product_id) || !is_numeric($product_id))
+		if (empty($product_db))
 		{
-			out(_("❌ No ID Given!"));
+			out(_("❌ Install Firmware Error, Product Object is empty!"));
 			return false;
 		}
-		elseif (! $this->epm->is_exist_hw_product($product_id, "id", true))
+		else if (! $product_db->isExistID())
 		{
-			out(_("❌ Product is not exist in the database!"));
+			out(_("❌ Install Firmware Error, Product ID not found in the database!"));
 			return false;
 		}
 
-		$product_json = $this->epm->packages->getProductByProductID($product_id);
-		$product_db   = $this->epm->get_hw_product($product_id, "id", "*", true);
-
-		if (empty($product_json) || empty($product_db))
+		$product_json = $this->epm->packages->getProductByProductID($product_db->getID());
+		if (empty($product_json))
 		{
-			out(_("❌ Product JSON or Product DB is empty!"));
+			out(_("❌ Install Firmware Error, Product JSON is empty!"));
 			return false;
 		}
-		
-		$firmware_ver    = $product_json->getFirmwareVer();
-		$firmware_pkg    = $product_json->getFirmwarePkg();
-		$firmware_ver_db = $product_db['firmware_vers'] ?? '';
+
+		out(sprintf(_("⚡ Installa frimware for Product '%s' ..."), $product_db->getName()));
+
+		$firmware_ver = $product_json->getFirmwareVer();
+		$firmware_pkg = $product_json->getFirmwarePkg();
+		$tftp_path	  = $this->epm->getConfig('config_location');
 
         if (empty($firmware_ver))
 		{
 			out(_("❌ The firmware version is Null or blank!"));
         	return false;
         }
-
-        if ((empty($firmware_pkg)) OR ($firmware_pkg == "NULL"))
+        else if ((empty($firmware_pkg)) OR ($firmware_pkg == "NULL"))
 		{
 			out(_("❌ The firmware package is Null or blank!"));
         	return false;
         }
 
-        if ($firmware_ver > $firmware_ver_db)
+        if ($firmware_ver > $product_db->getFirmwareVer())
 		{
-			out(_("⚡ New Firmware Version Detected '%s'!"), $firmware_ver);
+			out(sprintf(_("⚡ New Firmware Version Detected '%s'!"), $firmware_ver));
 			if ($product_json->isMD5SumFirmwarePkgValid())
 			{
 				out(_("✅ Firmware file is already downloaded, skipping download!"));
@@ -1900,7 +1937,7 @@ class Endpointman_Config
 			$firmware_files = array();
 			try
 			{
-				$copy_ok = $product_json->installFirmwarePkg($this->epm->getConfig('config_location'), false, $firmware_files);
+				$copy_ok = $product_json->installFirmwarePkg($tftp_path, false, $firmware_files);
 			}
 			catch (\Exception $e)
 			{
@@ -1910,12 +1947,8 @@ class Endpointman_Config
 			finally
 			{
 				// Important: Update the firmware version in the database is necessary for the process to remove the firmware
-				$update_product = array(
-					'firmware_vers'  => $firmware_ver,
-					'firmware_files' => implode(",", array_keys($firmware_files)),
-				);
-				$this->epm->set_hw_product($product_db['id'], $update_product, 'id');
-				unset($update_product);
+				$product_db->setFirmwareVer($firmware_ver);
+				$product_db->setFirmwareFiles(array_keys($firmware_files));
 			}
 
 			foreach ($firmware_files as $file => $status)
@@ -1929,7 +1962,7 @@ class Endpointman_Config
 				{
 					if ($this->epm->getConfig('debug'))
 					{
-						out(sprintf(_("👁‍🗨 Copied '%s' to '%s'!"), $file, $this->epm->getConfig('config_location')));
+						out(sprintf(_("👁‍🗨 Copied '%s' to '%s'!"), $file, $tftp_path));
 					}
 				}
 			}
@@ -1937,7 +1970,7 @@ class Endpointman_Config
 			if (! $copy_ok)
 			{
 				out(_("❌ Copy Error Detected! Aborting Install!"));
-				$this->remove_firmware($product_id);
+				$this->remove_firmware($product_db);
 				out(_("👁‍🗨Info: Please Check Directory/Permissions!"));
 
 			}
@@ -1957,56 +1990,55 @@ class Endpointman_Config
 	/**
 	 * Removes firmware files associated with a specific ID.
 	 *
-	 * @param int|null $id The ID of the product to remove the firmware from.
+	 * @param ProvisionerFamilyDB|null $product_db The product object to remove the firmware for.
 	 * @return bool Returns true if the firmware is successfully removed, false otherwise.
 	 */
-    public function remove_firmware($id = null)
+    public function remove_firmware(?ProvisionerFamilyDB $product_db = null)
 	{
-		out(_("⚡ Uninstalla frimware ..."));
-
-		if (empty($id) || !is_numeric($id))
+		if (empty($product_db))
 		{
-			out(_("❌ No ID Given!"));
+			out(_("❌ Remove Firmware Error, Product Object is empty!"));
 			return false;
 		}
-		elseif (! $this->epm->is_exist_hw_product($id, "id", true))
+		if (! $product_db->isExistID())
 		{
-			out(_("❌ Product is not exist in the database!"));
+			out(_("❌ Remove Firmware Error, Product ID not found in the database!"));
 			return false;
 		}
 
-		$files  = null;
-		$result = $this->epm->get_hw_product($id, 'id', 'id, firmware_files', true);
-		if (!empty($result))
-		{
-			$files = $files['firmware_files'] ?? "";
-		}
-		if (empty($files))
+		out(sprintf(_("⚡ Uninstall Firmware for Product '%s' ..."), $product_db->getName()));
+		if ($product_db->countFirmwareFiles() == 0)
 		{
 			out(_("💥Skipping, the brand does not have any firmware files."));
 			return true;
 		}
 
-		$path_config = $this->epm->getConfig('config_location');
-		if (empty($path_config))
+		$tftp_path = $this->epm->getConfig('config_location');
+		if (empty($tftp_path))
 		{
 			out(_("⭕ Skipping, Config Location tftp is not set!"));
 		}
-		elseif (!file_exists($path_config))
+		elseif (!file_exists($tftp_path))
 		{
 			out(_("⭕ Skipping, Location tftp does not exist!"));
 		}
 		else
 		{
-			foreach (explode(",", $files) as $file)
+			foreach ($product_db->getFirmwareFiles() as $file)
 			{
 				if (empty(trim($file)) || !is_string($file))
 				{
 					continue;
 				}
-				$file_path = $this->epm->brindPath($path_config, $file);
+				$file_path = $this->epm->brindPath($tftp_path, $file);
 				if (file_exists($file_path) &&  is_file($file_path))
 				{
+					if (! is_writable($file_path))
+					{
+						out(sprintf(_("❌ Unable to remove firmware file '%s' due to permissions!"), $file));
+						continue;
+					}
+
 					// Remove files from tftp directory
 					if (!unlink($file_path))
 					{
@@ -2016,9 +2048,11 @@ class Endpointman_Config
 			}
 		}
 
-		$this->epm->set_hw_product($id, ['firmware_files' => '', 'firmware_vers' => ''], 'id');
+		$product_db->setFirmwareVer('');
+		$product_db->setFirmwareFiles(null);
 
 		out(_("✅ Firmware Removed Successfully!"));
+		return true;
     }
 
 
@@ -2038,20 +2072,18 @@ class Endpointman_Config
 		}
 
 		$product_json = $this->epm->packages->getProductByProductID($id);
-		$product_db   = $this->epm->get_hw_product($id, "id", "*", true);
+		$product_db   = $this->epm->packagesdb->getProductByID($id);
 
-		if (empty($product_json) || empty($product_db))
+		if (empty($product_json) || !$product_db->isExistID())
 		{
 			// Return false if the product is not found or the configuration drive is unknown.
 			return '';
 		}
 
-		$firmware_ver_json = $product_json->getFirmwareVer();
-		$firmware_ver_db   = $product_db['firmware_vers'] ?? '';
-
-		if ($firmware_ver_db < $firmware_ver_json)
+		$fw_ver_json = $product_json->getFirmwareVer();
+		if ($product_db->getFirmwareVer() < $fw_ver_json)
 		{
-			return $firmware_ver_json;
+			return $fw_ver_json;
 		}
 		return '';
     }
@@ -2073,18 +2105,13 @@ class Endpointman_Config
 			return "nothing";
 		}
 
-		// Not exist in the database or the configuration drive is unknown.
-		if (! $this->epm->is_exist_hw_product($id, 'id', true))
-		{
-			return "nothing";
-		}
-
+		$product_db   = $this->epm->packagesdb->getProductByID($id);
 		$product_json = $this->epm->packages->getProductByProductID($id);
-		$product_db   = $this->epm->get_hw_product($id, "id", "*", true);
-		if (empty($product_json) || empty($product_db))
+
+		if (! $product_db->isExistID() || empty($product_json))
 		{
 			// Is not found or the configuration drive is unknown.
-			return 'nothing';
+			return "nothing";
 		}
 
 		// The product not firmware available to install.
@@ -2094,7 +2121,7 @@ class Endpointman_Config
 		}
 
 		// The firmware is already installed, accion allowed is remove.
-		if (! empty($product_db['firmware_vers']))
+		if ($product_db->isSetFirmwareVer())
 		{
 			return "remove";
 		}

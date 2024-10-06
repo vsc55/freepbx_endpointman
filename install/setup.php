@@ -21,24 +21,25 @@
             ));
         }
 
-        public static function endpointsAutoload($class) {
+        public static function endpointsAutoload($class)
+        {
             // If for some reason we get here and the class is already loaded, return
             if (class_exists($class, FALSE))
             {
                 return TRUE;
             }
 
+            $epm = FreePBX::Endpointman();
+            
             // Try to include the class
-            $file = str_replace('_', DIRECTORY_SEPARATOR, $class) . '.php';
+            $file = sprintf("%s.php", str_replace('_', DIRECTORY_SEPARATOR, $class));
+            $file = $epm->system->buildPath($epm->PHONE_MODULES_PATH, $file);
 
-            $file = FreePBX::Endpointman()->PHONE_MODULES_PATH . "/" . $file;
-
-            if (is_file($file)) {
+            if (is_file($file))
+            {
                 require $file;
-
                 return TRUE;
             }
-            
             return FALSE;
         }
     }

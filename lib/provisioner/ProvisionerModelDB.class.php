@@ -471,21 +471,22 @@ class ProvisionerModelDB extends ProvisionerBaseDB
 		return $this->updateQuery("endpointman_model_list", ['template_list' => $list], $this->id);
 	}
 
-	public function getTemplateData(string $template)
+	// public function getTemplateData(string $template)
+    public function getTemplateData()
 	{
 		if (! $this->isExistID())
 		{
 			return false;
 		}
-		$list = $this->getTemplateList();
-		if (empty($list))
-		{
-			return false;
-		}
-		if (! in_array($template, $list))
-		{
-			return false;
-		}
+		// $list = $this->getTemplateList();
+		// if (empty($list))
+		// {
+		// 	return false;
+		// }
+		// if (! in_array($template, $list))
+		// {
+		// 	return false;
+		// }
 		$result = $this->querySelect("endpointman_model_list", "template_data", $this->id, 1, true);
 		$result = unserialize($result);
 		if (empty($result) || ! is_array($result))

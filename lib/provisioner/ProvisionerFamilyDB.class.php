@@ -77,6 +77,7 @@ class ProvisionerFamilyDB extends ProvisionerBaseDB
 
     public function findBy($find, $value)
     {
+        $this->destory = true;
         if (empty($find) || empty($value))
         {
             return false;
@@ -115,6 +116,7 @@ class ProvisionerFamilyDB extends ProvisionerBaseDB
             $this->setBrand(is_numeric($brand) ? $brand: null);
         }
 
+        $this->destory = false;
         return true;
     }
 
@@ -221,7 +223,15 @@ class ProvisionerFamilyDB extends ProvisionerBaseDB
         {
             return false;
         }
-        //TODO: Delete the models before deleting the family
+        foreach ($this->getModels() as &$model)
+        {
+            $model->delete();
+        }
+        $countModules = $this->countModels();
+        if ($countModules > 0)
+        {
+            throw new \Exception(sprintf(_("There are %s models that are not deleted!"), $countModules));
+        }
         $result = $this->deleteQuery("endpointman_product_list", $this->id);
         if ($result === false)
         {
@@ -502,29 +512,44 @@ class ProvisionerFamilyDB extends ProvisionerBaseDB
      * @param string $version The version to set.
      * @return bool True if the version is updated, false otherwise.
      */
-    public function setFirmwareVer(string $version)
+    public function setFirmwareVer(?string $version)
     {
         if (! $this->isExistID())
         {
             return false;
         }
+        $version = $version ?? "";
         return $this->updateQuery("endpointman_product_list", ['firmware_vers' => $version], $this->id);
+    }
+
+    /**
+     * Check if the firmware version is set.
+     * 
+     * @return bool True if the firmware version is set, false otherwise.
+     */
+    public function isSetFirmwareVer()
+    {
+        $fw_ver = $this->getFirmwareVer();
+        if (empty($fw_ver))
+        {
+            return false;
+        }
+        return true;
     }
 
     /**
      * Get the firmware package of the family (product).
      */
-    public function getFirmwarePkg()
+    public function getFirmwareFiles()
     {
         if (! $this->isExistID())
         {
             return false;
         }
         $result = $this->querySelect("endpointman_product_list", "firmware_files", $this->id, 1, true);
-        if (empty($result))
-        {
-            return false;
-        }
+        $result = explode(",", $result ?? "");
+        $result = array_filter($result);
+        // $result = array_filter($result, function($value) { return $value !== ''; });
         return $result;
     }
     
@@ -534,14 +559,26 @@ class ProvisionerFamilyDB extends ProvisionerBaseDB
      * @param string $pkg The package to set.
      * @return bool True if the package is updated, false otherwise.
      */
-    public function setFirmwarePkg(string $pkg)
+    public function setFirmwareFiles(?array $files = [])
     {
         if (! $this->isExistID())
         {
             return false;
         }
-        return $this->updateQuery("endpointman_product_list", ['firmware_files' => $pkg], $this->id);
+        $files = implode(",", $files ?? []);
+        return $this->updateQuery("endpointman_product_list", ['firmware_files' => $files], $this->id);
     }
+
+    public function countFirmwareFiles()
+    {
+        $count = $this->getFirmwareFiles();
+        if (empty($count) || ! is_array($count))
+        {
+            return 0;
+        }        
+        return count($count);
+    }
+
 
     /**
      * Get the configuration files of the family (product).
@@ -553,11 +590,8 @@ class ProvisionerFamilyDB extends ProvisionerBaseDB
             return [];
         }
         $result = $this->querySelect("endpointman_product_list", "config_files", $this->id, 1, true);
-        $retuls = explode(",", $result ?? "");
-        if (empty($result))
-        {
-            return [];
-        }
+        $result = explode(",", $result ?? "");
+        $result = array_filter($result);
         return $result;
     }
 
@@ -571,10 +605,185 @@ class ProvisionerFamilyDB extends ProvisionerBaseDB
         return $this->updateQuery("endpointman_product_list", ['config_files' => $files], $this->id);
     }
 
+    public function countConfigurationFiles()
+    {
+        $count = $this->getConfigurationFiles();
+        if (empty($count) || ! is_array($count))
+        {
+            return 0;
+        }        
+        return count($count);
+    }
+
+
+    public function getConfigurationsCustom()
+    {
+        if (! $this->isExistID())
+        {
+            return [];
+        }
+        $where = [
+            'product_id' => [
+                'operator' => "=", 
+                'value' => $this->getId()
+            ],
+        ];
+        $custom = $this->querySelect("endpointman_custom_configs", "*", $where);
+        return $custom;
+    }
+
+    public function getConfigurationCustom(int $configId)
+    {
+        if (! $this->isExistID())
+        {
+            return [];
+        }
+        $where = [
+            'id' => [
+                'operator' => "=", 
+                'value' => $configId
+            ],
+            'product_id' => [
+                'operator' => "=", 
+                'value' => $this->getId()
+            ],
+        ];
+        $custom = $this->querySelect("endpointman_custom_configs", "*", $where, 1);
+        return $custom;
+    }
+
+    public function setConfigurationCustom(string $original_name, string $name, string $data, bool $overwrite = false, bool $noException = true)
+    {
+        if (! $this->isExistID())
+        {
+            $msg = _("The family (product) does not exist!");
+            if ($noException)
+            {
+                $this->sendDebug($msg);
+                return false;
+            }
+            throw new \Exception($msg);
+        }
+
+        // Check if the required fields are set
+        if (empty($original_name) || empty($name) || empty($data))
+        {
+            $msg = _("The original name, name, and data are required!");
+            if ($noException)
+            {
+                $this->sendDebug($msg);
+                return false;
+            }
+            throw new \Exception($msg);
+        }
+
+        // Sanitize the input
+        // $original_name = addslashes($original_name);
+        // $name          = addslashes($name);
+        // $data          = addslashes($data);
+
+        $where_exist = [
+            'product_id' => [
+                'operator' => "=", 
+                'value' => $this->getId()
+            ],
+            'original_name' => [
+                'operator' => "=", 
+                'value' => $original_name
+            ],
+            'name' => [
+                'operator' => "=", 
+                'value' => $name
+            ],
+        ];
+
+        if (empty($this->querySelect("endpointman_custom_configs", "id", $where_exist, 1, true)))
+        {
+            $new = [
+                'product_id'    => $this->getId(),
+                'original_name' => $original_name,
+                'name'          => $name,
+                'data'          => $data,
+            ];
+            return $this->insertQuery("endpointman_custom_configs", $new, ['id']);
+        }
+        elseif ($overwrite)
+        {
+            $where_update = [
+                'product_id' => [
+                    'operator' => "=", 
+                    'value' => $this->getId()
+                ],
+                'original_name' => [
+                    'operator' => "=", 
+                    'value' => $original_name
+                ],
+                'name' => [
+                    'operator' => "=", 
+                    'value' => $name
+                ],
+            ];
+            $new = [
+                'data' => $data,
+            ];
+            return $this->updateQuery("endpointman_custom_configs", $new, $where_update);
+        }
+        else
+        {
+            $msg = _("The configuration already exists!");
+            if ($noException)
+            {
+                $this->sendDebug($msg);
+                return false;
+            }
+            throw new \Exception($msg);
+        }
+    }
+
+    public function countConfigurationsCustom()
+    {
+        $count = $this->getConfigurationsCustom();
+        if (empty($count))
+        {
+            return 0;
+        }        
+        return count($count);
+    }
+
+    public function delConfigurationCustom(int $configId)
+    {
+        if (! $this->isExistID())
+        {
+            return false;
+        }
+        $where = [
+            'id' => [
+                'operator' => "=", 
+                'value' => $configId
+            ],
+            'product_id' => [
+                'operator' => "=", 
+                'value' => $this->getId()
+            ],
+        ];
+        return $this->deleteQuery("endpointman_custom_configs", $where);
+    }
+
+
+
+
+
     
     
-    
-    public function getModulesList(string $select = "*")
+    /**
+     * Get the list of models in the family (product).
+     * 
+     * @param string $select The columns to select, default is "*".
+     * @param bool $showAll True to show all models, false otherwise. Default is true.
+     * @param bool $onlyEnabled True to show only enabled models, false otherwise. Default is false.
+     * @return array The list of models.
+     */
+    public function getModulesList(string $select = "*", bool $showAll = true, bool $onlyEnabled = false)
     {
         if (! $this->isExistID())
         {
@@ -590,18 +799,39 @@ class ProvisionerFamilyDB extends ProvisionerBaseDB
                 'value' => $this->id
             ],
         ];
+        if ($onlyEnabled)
+        {
+            $where['enabled'] = [
+                'operator' => "=", 
+                'value' => 1
+            ];
+        }
+        if (! $showAll)
+        {
+            $where['hidden'] = [
+                'operator' => "=", 
+                'value' => 0
+            ];
+        }
         $rows = $this->querySelect("endpointman_model_list", $select, $where);
         return $rows;
     }
 
-    public function getModels()
+    /**
+     * Get the list of models in the family (product).
+     * 
+     * @param bool $showAll True to show all models, false otherwise. Default is true.
+     * @param bool $onlyEnabled True to show only enabled models, false otherwise. Default is false.
+     * @return array The list of models, each model is an object of ProvisionerModelDB.
+     */
+    public function getModels(bool $showAll = true, bool $onlyEnabled = false)
     {
         if (! $this->isExistID())
         {
             return [];
         }
         $model_list = [];
-        foreach ($this->getModulesList("id") as $model)
+        foreach ($this->getModulesList("id", $showAll, $onlyEnabled) as $model)
         {
             $new_model = new ProvisionerModelDB($this->parent);
             $new_model->findBy('id', $model['id']);
@@ -610,9 +840,16 @@ class ProvisionerFamilyDB extends ProvisionerBaseDB
         return $model_list;
     }
 
-    public function countModels()
+    /**
+     * Count the number of models in the family (product).
+     * 
+     * @param bool $showAll True to show all models, false otherwise.
+     * @param bool $onlyEnabled True to show only enabled models, false otherwise.
+     * @return int The number of models.
+     */
+    public function countModels(bool $showAll = true, bool $onlyEnabled = false)
     {
-        $count = $this->getModulesList('id');
+        $count = $this->getModulesList('id', $showAll, $onlyEnabled);
         if (empty($count))
         {
             return 0;
@@ -635,6 +872,13 @@ class ProvisionerFamilyDB extends ProvisionerBaseDB
     //     return false;
     // }
 
+
+    /**
+     * Get the model object.
+     * 
+     * @param int $modelId The ID of the model.
+     * @return ProvisionerModelDB The model object.
+     */
     public function getModel(int $modelId)
     {
         $new_model = new ProvisionerModelDB($this->parent);
@@ -686,7 +930,8 @@ class ProvisionerFamilyDB extends ProvisionerBaseDB
             'directory'     => $this->getDirectory(),
             'cfg_ver'       => $this->getLastModified(),
             'firmware'      => $this->getFirmwareVer(),
-            'firmware_pkg'  => $this->getFirmwarePkg(),
+            'firmware_files'=> $this->getFirmwareFiles(),
+            'firmware_count'=> $this->countFirmwareFiles(),
             'cfg_files'     => $this->getConfigurationFiles(),
 
             'models'        => $this->getModels(),

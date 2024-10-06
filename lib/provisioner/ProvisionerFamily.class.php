@@ -14,6 +14,7 @@ class ProvisionerFamily extends ProvisionerBase
     private $firmware_ver        = '';
     private $firmware_pkg        = 'NULL';
     private $firmware_md5sum     = '';
+    private $firmware_required   = null;
     private $description         = '';
     private $configuration_files = '';
     private $provisioning_types  = [];
@@ -112,10 +113,20 @@ class ProvisionerFamily extends ProvisionerBase
         $this->firmware_ver        = $jsonData['data']['firmware_ver']        ?? '';
         $this->firmware_pkg        = $jsonData['data']['firmware_pkg']        ?? 'NULL';
         $this->firmware_md5sum     = $jsonData['data']['firmware_md5sum']     ?? '';
+        $this->firmware_required   = $jsonData['data']['firmware_required']   ?? null;
         $this->description         = $jsonData['data']['description']         ?? '';
         $this->configuration_files = $jsonData['data']['configuration_files'] ?? [];
         $this->provisioning_types  = $jsonData['data']['provisioning_types']  ?? [];
 
+        if (! empty($this->firmware_required) && is_string($this->firmware_required))
+        {
+            $this->firmware_required = strtolower($this->firmware_required) == 'true' ? true : false;
+        }
+        else
+        {
+            $this->firmware_required = false;
+        }
+        
         if (is_string($this->configuration_files))
         {
             $this->configuration_files = explode(',', $this->configuration_files);
@@ -177,6 +188,7 @@ class ProvisionerFamily extends ProvisionerBase
         $this->firmware_ver        = '';
         $this->firmware_pkg        = 'NULL';
         $this->firmware_md5sum     = '';
+        $this->firmware_required   = null;
         $this->description         = '';
         $this->configuration_files = '';
         $this->provisioning_types  = [];
@@ -266,6 +278,11 @@ class ProvisionerFamily extends ProvisionerBase
         return $this->firmware_md5sum;
     }
 
+    public function isFirmwareRequired()
+    {
+        return $this->firmware_required;
+    }
+
     public function getDescription()
     {
         return $this->description;
@@ -287,6 +304,115 @@ class ProvisionerFamily extends ProvisionerBase
         }
         return $this->configuration_files;
     }
+
+
+    public function getConfigurationFile(string $file, bool $noException = true)
+    {
+        $data_return    = null;
+        if (empty($file) || !in_array($file, $this->getConfigurationFiles()))
+        {
+            if ($noException) { return $data_return; }
+            throw new \Exception(sprintf(_("Invalid configuration file '%s' [%s]!"), $file, __CLASS__));
+        }
+
+        $file_full_path = $this->getConfigurationFilePath($file);
+        switch(true)
+        {
+            case empty($file_full_path):
+                $err_msg = _("Empty configuration file path!");
+                break;
+
+            case !file_exists($file_full_path):
+                $err_msg = sprintf(_("Configuration file '%s' not exist!"), $file_full_path);
+                break;
+
+            case !is_file($file_full_path):
+                $err_msg = sprintf(_("Configuration file '%s' is not a file!"), $file_full_path);
+                break;
+
+            case !is_readable($file_full_path):
+                $err_msg = sprintf(_("Configuration file '%s' is not readable!"), $file_full_path);
+                break;
+
+            default:
+                $err_msg = null;
+        }
+
+        if (!empty($err_msg))
+        {
+            if ($noException) { return $data_return; }
+            throw new \Exception(sprintf(_("%s [%s]!"), $err_msg, __CLASS__));
+        }
+
+        $data_return = "";
+        if (filesize($file_full_path) > 0)
+        {
+            $fo          = fopen($file_full_path, "rb");
+            $data_return = fread($fo, filesize($file_full_path));
+            fclose($fo);
+        }
+        return $data_return;
+    }
+
+    public function setConfigurationFile(string $file, string $data, bool $overwrite = false, bool $noException = true)
+    {
+        $file_full_path = $this->getConfigurationFilePath($file);
+        $file_dir_path  = dirname($file_full_path);
+        switch(true)
+        {
+            case empty($file_full_path):
+                $err_msg = _("Empty configuration file path!");
+                break;
+
+            case file_exists($file_full_path) && ! $overwrite:
+                $err_msg = sprintf(_("Configuration file '%s' already exist!"), $file_full_path);
+                break;
+
+            case !is_file($file_full_path):
+                $err_msg = sprintf(_("Configuration file '%s' is not a file!"), $file_full_path);
+                break;
+
+            case !file_exists($file_full_path) && !is_writable($file_dir_path):
+                $err_msg = sprintf(_("Configuration directory '%s' is not writable!"), $file_dir_path);
+                break;
+
+            case file_exists($file_full_path) && !is_writable($file_full_path):
+                $err_msg = sprintf(_("Configuration file '%s' is not writable!"), $file_full_path);
+                break;
+
+            default:
+                $err_msg = null;
+        }
+
+        if (!empty($err_msg))
+        {
+            if ($noException) { return false; }
+            throw new \Exception(sprintf(_("%s [%s]!"), $err_msg, __CLASS__));
+        }
+
+        try
+        {
+            $wfh = fopen($file_full_path, 'w');
+            fwrite($wfh, $data);
+            fclose($wfh);
+        }
+        catch (\Exception $e)
+        {
+            if ($noException) { return false; }
+            throw $e;
+        }
+        return true;
+    }
+
+    public function getConfigurationFilePath(string $file)
+    {
+        if (empty($file) || empty($this->getBrandDirecotry()) || empty($this->getDirectory()))
+        {
+            return null;
+        }
+        return $this->system->buildPath($this->getPathEndPoint(), $this->getBrandDirecotry(), $this->getDirectory(), $file);
+    }
+
 
     public function getProvisioningTypes()
     {
