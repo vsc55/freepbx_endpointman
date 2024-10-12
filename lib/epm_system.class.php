@@ -845,4 +845,25 @@ class epm_system {
 		}
         return true;
     }
+
+    /**
+     * This function takes a string and tries to determine if it's a valid mac addess, return FALSE if invalid
+     * 
+     * @param string $mac The full mac address
+     * @return mixed The cleaned up MAC is it was a MAC or False if not a mac
+     */
+    public function mac_check_clean($mac)
+	{
+		// regular expression that validates mac with :, -, spaces, or without separators
+		$pattern = '/^([0-9a-f]{2}[:-]?){5}([0-9a-f]{2})$/i';
+
+		// check if the mac complies with the pattern
+		if (preg_match($pattern, $mac))
+		{
+			// clean the mac of non-hexadecimal characters and convert them to uppercase
+			return strtoupper(preg_replace('/[^0-9a-f]/i', '', $mac));
+		}
+		// return false if not a valid mac address
+		return false;
+    }
 }

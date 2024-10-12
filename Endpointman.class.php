@@ -417,27 +417,27 @@ class Endpointman extends FreePBX_Helpers implements BMO {
 			{
 				case "epm_devices":
 					$data_return = $this->epm_devices->ajaxHandler($data['module_tab'], $data['command']);
-					break;
+				break;
 
 				case "epm_oss":
 					$data_return = $this->epm_oss->ajaxHandler($data['module_tab'], $data['command']);
-					break;
+				break;
 
 				case "epm_placeholders":
 					$data_return = $this->epm_placeholders->ajaxHandler($data['module_tab'], $data['command']);
-					break;
+				break;
 
 				case "epm_templates":
 					$data_return = $this->epm_templates->ajaxHandler($data['module_tab'], $data['command']);
-					break;
+				break;
 
 				case "epm_config":
 					$data_return = $this->epm_config->ajaxHandler($data);
-					break;
+				break;
 
 				case "epm_advanced":
 					$data_return = $this->epm_advanced->ajaxHandler($data);
-					break;
+				break;
 
 				case "epm_ajax":
 					$id = $request['id'] ?? null;
@@ -589,7 +589,7 @@ class Endpointman extends FreePBX_Helpers implements BMO {
 							$i++;
 						}
 					}
-					break;
+				break;
 
 				default:
 					$data_return = array("status" => false, "message" => _("Invalid section module '%s'!", $data['module_sec']));
@@ -1736,6 +1736,235 @@ class Endpointman extends FreePBX_Helpers implements BMO {
 
 
 	
+
+
+
+
+
+	//BulkHandler hooks
+	public function bulkhandlerGetTypes()
+	{
+		return [
+			'endpointman' => [
+				'name' 		  => _('OSS End Point Manager'),
+				'description' => _('Import/Export Device List')
+			]
+		];
+	}
+
+	public function bulkhandlerGetHeaders($type)
+	{
+		// <mac>,<brand>,<model>,<extension>,<line>
+		// -> mac - is required (Dirección MAC)
+		// ->brand - can be blank
+		// ->model - can be blank
+		// ->extension - can be blank
+		// ->line - can be blank
+		//
+		// Examples:
+		// -> 001122334455,Cisco/Linksys,7940,4321,1
+		// -> 112233445566,Cisco/Linksys,7945,,
+
+		$headers = [];
+  		switch($type)
+		{
+			case 'endpointman':
+				$headers = [
+					'mac' => [
+						'required' 	  => true,
+						'identifier'  => "mac",
+						'description' => _("The mac address of the device"),
+					],
+					'brand' => [
+						'required' 	  => false,
+						'identifier'  => "brand",
+						'description' => _("The brand name of the device"),
+					],
+					'model' => [
+						'required' 	  => false,
+						'identifier'  => "model",
+						'description' => _("The model id of the device"),
+					],
+					'extension' => [
+						'required' 	  => false,
+						'identifier'  => "extension",
+						'description' => _("The extension number"),
+					],
+					'line' => [
+						'required' 	  => false,
+						'identifier'  => "line",
+						'description' => _("The line of the device"),
+					]
+				];
+			break;
+		}
+		return $headers;
+	}
+
+	public function bulkhandlerExport($type)
+	{
+		$data = null;
+		switch ($type)
+		{
+			case 'endpointman':
+				$data = $this->bulkhandlerExport_run();
+			break;
+		}
+		return $data;
+	}
+
+	public function bulkhandlerImport($type, $rawData)
+	{
+		$ret = null;
+		switch ($type)
+		{
+			case 'endpointman':
+				$ret = $this->bulkhandlerImport_run($rawData);
+			break;
+		}
+		return $ret;
+	}
+
+	public function bulkhandlerExport_run()
+	{
+		//TODO: Pending upate code
+		// <mac>,<brand>,<model>,<extension>,<line>
+		// -> mac - is required (Dirección MAC)
+		// ->brand - can be blank
+		// ->model - can be blank
+		// ->extension - can be blank
+		// ->line - can be blank
+		//
+		// Examples:
+		// -> 001122334455,Cisco/Linksys,7940,4321,1
+		// -> 112233445566,Cisco/Linksys,7945,,
+
+		$sql = 'SELECT
+			endpointman_mac_list.id,
+			endpointman_mac_list.mac,
+			endpointman_line_list.ipei,
+			endpointman_brand_list.name,
+			endpointman_model_list.model,
+			endpointman_line_list.ext,
+			endpointman_line_list.line 
+				FROM 
+					endpointman_mac_list,
+					endpointman_model_list,
+					endpointman_brand_list,
+					endpointman_line_list
+						WHERE
+							endpointman_line_list.mac_id = endpointman_mac_list.id AND 
+							endpointman_model_list.id = endpointman_mac_list.model AND 
+							endpointman_model_list.brand = endpointman_brand_list.id
+		';
+		$result = sql($sql,'getAll',\PDO::FETCH_ASSOC);
+
+		$data = [];
+		foreach ($result as $row)
+		{
+			$data[] = [
+				'id' 		=> $row['id'],
+				'mac' 		=> $row['mac'],
+				'ipei' 		=> $row['ipei'],
+				'brand' 	=> $row['name'],
+				'model' 	=> $row['model'],
+				'extension' => $row['ext'],
+				'line' 		=> $row['line']
+			];
+		}
+		return $data;
+	}
+
+	public function bulkhandlerImport_run($rawData = [])
+	{
+		// <mac>,<brand>,<model>,<extension>,<line>
+		// -> mac - is required (Dirección MAC)
+		// ->brand - can be blank
+		// ->model - can be blank
+		// ->extension - can be blank
+		// ->line - can be blank
+		//
+		// Examples:
+		// -> 001122334455,Cisco/Linksys,7940,4321,1
+		// -> 112233445566,Cisco/Linksys,7945,,
+
+		if (is_array($rawData) && count($rawData) > 0)
+		{
+			foreach ($rawData as $data)
+			{
+				//TODO: Pending tested
+				continue;
+
+				// $data['mac']
+				// $data['brand']
+				// $data['model']
+				// $data['extension']
+				// $data['line']
+
+				if (empty($data) || empty($data['mac']))
+				{
+					continue;
+				}
+
+				$mac = $this->system->mac_check_clean($data['mac']);
+				if (! $mac)
+				{
+					// out(sprintf(_("Error: Invalid Mac on line %d!"), $i));
+					continue;
+				}
+
+				
+				$sql = sprintf("SELECT id FROM endpointman_brand_list WHERE name LIKE '%%%s%%' LIMIT 1", $data['brand']);
+				$res = sql($sql, 'getAll', \PDO::FETCH_ASSOC);
+
+				if (count(array($res)) == 0) {
+					// out(sprintf(_("Error: Invalid Brand Specified on line %d!"), $i));
+					continue;
+				}
+
+
+				$brand_id  = sql($sql, 'getOne');
+				$sql_model = sprintf("SELECT id FROM endpointman_model_list WHERE brand = %s AND model LIKE '%%%s%%' LIMIT 1", $brand_id, $data['model']);
+				$sql_ext   = sprintf("SELECT extension, name FROM users WHERE extension LIKE '%%%s%%' LIMIT 1", $data['extension']);
+				$line_id   = $data['line'] ?? 1;
+				$res_model = sql($sql_model);
+
+				if (count(array($res_model)) == 0)
+				{
+					// out(sprintf(_("Error: Invalid Model Specified on line %d!"), $i));
+					continue;
+				}
+	
+				$model_id = sql($sql_model, 'getRow', \PDO::FETCH_ASSOC);
+				$model_id = $model_id['id'];
+				$res_ext  = sql($sql_ext);
+
+				if (count(array($res_ext)) == 0)
+				{
+					// out(sprintf(_("Error: Invalid Extension Specified on line %d!"), $i));
+					continue;
+				}
+
+				$ext 		  = sql($sql_ext, 'getRow', \PDO::FETCH_ASSOC);
+				$description = $ext['name'];
+				$ext 		 = $ext['extension'];
+
+				$this->epm->add_device($mac, $model_id, $ext, 0, $line_id, $description);
+
+				// out(_("<font color='#FF0000'><b>Please reboot & rebuild all imported phones</b></font>"));
+			}
+		}
+		$ret = ['status' => true];
+		return $ret;
+	}
+
+
+
+
+
+
+
+
 
 
 

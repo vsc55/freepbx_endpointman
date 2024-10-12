@@ -39,12 +39,9 @@ class Endpointman_Advanced
 			"oui_add",						// Tab OUI Manager
 			"oui_remove",					// Tab OUI Manager
 			"poce_tree", 					// Tab POCE
-			// "poce_list_brands",
-			// "poce_select",
 			"poce_select_file",				// Tab POCE
 			"poce_save_file",				// Tab POCE
 			"poce_save_as_file",			// Tab POCE
-			// "poce_sendid",
 			"poce_delete_config_custom",	// Tab POCE
 			"list_files_brands_export",		// Tab Manual Upload
 			"saveconfig"					// Tab Settings
@@ -139,15 +136,6 @@ class Endpointman_Advanced
 							$command_allow = false;
 					}
 				break;
-
-				case 'iedl':
-					switch ($command)
-					{
-						default:
-							$command_allow = false;
-					}
-					
-				break;
 				
 				case 'poce':
 					switch ($command)
@@ -238,24 +226,6 @@ class Endpointman_Advanced
 			$endprocess = false;
 			switch ($mod_tab)
 			{
-				case "iedl":
-					switch ($command)
-					{
-						case "export":
-							$endprocess = true;
-							$this->activeFlush();
-							$this->epm_advanced_iedl_export();
-							//TODO: Igual tenemos que hacer exit para que no añadia el <br /><hr><br />
-							break;
-
-						case "import":
-							$endprocess = true;
-							$this->activeFlush();
-							$this->epm_advanced_iedl_import();
-							break;
-					}
-				break;
-
 				case "manual_upload":
 					switch ($command)
 					{
@@ -326,10 +296,6 @@ class Endpointman_Advanced
 			'poce' => array(
 				"name" => _("Product Configuration Editor"),
 				"page" => '/views/epm_advanced_poce.page.php'
-			),
-			'iedl' => array(
-				"name" => _("Import/Export My Devices List"),
-				"page" => '/views/epm_advanced_iedl.page.php'
 			),
 			'manual_upload' => array(
 				"name" => _("Package Import/Export"),
@@ -756,10 +722,6 @@ class Endpointman_Advanced
 					$provisioner_ver 						= $this->epm->getConfig("endpoint_vers");
 					$data_tab['config']['provisioner_ver']  = sprintf(_("%s at %s"), date("d-M-Y", $provisioner_ver) , date("g:ia", $provisioner_ver));
 					$data_tab['config']['brands_available'] = $this->epm->brands_available("", false);
-				break;
-
-				case "iedl":
-					$data_tab['config']['url_export'] = "config.php?display=epm_advanced&subpage=iedl&command=export";
 				break;
 
 				case "oui_manager":
@@ -2484,122 +2446,6 @@ class Endpointman_Advanced
 	}
 
 
-	/**** FUNCIONES SEC MODULO "epm_advanced\iedl" ****/
-	public function epm_advanced_iedl_export($sFileName = "devices_list.csv")
-	{
-		header("Content-type: text/csv");
-		header('Content-Disposition: attachment; filename="'.$sFileName.'"');
-		$outstream = fopen("php://output",'w');
-		$sql = 'SELECT endpointman_mac_list.mac, endpointman_line_list.ipei, endpointman_brand_list.name, endpointman_model_list.model, endpointman_line_list.ext,endpointman_line_list.line FROM endpointman_mac_list, endpointman_model_list, endpointman_brand_list, endpointman_line_list WHERE endpointman_line_list.mac_id = endpointman_mac_list.id AND endpointman_model_list.id = endpointman_mac_list.model AND endpointman_model_list.brand = endpointman_brand_list.id';
-		$result = sql($sql,'getAll',\PDO::FETCH_ASSOC);
-		foreach($result as $row) {
-			fputcsv($outstream, $row);
-		}
-		fclose($outstream);
-		exit;
-	}
-
-	//Dave B's Q&D file upload security code (http://us2.php.net/manual/en/features.file-upload.php)
-	public function epm_advanced_iedl_import()
-	{
-		if (count($_FILES["files"]["error"]) == 0) {
-			out(_("Error: Can Not Find Uploaded Files!"));
-		}
-		else
-		{
-			//$allowedExtensions = array("application/csv", "text/plain", "text/csv", "application/vnd.ms-excel");
-			$allowedExtensions = array("csv", "txt");
-			foreach ($_FILES["files"]["error"] as $key => $error) {
-				outn(sprintf(_("Importing CSV file %s ...<br />"), $_FILES["files"]["name"][$key]));
-
-				if ($error != UPLOAD_ERR_OK) {
-					out(sprintf(_("Error: %s"), $this->file_upload_error_message($error)));
-				}
-				else
-				{
-					//if (!in_array($_FILES["files"]["type"][$key], $allowedExtensions)) {
-					if (!in_array(substr(strrchr($_FILES["files"]["name"][$key], "."), 1), $allowedExtensions)) {
-						out(sprintf(_("Error: We support only CSV and TXT files, type file %s no support!"), $_FILES["files"]["name"][$key]));
-					}
-					elseif ($_FILES["files"]["size"][$key] == 0) {
-						out(sprintf(_("Error: File %s size is 0!"), $_FILES["files"]["name"][$key]));
-					}
-					else {
-						$uploadfile = $this->epm->system->buildPath($this->epm->MODULE_PATH, basename($_FILES["files"]["name"][$key]));
-						$uploadtemp = $_FILES["files"]["tmp_name"][$key];
-
-						if (move_uploaded_file($uploadtemp, $uploadfile)) {
-							//Parse the uploaded file
-							$handle = fopen($uploadfile, "r");
-							$i = 1;
-							while (($device = fgetcsv($handle, filesize($uploadfile))) !== FALSE) {
-								if ($device[0] != "") {
-									if ($mac = $this->mac_check_clean($device[0])) {
-										$sql = "SELECT id FROM endpointman_brand_list WHERE name LIKE '%" . $device[1] . "%' LIMIT 1";
-										//$res = sql($sql);
-										$res = sql($sql, 'getAll', \PDO::FETCH_ASSOC);
-
-										if (count(array($res)) > 0) {
-											$brand_id = sql($sql, 'getOne');
-										//	$brand_id = $brand_id[0];
-
-											$sql_model = "SELECT id FROM endpointman_model_list WHERE brand = " . $brand_id . " AND model LIKE '%" . $device[2] . "%' LIMIT 1";
-											$sql_ext = "SELECT extension, name FROM users WHERE extension LIKE '%" . $device[3] . "%' LIMIT 1";
-
-											$line_id = isset($device[4]) ? $device[4] : 1;
-
-											$res_model = sql($sql_model);
-											if (count(array($res_model))) {
-												$model_id = sql($sql_model, 'getRow', \PDO::FETCH_ASSOC);
-												$model_id = $model_id['id'];
-
-												$res_ext = sql($sql_ext);
-												if (count(array($res_ext))) {
-													$ext = sql($sql_ext, 'getRow', \PDO::FETCH_ASSOC);
-													$description = $ext['name'];
-													$ext = $ext['extension'];
-//TODO: PENDIENTE ASIGNAR OBJ
-FreePBX::Endpointman()->add_device($mac, $model_id, $ext, 0, $line_id, $description);
-
-													//out(_("Done!"));
-												} else {
-													out(sprintf(_("Error: Invalid Extension Specified on line %d!"), $i));
-												}
-											} else {
-												out(sprintf(_("Error: Invalid Model Specified on line %d!"), $i));
-											}
-										} else {
-											out(sprintf(_("Error: Invalid Brand Specified on line %d!"), $i));
-										}
-									} else {
-										out(sprintf(_("Error: Invalid Mac on line %d!"), $i));
-									}
-								}
-								$i++;
-
-							}
-							fclose($handle);
-							unlink($uploadfile);
-							out(_("<font color='#FF0000'><b>Please reboot & rebuild all imported phones</b></font>"));
-						} else {
-							out(_("Error: Possible file upload attack!"));
-						}
-					}
-				}
-			}
-		}
-	}
-
-
-
-
-
-
-
-
-
-
-
 
 
 	public function tftp_check(bool $noException = true)
@@ -2714,25 +2560,4 @@ FreePBX::Endpointman()->add_device($mac, $model_id, $ext, 0, $line_id, $descript
     			return _('Unknown upload error');
     	}
     }
-
-	/**
-     * This function takes a string and tries to determine if it's a valid mac addess, return FALSE if invalid
-     * @param string $mac The full mac address
-     * @return mixed The cleaned up MAC is it was a MAC or False if not a mac
-     */
-    function mac_check_clean($mac)
-	{
-		// regular expression that validates mac with :, -, spaces, or without separators
-		$pattern = '/^([0-9a-f]{2}[:-]?){5}([0-9a-f]{2})$/i';
-
-		// check if the mac complies with the pattern
-		if (preg_match($pattern, $mac))
-		{
-			// clean the mac of non-hexadecimal characters and convert them to uppercase
-			return strtoupper(preg_replace('/[^0-9a-f]/i', '', $mac));
-		}
-		// return false if not a valid mac address
-		return false;
-    }
-
 }

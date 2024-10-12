@@ -144,5 +144,11 @@
 		<framework namespace="FreePBX\Console\Command" class="Chown">
 			<method namespace="FreePBX\modules" class="Endpointman" callingMethod="fwcChownFiles">chownFreepbx</method>
 		</framework>
+		<bulkhandler class="Bulkhandler" namespace="FreePBX\modules">
+			<method callingMethod="getHeaders" class="Endpointman" namespace="FreePBX\modules">bulkhandlerGetHeaders</method>
+			<method callingMethod="getTypes" class="Endpointman" namespace="FreePBX\modules">bulkhandlerGetTypes</method>
+			<method callingMethod="import" class="Endpointman" namespace="FreePBX\modules">bulkhandlerImport</method>
+			<method callingMethod="export" class="Endpointman" namespace="FreePBX\modules">bulkhandlerExport</method>
+		</bulkhandler>
 	</hooks>
 </module>

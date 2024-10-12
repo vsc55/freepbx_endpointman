@@ -552,24 +552,6 @@ function epm_advanced_tab_manual_upload_list_files_brand_expor()
 
 
 
-
-
-// INI: FUNCTION TAB IEDL
-function epm_advanced_tab_iedl_bt_import() 
-{
-	var urlStr = "config.php?display=epm_advanced&subpage=iedl&command=import";
-	var formname = "iedl_form_import_cvs";
-	epm_global_dialog_action("iedlimport", urlStr, formname);
-}
-// END: FUNCTION TAB IEDL
-
-
-
-
-
-
-
-
 // INI: FUNCTION TAB POCE
 
 function epm_advanced_tab_poce_resize() {
