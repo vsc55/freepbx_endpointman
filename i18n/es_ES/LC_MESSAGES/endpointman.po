@@ -9,8 +9,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: \n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2024-08-22 02:31+0200\n"
-"PO-Revision-Date: 2024-08-22 02:37+0200\n"
+"POT-Creation-Date: 2024-10-12 18:28+0200\n"
+"PO-Revision-Date: 2024-10-12 19:28+0200\n"
 "Last-Translator: Ernesto <ecasas@sangoma.com>\n"
 "Language-Team: Spanish <http://weblate.freepbx.org/projects/fpbxcn/"
 "endpointman/es_ES/>\n"
@@ -19,28 +19,27 @@ msgstr ""
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2; plural=n != 1;\n"
-"X-Generator: Poedit 3.4.4\n"
+"X-Generator: Poedit 3.5\n"
 "X-Poedit-SourceCharset: UTF-8\n"
 "X-Poedit-Basepath: ../../..\n"
 "X-Poedit-SearchPath-0: .\n"
 "X-Poedit-SearchPathExcluded-0: _old\n"
 "X-Poedit-SearchPathExcluded-1: i18n\n"
 
-#: Endpointman.class.php:80
+#: Endpointman.class.php:86
 msgid "Not given a FreePBX Object"
-msgstr ""
+msgstr "No se le ha dado un objeto FreePBX"
 
-#: Endpointman.class.php:126 Endpointman_Advanced.class.php:27
-#: Endpointman_Config.class.php:34
-msgid "Can't Load Local Endpoint Manager Directory!"
-msgstr "¡No se puede cargar el directorio local de Endpoint Manager!"
+#: Endpointman.class.php:126
+#, php-format
+msgid "Can't Load Local Endpoint Manager Directory (%s)!"
+msgstr "¡No se puede cargar el directorio local de Endpoint Manager (%s)!"
 
-#: Endpointman.class.php:148 Endpointman_Advanced.class.php:31
-#: Endpointman_Config.class.php:38
+#: Endpointman.class.php:134
 msgid "Endpoint Manager can not create the modules folder!"
 msgstr "¡Endpoint Manager no puede crear la carpeta de módulos!"
 
-#: Endpointman.class.php:188
+#: Endpointman.class.php:158
 #, php-format
 msgid ""
 "Configuration Directory is not writable!<br />\n"
@@ -56,7 +55,7 @@ msgstr ""
 "'chown -hR root:%2$s %3$s'<br />\n"
 "'chmod g+w %3$s'"
 
-#: Endpointman.class.php:198
+#: Endpointman.class.php:168
 #, php-format
 msgid ""
 "Configuration Directory is not a directory or does not exist! Please change "
@@ -65,50 +64,51 @@ msgstr ""
 "¡El directorio de configuración no es un directorio o no existe! Por favor, "
 "cambie la ubicación aquí: <a href='%s'>Aquí</a>"
 
-#: Endpointman.class.php:285
+#: Endpointman.class.php:412
 msgid "No command was sent!"
 msgstr "Ningún comando fue enviado!"
 
-#: Endpointman.class.php:404
+#: Endpointman.class.php:531
 msgid "Custom..."
 msgstr "Personalizado..."
 
-#: Endpointman.class.php:470
-msgid "Invalid section module!"
-msgstr "Módulo de sección no válido!"
+#: Endpointman.class.php:595
+#, php-format
+msgid "Invalid section module '%s'!"
+msgstr "¡Módulo de sección '%s' inválido!"
 
-#: Endpointman.class.php:551
+#: Endpointman.class.php:680
 msgid "End Point Manager"
 msgstr "Administracion End Point"
 
-#: Endpointman.class.php:567 Endpointman.class.php:608
-#: Endpointman.class.php:635 Endpointman.class.php:694
-#: Endpointman.class.php:721
+#: Endpointman.class.php:696 Endpointman.class.php:737
+#: Endpointman.class.php:764 Endpointman.class.php:823
+#: Endpointman.class.php:850
 msgid "ERROR AJAX:"
 msgstr "ERROR AJAX:"
 
-#: Endpointman.class.php:668 Endpointman_Templates.class.php:141
-#: views/epm_advanced_poce.page.php:84 views/epm_devices_main.page.php:474
+#: Endpointman.class.php:797 Endpointman_Templates.class.php:141
+#: views/epm_advanced_poce.page.php:80 views/epm_devices_main.page.php:474
 #: views/epm_devices_main.page.php:492 views/epm_devices_main.page.php:505
 #: views/epm_devices_main.page.php:515
 msgid "Delete"
 msgstr "Borrar"
 
-#: Endpointman.class.php:668
+#: Endpointman.class.php:797
 msgid "Delete this Extension from Endpoint Manager"
-msgstr ""
+msgstr "Eliminar esta extensión de Endpoint Manager"
 
-#: Endpointman.class.php:669
+#: Endpointman.class.php:798
 msgid "Go to phone web interface"
 msgstr "Ir a la interfaz web del teléfono"
 
-#: Endpointman.class.php:670 Endpointman.class.php:742
+#: Endpointman.class.php:799 Endpointman.class.php:871
 #: views/epm_advanced_iedl.page.php:88 views/epm_advanced_iedl.page.php:90
 #: views/epm_devices_main.page.php:244 views/epm_devices_main.page.php:467
 msgid "MAC Address"
 msgstr "Direccion MAC"
 
-#: Endpointman.class.php:670 Endpointman.class.php:742
+#: Endpointman.class.php:799 Endpointman.class.php:871
 msgid ""
 "The MAC Address of the Phone Assigned to this Extension/Device. <br />(Leave "
 "Blank to Remove from Endpoint Manager)"
@@ -116,11 +116,11 @@ msgstr ""
 "La dirección MAC del teléfono asignado a esta extensión/dispositivo. <br /"
 ">(Dejar en blanco para eliminar de Endpoint Manager)"
 
-#: Endpointman.class.php:670 Endpointman.class.php:742
+#: Endpointman.class.php:799 Endpointman.class.php:871
 msgid "Please enter a valid MAC Address"
 msgstr "Introduzca una dirección MAC válida"
 
-#: Endpointman.class.php:671 Endpointman.class.php:743
+#: Endpointman.class.php:800 Endpointman.class.php:872
 #: views/epm_advanced_iedl.page.php:88 views/epm_advanced_iedl.page.php:91
 #: views/epm_advanced_oui_manager.page.php:27
 #: views/epm_advanced_oui_manager.page.php:73
@@ -129,481 +129,1040 @@ msgstr "Introduzca una dirección MAC válida"
 msgid "Brand"
 msgstr "Marca"
 
-#: Endpointman.class.php:671 Endpointman.class.php:743
+#: Endpointman.class.php:800 Endpointman.class.php:872
 msgid "The Brand of this Phone."
 msgstr "La marca de este teléfono."
 
-#: Endpointman.class.php:672 Endpointman.class.php:744
+#: Endpointman.class.php:801 Endpointman.class.php:873
 #: views/epm_advanced_iedl.page.php:88 views/epm_advanced_iedl.page.php:92
 #: views/epm_devices_main.page.php:519
 msgid "Model"
 msgstr "Modelo"
 
-#: Endpointman.class.php:672 Endpointman.class.php:744
+#: Endpointman.class.php:801 Endpointman.class.php:873
 msgid "The Model of this Phone."
 msgstr "El modelo de este teléfono."
 
-#: Endpointman.class.php:673 Endpointman.class.php:745
+#: Endpointman.class.php:802 Endpointman.class.php:874
 #: views/epm_advanced_iedl.page.php:88 views/epm_advanced_iedl.page.php:94
 #: views/epm_devices_main.page.php:247 views/epm_devices_main.page.php:470
 msgid "Line"
 msgstr "Linea"
 
-#: Endpointman.class.php:673 Endpointman.class.php:745
+#: Endpointman.class.php:802 Endpointman.class.php:874
 msgid "The Line of this Extension/Device."
 msgstr "La línea de esta extensión/dispositivo."
 
-#: Endpointman.class.php:674 Endpointman.class.php:746
+#: Endpointman.class.php:803 Endpointman.class.php:875
 #: views/epm_devices_main.page.php:249 views/epm_devices_main.page.php:472
 msgid "Template"
 msgstr "Plantilla"
 
-#: Endpointman.class.php:675 views/epm_devices_main.page.php:549
+#: Endpointman.class.php:804 views/epm_devices_main.page.php:549
 msgid "Reboot"
 msgstr "Reiniciar"
 
-#: Endpointman.class.php:675
+#: Endpointman.class.php:804
 msgid "Reboot this Phone on Submit"
 msgstr ""
 
-#: Endpointman.class.php:746
+#: Endpointman.class.php:875
 msgid "The Template of this Phone."
 msgstr "La plantilla de este teléfono."
 
-#: Endpointman.class.php:747
+#: Endpointman.class.php:876
 msgid ""
 "Note: This might reboot the phone if it's already registered to Asterisk"
 msgstr ""
 
-#: Endpointman.class.php:1111 Endpointman_Templates.class.php:31
+#: Endpointman.class.php:1272 Endpointman_Templates.class.php:31
 msgid "Current Templates"
 msgstr "Plantillas actuales"
 
-#: Endpointman.class.php:1115 Endpointman_Templates.class.php:35
+#: Endpointman.class.php:1276 Endpointman_Templates.class.php:35
 msgid "Template Editor"
 msgstr "Editor de plantillas"
 
-#: Endpointman.class.php:1127 Endpointman.class.php:1136
+#: Endpointman.class.php:1288 Endpointman.class.php:1297
 msgid "Invalid page!"
 msgstr "¡Página no válida!"
 
-#: Endpointman.class.php:1170 Endpointman_Advanced.class.php:40
-#: views/epm_templates/editor.views.template.php:70 views/rnav.php:21
-msgid "Settings"
-msgstr "Configuración"
-
-#: Endpointman.class.php:1174 Endpointman_Advanced.class.php:44
-msgid "OUI Manager"
-msgstr "Administrador OUI"
-
-#: Endpointman.class.php:1178 Endpointman_Advanced.class.php:48
-msgid "Product Configuration Editor"
-msgstr "Editor de configuración de producto"
-
-#: Endpointman.class.php:1182 Endpointman_Advanced.class.php:52
-msgid "Import/Export My Devices List"
-msgstr "Importar/exportar mi lista de dispositivos"
-
-#: Endpointman.class.php:1186 Endpointman_Advanced.class.php:56
-msgid "Package Import/Export"
-msgstr "Paquete de importación/exportación"
-
-#: Endpointman.class.php:1218 Endpointman_Advanced.class.php:352
-msgid "Git not installed!"
-msgstr "GIT no instalado!"
-
-#: Endpointman.class.php:1298
+#: Endpointman.class.php:1326
 #, php-format
 msgid "Page Not Found (%s)!!!!"
 msgstr "Página no encontrada (%s)!!!"
 
-#: Endpointman.class.php:1380
-msgid "Creating Phone Modules Directory..."
-msgstr "Creación de un directorio de módulos telefónicos..."
+#: Endpointman.class.php:1413
+msgid "⚡ Endpoint Manager Installer ..."
+msgstr "⚡ Instalador de Endpoint Manager ..."
 
-#: Endpointman.class.php:1382 Endpointman.class.php:1389
-#: Endpointman.class.php:1396 Endpointman.class.php:1410
-#: Endpointman.class.php:1479 Endpointman.class.php:1486
-#: Endpointman_Advanced.class.php:572 Endpointman_Advanced.class.php:679
-msgid "OK"
-msgstr "OK"
+#: Endpointman.class.php:1414
+msgid "⚡ Createing Structure directories..."
+msgstr "⚡ Creación de directorios de estructura..."
 
-#: Endpointman.class.php:1387
-msgid "Moving Auto Provisioner Class..."
-msgstr "Mover la clase de aprovisionador automático..."
+#: Endpointman.class.php:1418
+msgid "⚡ Creating symlink to web provisioner..."
+msgstr "⚡ Creación de un enlace simbólico al aprovisionador web..."
 
-#: Endpointman.class.php:1394
-msgid "Creating temp folder..."
-msgstr "Creando una carpeta temporal..."
+#: Endpointman.class.php:1428
+msgid " Skipped (already exists) ✔"
+msgstr " Omitido (ya existe) ✔"
 
-#: Endpointman.class.php:1402
-msgid "Creating symlink to web provisioner..."
-msgstr "Creación de un enlace simbólico al aprovisionador web..."
+#: Endpointman.class.php:1433
+#, php-format
+msgid ""
+"The file '%s' already exists and not pointing to the correct location, "
+"location is '%s'!"
+msgstr ""
+"El archivo '%s' ya existe y no apunta a la ubicación correcta, ¡la ubicación "
+"es '%s'!"
 
-#: Endpointman.class.php:1405 Endpointman_Advanced.class.php:92
-#: Endpointman_Advanced.class.php:992 Endpointman_Advanced.class.php:1072
-#: Endpointman_Config.class.php:83 Endpointman_Config.class.php:1155
+#: Endpointman.class.php:1439
+#, php-format
+msgid "The file '%s' already exists and is not a symbolic link!"
+msgstr "¡El archivo '%s' ya existe y no es un enlace simbólico!"
+
+#: Endpointman.class.php:1447
+#, php-format
+msgid "Your permissions are wrong on '%s', web provisioning link not created!"
+msgstr ""
+"Sus permisos son incorrectos en '%s', ¡el enlace de aprovisionamiento web no "
+"se ha creado!"
+
+#: Endpointman.class.php:1453
+#, php-format
+msgid "Failed to create symbolic link '%s' to '%s'!"
+msgstr "¡No se pudo crear el enlace simbólico '%s' a '%s'!"
+
+#: Endpointman.class.php:1472
+msgid "⚡ Inserting Config Global and Updating..."
+msgstr "⚡ Insertando Config Global y actualizando..."
+
+#: Endpointman.class.php:1529 Endpointman.class.php:1540
+#: Endpointman_Config.class.php:987 Endpointman_Config.class.php:1772
+msgid " ✔"
+msgstr ""
+
+#: Endpointman.class.php:1535
+msgid "⚡ Removing Structure Directories..."
+msgstr ""
+
+#: Endpointman.class.php:1542
+#, fuzzy
+#| msgid "Removing symlink to web provisioner"
+msgid "⚡ Removing Symlink to web provisioner..."
+msgstr "Eliminación del enlace simbólico al aprovisionador web"
+
+#: Endpointman.class.php:1554 Endpointman.class.php:1564
+#: Endpointman.class.php:1570
+msgid "❌"
+msgstr ""
+
+#: Endpointman.class.php:1555
+#, php-format
+msgid "Failed to remove symbolic link '%s' to '%s'!"
+msgstr ""
+
+#: Endpointman.class.php:1565
+#, php-format
+msgid ""
+"The file '%s' already exists and not pointing to the correct location, "
+"location is '%s, can't remove!"
+msgstr ""
+
+#: Endpointman.class.php:1571
+#, php-format
+msgid "The file '%s' already exists and is not a symbolic link, can't remove!"
+msgstr ""
+
+#: Endpointman_Advanced.class.php:26 Endpointman_Config.class.php:39
+#: lib/epm_packages.class.php:26
+#, php-format
+msgid "[%s] Can't Load Local Endpoint Manager Directory!"
+msgstr "[%s] ¡No se puede cargar el directorio local de Endpoint Manager!"
+
+#: Endpointman_Advanced.class.php:30 Endpointman_Config.class.php:43
+#: lib/epm_packages.class.php:30
+#, php-format
+msgid "[%s] Endpoint Manager can not create the modules folder!"
+msgstr "[%s] ¡Endpoint Manager no puede crear la carpeta de módulos!"
+
+#: Endpointman_Advanced.class.php:65 Endpointman_Advanced.class.php:2282
+#: Endpointman_Advanced.class.php:2369 Endpointman_Config.class.php:100
+#: Endpointman_Config.class.php:1228 Endpointman_Config.class.php:1236
 msgid "Error!"
 msgstr "Error!"
 
-#: Endpointman.class.php:1406
-#, php-format
-msgid ""
-"<strong>Your permissions are wrong on %s, web provisioning link not created!"
-"</strong>"
-msgstr ""
-"<strong>¡Sus permisos son incorrectos en %s, enlace de aprovisionamiento web "
-"no creado!</strong>"
-
-#: Endpointman.class.php:1419
-msgid "Locating NMAP + ARP + ASTERISK Executables"
-msgstr "Localización de ejecutables NMAP + ARP + ASTERISK"
-
-#: Endpointman.class.php:1430
-msgid "Inserting data into the global vars Table..."
-msgstr ""
-
-#: Endpointman.class.php:1482
-#, php-format
-msgid "Update Version Number to %s..."
-msgstr "Actualice el número de versión a %s..."
-
-#: Endpointman.class.php:1493
-msgid "Removing Phone Modules Directory"
-msgstr "Eliminación del directorio de módulos telefónicos"
-
-#: Endpointman.class.php:1501
-msgid "Removing symlink to web provisioner"
-msgstr "Eliminación del enlace simbólico al aprovisionador web"
-
-#: Endpointman.class.php:1669 Endpointman_Config.class.php:1761
-msgid "Maximum stack depth exceeded"
-msgstr "Se ha excedido la profundidad máxima de la pila"
-
-#: Endpointman.class.php:1673 Endpointman_Config.class.php:1766
-msgid "Underflow or the modes mismatch"
-msgstr "JSON con formato incorrecto o inválido"
-
-#: Endpointman.class.php:1677 Endpointman_Config.class.php:1771
-msgid "Unexpected control character found"
-msgstr ""
-"Error del carácter de control, posiblemente se ha codificado de forma "
-"incorrecta"
-
-#: Endpointman.class.php:1681 Endpointman_Config.class.php:1776
-msgid "Syntax error, malformed JSON"
-msgstr "Error de sintaxis, JSON malformada"
-
-#: Endpointman.class.php:1685 Endpointman_Config.class.php:1781
-msgid "Malformed UTF-8 characters, possibly incorrectly encoded"
-msgstr ""
-"Caracteres UTF-8 mal formados, posiblemente codificados de forma incorrecta"
-
-#: Endpointman.class.php:1689 Endpointman_Config.class.php:1786
-msgid "Unknown error"
-msgstr "Error desconocido"
-
-#: Endpointman.class.php:1695 Endpointman_Config.class.php:1793
-#, php-format
-msgid "Cant find file: %s"
-msgstr "No se puede encontrar el archivo: %s"
-
-#: Endpointman.class.php:1804
-msgid "Local TFTP Server is not correctly configured"
-msgstr "El servidor TFTP local no está configurado correctamente"
-
-#: Endpointman.class.php:1811
-#, php-format
-msgid "Unable to write to %s"
-msgstr "No se puede escribir a %s"
-
-#: Endpointman.class.php:1819
-msgid ""
-"Disabled is set to \"yes\" in /etc/xinetd.d/tftp. Please fix <br />Then "
-"restart your TFTP service"
-msgstr ""
-
-#: Endpointman.class.php:1826
-msgid ""
-"TFTP Server is not running. <br />See here for instructions on how to "
-"install one: <a href=\"http://wiki.provisioner.net/index.php/Tftp\" "
-"target=\"_blank\">http://wiki.provisioner.net/index.php/Tftp</a>"
-msgstr ""
-
-#: Endpointman.class.php:1835
-msgid "TFTP Server check failed on last past. Skipping"
-msgstr ""
-
-#: Endpointman_Advanced.class.php:93 Endpointman_Config.class.php:85
+#: Endpointman_Advanced.class.php:66 Endpointman_Config.class.php:102
 msgid "Saving Changes..."
 msgstr "Guardando cambios…"
 
-#: Endpointman_Advanced.class.php:94 Endpointman_Config.class.php:86
+#: Endpointman_Advanced.class.php:67 Endpointman_Config.class.php:103
 msgid "Saving Changes... Ok!"
 msgstr "Guardando cambios… Listo!"
 
-#: Endpointman_Advanced.class.php:95 Endpointman_Config.class.php:91
+#: Endpointman_Advanced.class.php:68 Endpointman_Config.class.php:108
 msgid "Invalid Option!"
 msgstr "Opcion no valida!"
 
-#: Endpointman_Advanced.class.php:198
+#: Endpointman_Advanced.class.php:71
+msgid "File Content Obtained Successfully"
+msgstr "Contenido del archivo obtenido correctamente"
+
+#: Endpointman_Advanced.class.php:79 Endpointman_Config.class.php:115
+msgid "Empty data received or data is not foromatted correctly!"
+msgstr ""
+"Se han recibido datos vacíos o los datos no se han procesado correctamente"
+
+#: Endpointman_Advanced.class.php:207
 #, php-format
 msgid "Tab '%s' not valid!"
 msgstr "¡La pestaña '%s' no es válida!"
 
-#: Endpointman_Advanced.class.php:205
+#: Endpointman_Advanced.class.php:215
 #, php-format
 msgid "Command '%s' not found!"
 msgstr "¡Comando '%s' no encontrado!"
 
-#: Endpointman_Advanced.class.php:301 Endpointman_Advanced.class.php:588
-#: Endpointman_Advanced.class.php:754 Endpointman_Advanced.class.php:868
-#: Endpointman_Config.class.php:331 Endpointman_Templates.class.php:346
-msgid "No send value!"
-msgstr "No se ha enviado VALOR!"
+#: Endpointman_Advanced.class.php:319
+#: views/epm_templates/editor.views.template.php:70 views/rnav.php:21
+msgid "Settings"
+msgstr "Configuración"
 
-#: Endpointman_Advanced.class.php:371 Endpointman_Templates.class.php:242
-msgid "Directory Not Writable!"
-msgstr "Directorio no escribible!"
+#: Endpointman_Advanced.class.php:323
+msgid "OUI Manager"
+msgstr "Administrador OUI"
 
-#: Endpointman_Advanced.class.php:374
-msgid "Not a Vaild Directory.<br /> Try to run 'mkdir "
-msgstr "No es un directorio válido. <br / Intente ejecutar \"mkdir "
+#: Endpointman_Advanced.class.php:327
+msgid "Product Configuration Editor"
+msgstr "Editor de configuración de producto"
 
-#: Endpointman_Advanced.class.php:377 Endpointman_Templates.class.php:250
+#: Endpointman_Advanced.class.php:331
+msgid "Import/Export My Devices List"
+msgstr "Importar/exportar mi lista de dispositivos"
+
+#: Endpointman_Advanced.class.php:335
+msgid "Package Import/Export"
+msgstr "Paquete de importación/exportación"
+
+#: Endpointman_Advanced.class.php:372 Endpointman_Advanced.class.php:852
+msgid "Git not installed!"
+msgstr "GIT no instalado!"
+
+#: Endpointman_Advanced.class.php:395
+#, fuzzy
+#| msgid "Provisioner Package"
+msgid "Provisioner Settings"
+msgstr "Provisioner Paquete"
+
+#: Endpointman_Advanced.class.php:398
+#: views/epm_templates/editor.views.dialog.cfg.global.php:37
+msgid "IP address of phone server"
+msgstr "Dirección IP del servidor telefónico (PBX)"
+
+#: Endpointman_Advanced.class.php:401
+msgid "IP Server PBX..."
+msgstr "IP del Servidor PBX..."
+
+#: Endpointman_Advanced.class.php:402
+msgid ""
+"The IP Address of the Server PBX that will be used to provision the phones."
+msgstr ""
+"La dirección IP del servidor PBX que se utilizará para aprovisionar los "
+"teléfonos."
+
+#: Endpointman_Advanced.class.php:405 Endpointman_Advanced.class.php:418
+#: Endpointman_Advanced.class.php:511
+msgid "Use Me!"
+msgstr "¡Úsame!"
+
+#: Endpointman_Advanced.class.php:411
+msgid "Internal IP address of phone server"
+msgstr ""
+
+#: Endpointman_Advanced.class.php:414
+#, fuzzy
+#| msgid "Server PBX..."
+msgid "Internal IP Server PBX..."
+msgstr "Servidor PBX..."
+
+#: Endpointman_Advanced.class.php:415
+#, fuzzy
+#| msgid "IP address of the PBX server that will use the terminals."
+msgid ""
+"The Internal IP Address of the Server PBX that will be used to provision the "
+"phones."
+msgstr "Dirección IP del servidor PBX que van a utilizar los terminales."
+
+#: Endpointman_Advanced.class.php:424
+#: views/epm_templates/editor.views.dialog.cfg.global.php:66
+msgid "Configuration Type"
+msgstr "Tipo de Configuracion"
+
+#: Endpointman_Advanced.class.php:427
+msgid ""
+"The type of server that will be used to provision the phones (TFTP/FTP, "
+"HTTP, HTTPS)."
+msgstr ""
+
+#: Endpointman_Advanced.class.php:433
+#: views/epm_templates/editor.views.dialog.cfg.global.php:71
+msgid "File (TFTP/FTP)"
+msgstr "Archivos (TFTP/FTP)"
+
+#: Endpointman_Advanced.class.php:438
+msgid "HTTP"
+msgstr "HTTP"
+
+#: Endpointman_Advanced.class.php:443
+msgid "HTTPS"
+msgstr "HTTPS"
+
+#: Endpointman_Advanced.class.php:450
+#, php-format
+msgid "<strong>Updated!</strong> - Point your phones to: %s"
+msgstr "<strong>¡Actualizado!</strong> - Apunten sus teléfonos a: %s"
+
+#: Endpointman_Advanced.class.php:456
+#: views/epm_templates/editor.views.dialog.cfg.global.php:97
+msgid "Global Final Config & Firmware Directory"
+msgstr "Directorio global de firmware y configuración final"
+
+#: Endpointman_Advanced.class.php:459
+msgid "Configuration Location..."
+msgstr "Configuración Ubicación..."
+
+#: Endpointman_Advanced.class.php:460
+msgid "Path location root TFTP server."
+msgstr "Ubicación de la ruta raíz del servidor TFTP."
+
+#: Endpointman_Advanced.class.php:463
+msgid "Phone Admin Password"
+msgstr "Contraseña de administrador del teléfono"
+
+#: Endpointman_Advanced.class.php:467
+msgid "Admin Password..."
+msgstr "Contraseña de administrador..."
+
+#: Endpointman_Advanced.class.php:468
+msgid ""
+"Enter a admin password for your phones. Must be 6 characters and only "
+"nummeric is recommendet!"
+msgstr ""
+"Introduzca una contraseña de administrador para sus teléfonos. Debe tener 6 "
+"caracteres y sólo se recomienda numérico"
+
+#: Endpointman_Advanced.class.php:471
+msgid "Phone User Password"
+msgstr "Contraseña de usuario del teléfono"
+
+#: Endpointman_Advanced.class.php:475
+msgid "User Password..."
+msgstr "Contraseña de usuario..."
+
+#: Endpointman_Advanced.class.php:476
+msgid ""
+"Enter a user password for your phones. Must be 6 characters and only "
+"nummeric is recommendet!"
+msgstr ""
+"Introduzca una contraseña de usuario para sus teléfonos. ¡Debe tener 6 "
+"caracteres y solo se recomienda nummérico!"
+
+#: Endpointman_Advanced.class.php:481
+msgid "Time Settings"
+msgstr "Ajustes de Hora"
+
+#: Endpointman_Advanced.class.php:484
+#: views/epm_templates/editor.views.dialog.cfg.global.php:129
+msgid "Time Zone"
+msgstr "Zona Horaria"
+
+#: Endpointman_Advanced.class.php:487
+msgid "Time Zone configuration terminasl. Like England/London"
+msgstr ""
+"Zona Horaria que se usar para configura los terminales. Ejemplo Europa/Madrid"
+
+#: Endpointman_Advanced.class.php:490
+#: views/epm_advanced_manual_upload.page.php:99
+#: views/epm_advanced_oui_manager.page.php:79
+#: views/epm_devices_main.page.php:536 views/epm_templates_manager.page.php:85
+#: views/epm_templates_manager.page.php:113 views/page.main.config.php:18
+#: views/page.main.config.php:38
+msgid "Search"
+msgstr "Buscar"
+
+#: Endpointman_Advanced.class.php:498
+msgid "Time Zone PBX"
+msgstr "Zona Horaria de la PBX"
+
+#: Endpointman_Advanced.class.php:504
+#: views/epm_templates/editor.views.dialog.cfg.global.php:165
+msgid "Time Server (NTP Server)"
+msgstr "Servidor de Tiempo (NTP Server)"
+
+#: Endpointman_Advanced.class.php:507
+msgid "NTP Server..."
+msgstr "Servidor NTP..."
+
+#: Endpointman_Advanced.class.php:508
+msgid "The NTP Server that will be used to provision the phones."
+msgstr "El servidor NTP que se usará para aprovisionar los teléfonos."
+
+#: Endpointman_Advanced.class.php:519
+msgid "Local Paths"
+msgstr "Rutas Locales"
+
+#: Endpointman_Advanced.class.php:522
+msgid "NMAP Executable Path"
+msgstr "Ruta Ejecutable NMAP"
+
+#: Endpointman_Advanced.class.php:525
+msgid "Nmap Location..."
+msgstr "Ubicación de Nmap..."
+
+#: Endpointman_Advanced.class.php:526
+msgid "The location of the Nmap binary."
+msgstr "La ubicación del binario Nmap."
+
+#: Endpointman_Advanced.class.php:529
+msgid "Arp Executable Path"
+msgstr "Ruta ejecutable Arp"
+
+#: Endpointman_Advanced.class.php:532
+msgid "Arp Location..."
+msgstr "Ubicación de Arp..."
+
+#: Endpointman_Advanced.class.php:533
+msgid "The location of the Arp binary."
+msgstr "La ubicación del binario Arp."
+
+#: Endpointman_Advanced.class.php:536
+msgid "Asterisk Executable Path"
+msgstr "Ruta Ejecutable Asterisk"
+
+#: Endpointman_Advanced.class.php:539
+msgid "Asterisk Location..."
+msgstr "Ubicación de Asterisk..."
+
+#: Endpointman_Advanced.class.php:540
+msgid "The location of the Asterisk binary."
+msgstr "La ubicación del binario Asterisk."
+
+#: Endpointman_Advanced.class.php:543
+msgid "Tar Executable Path"
+msgstr "Ruta del ejecutable Tar"
+
+#: Endpointman_Advanced.class.php:546
+msgid "Tar Location..."
+msgstr "Ubicación de TAR..."
+
+#: Endpointman_Advanced.class.php:547
+msgid "The location of the Tar binary."
+msgstr "La ubicación del binario Tar."
+
+#: Endpointman_Advanced.class.php:550
+msgid "Netstat Executable Path"
+msgstr "Ruta ejecutable de Netstat"
+
+#: Endpointman_Advanced.class.php:553
+msgid "Netstat Location..."
+msgstr "Ubicación de Netstat..."
+
+#: Endpointman_Advanced.class.php:554
+msgid "The location of the Netstat binary."
+msgstr "La ubicación del binario Netstat."
+
+#: Endpointman_Advanced.class.php:557
+msgid "Whoami Executable Path"
+msgstr "Ruta ejecutable de Whoami"
+
+#: Endpointman_Advanced.class.php:560
+msgid "Whoami Location..."
+msgstr "Ubicación de Whoami..."
+
+#: Endpointman_Advanced.class.php:561
+msgid "The location of the Whoami binary."
+msgstr "La ubicación del binario Whoami."
+
+#: Endpointman_Advanced.class.php:564
+msgid "Nohup Executable Path"
+msgstr "Ruta de acceso ejecutable de Nohup"
+
+#: Endpointman_Advanced.class.php:567
+msgid "Nohup Location..."
+msgstr "Ubicación de Nohup..."
+
+#: Endpointman_Advanced.class.php:568
+msgid "The location of the Nohup binary."
+msgstr "La ubicación del binario Nohup."
+
+#: Endpointman_Advanced.class.php:571
+msgid "Groups Executable Path"
+msgstr "Ruta de acceso ejecutable Grupos"
+
+#: Endpointman_Advanced.class.php:574
+msgid "Groups Location..."
+msgstr "Grupos Ubicación..."
+
+#: Endpointman_Advanced.class.php:575
+msgid "The location of the Groups binary."
+msgstr "La ubicación del binario Groups."
+
+#: Endpointman_Advanced.class.php:580
+msgid "Web Directories"
+msgstr "Directorios Web"
+
+#: Endpointman_Advanced.class.php:583
+msgid "Package Server"
+msgstr "Servidor de Paquetes"
+
+#: Endpointman_Advanced.class.php:586
+msgid "Server Packages..."
+msgstr ""
+
+#: Endpointman_Advanced.class.php:587
+msgid "URL download files and packages the configuration terminals."
+msgstr ""
+"URL de descarga de archivos y paquetes de los terminales de configuración."
+
+#: Endpointman_Advanced.class.php:590
+msgid "Default Mirror FreePBX"
+msgstr "Mirror por defecto de FreePBX"
+
+#: Endpointman_Advanced.class.php:598
+msgid "Other Settings"
+msgstr "Otros ajustes"
+
+#: Endpointman_Advanced.class.php:601
+#, fuzzy
+#| msgid "Disable Endpoint Manager Conflict Warning"
+msgid "Disable Endpoint Warning"
+msgstr "Deshabilitar la advertencia de conflicto de Endpoint Manager"
+
+#: Endpointman_Advanced.class.php:603
+msgid ""
+"Enable this setting if you dont want to get a warning message anymore if you "
+"have the Commercial Endpoint Manager installed together with OSS Endpoint "
+"Manager."
+msgstr ""
+"Habilite esta configuración si no desea recibir más un mensaje de "
+"advertencia si tiene el Gestor de Endpoints Comercial instalado junto con el "
+"Gestor de Endpoints OSS."
+
+#: Endpointman_Advanced.class.php:607 Endpointman_Advanced.class.php:630
+#: Endpointman_Advanced.class.php:649 Endpointman_Advanced.class.php:667
+#: Endpointman_Advanced.class.php:685 Endpointman_Advanced.class.php:703
+#: Endpointman_Advanced.class.php:721 Endpointman_Advanced.class.php:739
+msgid "No"
+msgstr "No"
+
+#: Endpointman_Advanced.class.php:612 Endpointman_Advanced.class.php:635
+#: Endpointman_Advanced.class.php:654 Endpointman_Advanced.class.php:672
+#: Endpointman_Advanced.class.php:690 Endpointman_Advanced.class.php:708
+#: Endpointman_Advanced.class.php:726 Endpointman_Advanced.class.php:744
+msgid "Yes"
+msgstr "Yes"
+
+#: Endpointman_Advanced.class.php:621
+msgid "Experimental Settings"
+msgstr "Ajustes experimentales"
+
+#: Endpointman_Advanced.class.php:624
+msgid "Enable FreePBX ARI Module"
+msgstr "Habilitar el módulo ARI de FreePBX"
+
+#: Endpointman_Advanced.class.php:626
+#, php-format
+msgid "Enable FreePBX ARI Module %s."
+msgstr "Habilite el módulo ARI de FreePBX %s."
+
+#: Endpointman_Advanced.class.php:642
+msgid "Debug"
+msgstr "Debug"
+
+#: Endpointman_Advanced.class.php:644
+msgid "Enable this setting if you want to see debug messages."
+msgstr "Active esta opción si desea ver los mensajes de depuración."
+
+#: Endpointman_Advanced.class.php:661
+msgid "Disable Tooltips"
+msgstr "Desactivar las sugerencias"
+
+#: Endpointman_Advanced.class.php:663
+msgid "Disable Tooltip popups"
+msgstr "Desactivar ventanas emergentes"
+
+#: Endpointman_Advanced.class.php:679
+msgid "Allow Duplicate Extensions"
+msgstr "Permitir extensiones duplicadas"
+
+#: Endpointman_Advanced.class.php:681
+msgid ""
+"Assign the same extension to multiple phones (Note: This is not supported by "
+"Asterisk)"
+msgstr ""
+"Asignar la misma extensión a múltiples teléfonos (Nota: Esto no es soportado "
+"por Asterisk)"
+
+#: Endpointman_Advanced.class.php:697
+msgid "Allow Saving Over Default Configuration Files"
+msgstr "Permitir guardar Sobre los archivos de configuración predeterminados"
+
+#: Endpointman_Advanced.class.php:699
+msgid ""
+"When editing the configuration files allows one to save over the global "
+"template default instead of saving directly to the database. These types of "
+"changes can and will be overwritten when updating the brand packages from "
+"the configuration/installation page."
+msgstr ""
+"Al editar los archivos de configuración permite guardar sobre la plantilla "
+"global por defecto en lugar de guardar directamente en la base de datos. "
+"Este tipo de cambios pueden y serán sobrescritos al actualizar los paquetes "
+"de marca desde la página de configuración/instalación."
+
+#: Endpointman_Advanced.class.php:715
+msgid "Disable TFTP Server Check"
+msgstr "Desactivar comprobación de servidor TFTP"
+
+#: Endpointman_Advanced.class.php:717
+msgid ""
+"Disable checking for a valid, working TFTP server which can sometimes cause "
+"Apache to crash."
+msgstr ""
+"Desactivar la comprobación de un servidor TFTP válido y en funcionamiento, "
+"que a veces puede provocar el bloqueo de Apache."
+
+#: Endpointman_Advanced.class.php:733
+msgid "Disable Configuration File Backups"
+msgstr "Desactivar las copias de seguridad del archivo de configuración"
+
+#: Endpointman_Advanced.class.php:735
+msgid "Disable backing up the tftboot directory on every phone rebuild or save"
+msgstr ""
+
+#: Endpointman_Advanced.class.php:757
+#, php-format
+msgid "%s at %s"
+msgstr "%s a las %s"
+
+#: Endpointman_Advanced.class.php:801 Endpointman_Advanced.class.php:1501
+#: Endpointman_Advanced.class.php:1622 Endpointman_Advanced.class.php:1694
+#: Endpointman_Advanced.class.php:1851 Endpointman_Advanced.class.php:2013
+#: Endpointman_Advanced.class.php:2078 Endpointman_Config.class.php:345
+msgid "Error in the process of checking the request arguments!"
+msgstr ""
+
+#: Endpointman_Advanced.class.php:865 Endpointman_Templates.class.php:250
 msgid "No Configuration Location Defined!"
 msgstr "Configuracion de Ubicacion no definida!"
 
-#: Endpointman_Advanced.class.php:442
+#: Endpointman_Advanced.class.php:869
+msgid "Directory does not exist!"
+msgstr "¡El directorio no existe!"
+
+#: Endpointman_Advanced.class.php:873
+#, php-format
+msgid "The path '%s' is not a directory!"
+msgstr "¡La ruta '%s' no es un directorio!"
+
+#: Endpointman_Advanced.class.php:877
+#, php-format
+msgid "Directory '%s' Not Writable!"
+msgstr "¡El directorio '%s' no se puede escribir!"
+
+#: Endpointman_Advanced.class.php:949
+#, php-format
+msgid "Invalid server type '%s'!"
+msgstr "¡Tipo de servidor '%s' no válido!"
+
+#: Endpointman_Advanced.class.php:959
 #, php-format
 msgid "Your permissions are wrong on %s, web provisioning link not created!"
 msgstr ""
 "Sus permisos son incorrectos en %s, ¡el enlace de aprovisionamiento web no "
 "se ha creado!"
 
-#: Endpointman_Advanced.class.php:459
-msgid "Name invalid: "
-msgstr "Nombre no válido: "
+#: Endpointman_Advanced.class.php:967
+#, php-format
+msgid "Name invalid: %s"
+msgstr "Nombre no válido: %s"
 
-#: Endpointman_Advanced.class.php:489
-msgid "Ok!"
-msgstr "Ok!"
+#: Endpointman_Advanced.class.php:1035
+msgid "Files Config"
+msgstr "Archivos de Configuración"
 
-#: Endpointman_Advanced.class.php:495 Endpointman_Advanced.class.php:704
-msgid "No send Product Select!"
-msgstr "No se envío producto seleccionado!"
+#: Endpointman_Advanced.class.php:1044
+msgid "Templates"
+msgstr "Plantillas"
 
-#: Endpointman_Advanced.class.php:498 Endpointman_Advanced.class.php:592
-msgid "Product Select send is not number!"
-msgstr "Producto seleccionado enviado no es un número!"
+#: Endpointman_Advanced.class.php:1053
+msgid "Custom Files"
+msgstr "Archivos Personalizados"
 
-#: Endpointman_Advanced.class.php:501 Endpointman_Advanced.class.php:595
+#: Endpointman_Advanced.class.php:1071
+msgid "No send ID Product!"
+msgstr "¡No hay producto de identificación enviado!"
+
+#: Endpointman_Advanced.class.php:1075
+msgid "Ivalid ID Product!"
+msgstr "¡Ivalid ID Product!"
+
+#: Endpointman_Advanced.class.php:1079
+msgid "Invalid ID Product (less than 0)!"
+msgstr "ID de producto no válido (menos de 0)"
+
+#: Endpointman_Advanced.class.php:1083
+msgid "File setup.php not found!"
+msgstr "¡Archivo setup.php no encontrado!"
+
+#: Endpointman_Advanced.class.php:1090
+msgid "Product not located in the database!"
+msgstr "¡Producto no localizado en la base de datos!"
+
+#: Endpointman_Advanced.class.php:1123
+#, php-format
+msgid "Class '%s' not found!"
+msgstr "¡Clase '%s' no encontrada!"
+
+#: Endpointman_Advanced.class.php:1232 Endpointman_Advanced.class.php:1279
+msgid "There are no files!"
+msgstr ""
+
+#: Endpointman_Advanced.class.php:1267
+msgid "There are no activated products!"
+msgstr ""
+
+#: Endpointman_Advanced.class.php:1332
+msgid "OK!"
+msgstr "OK!"
+
+#: Endpointman_Advanced.class.php:1518
 msgid "Product Select send is number not valid!"
 msgstr "Producto seleccione enviado es un número no válido!"
 
-#: Endpointman_Advanced.class.php:649
-msgid "File not readable, check the permission! "
-msgstr "Archivo no legible, ¡verifique el permiso! "
+#: Endpointman_Advanced.class.php:1540 Endpointman_Advanced.class.php:1778
+#, php-format
+msgid "File '%s' not found!"
+msgstr "¡Archivo '%s' no encontrado!"
 
-#: Endpointman_Advanced.class.php:707
-msgid "No send Type File!"
-msgstr "No se envío tipo de archivo!"
+#: Endpointman_Advanced.class.php:1592
+#, php-format
+msgid "Type File invalid: %s"
+msgstr "Tipo Archivo no válido: %s"
 
-#: Endpointman_Advanced.class.php:710
-msgid "No send SendID!"
-msgstr "No se envío ID!"
+#: Endpointman_Advanced.class.php:1596
+msgid "OK"
+msgstr "OK"
 
-#: Endpointman_Advanced.class.php:882
-msgid "Type File not valid!"
-msgstr "Tipo de archivo no es válido!"
+#: Endpointman_Advanced.class.php:1644 Endpointman_Advanced.class.php:1888
+msgid "Product not found!"
+msgstr "Producto no encontrado!"
 
-#: Endpointman_Advanced.class.php:944
+#: Endpointman_Advanced.class.php:1655
+msgid "File delete ok!"
+msgstr "¡Archivo borrado ok!"
+
+#: Endpointman_Advanced.class.php:1659
+msgid "File not delete!"
+msgstr "Archivo no borrado!"
+
+#: Endpointman_Advanced.class.php:1669
+#, php-format
+msgid "Type File [%s] not valid!"
+msgstr "El tipo de archivo [%s] no es válido!"
+
+#: Endpointman_Advanced.class.php:1718
+#, php-format
+msgid "Product '%s' not found!"
+msgstr "¡Producto '%s' no encontrado!"
+
+#: Endpointman_Advanced.class.php:1742
+msgid "The name of the file to save is empty!"
+msgstr "El nombre del archivo a guardar está vacío!"
+
+#: Endpointman_Advanced.class.php:1747
+msgid "The name of the file to save must be different from the original name!"
+msgstr ""
+"El nombre del archivo a guardar debe ser diferente del nombre original!"
+
+#: Endpointman_Advanced.class.php:1751 Endpointman_Advanced.class.php:1878
+#, php-format
+msgid "Type File '%s' not valid!"
+msgstr "El tipo de archivo '%s' no es válido"
+
+#: Endpointman_Advanced.class.php:1820
+#, php-format
+msgid "Error Saving, Type '%s': %s"
+msgstr ""
+
+#: Endpointman_Advanced.class.php:1825
+msgid "Saved data successfully!"
+msgstr ""
+
+#: Endpointman_Advanced.class.php:1981
+#: views/epm_advanced_manual_upload.page.php:100
+#: views/epm_advanced_oui_manager.page.php:80
+msgid "Select Brand:"
+msgstr "Seleccionar Marca:"
+
+#: Endpointman_Advanced.class.php:2031 Endpointman_Advanced.class.php:2108
+msgid "OUI is empty!"
+msgstr "¡La OUI está vacía!"
+
+#: Endpointman_Advanced.class.php:2035
+msgid "OUI must be a number!"
+msgstr "¡La OUI debe ser un número!"
+
+#: Endpointman_Advanced.class.php:2043
+msgid "OUI is not custom!"
+msgstr ""
+
+#: Endpointman_Advanced.class.php:2052
+msgid "OUI not found!"
+msgstr "¡OUI no encontrado!"
+
+#: Endpointman_Advanced.class.php:2063
+#, php-format
+msgid "Error deleting OUI '%s' from brand '%s'!"
+msgstr "¡Error al borrar OUI '%s' de la marca '%s'!"
+
+#: Endpointman_Advanced.class.php:2065
+#, php-format
+msgid "OUI '%s' deleted from brand '%s' successfully!"
+msgstr "OUI '%s' borrada de la marca '%s' Satisfactoriamente!"
+
+#: Endpointman_Advanced.class.php:2096
+msgid "Brand is empty!"
+msgstr "¡La marca está vacía!"
+
+#: Endpointman_Advanced.class.php:2100
+msgid "Brand send is number not valid!"
+msgstr ""
+
+#: Endpointman_Advanced.class.php:2104
+#, php-format
+msgid "Brand '%s' not found!"
+msgstr "¡Marca '%s' no encontrada!"
+
+#: Endpointman_Advanced.class.php:2112
+msgid "OUI must be at least 6 characters!"
+msgstr "La OUI debe tener al menos 6 caracteres!"
+
+#: Endpointman_Advanced.class.php:2116
+msgid "OUI must be hexadecimal!"
+msgstr "La OUI debe ser hexadecimal!"
+
+#: Endpointman_Advanced.class.php:2123
+#, php-format
+msgid "OUI '%s' already exists!"
+msgstr "¡OUI '%s' ya existe!"
+
+#: Endpointman_Advanced.class.php:2127
+#, php-format
+msgid "OUI '%s' already exists for brand '%s'!"
+msgstr "¡La OUI '%s' ya existe para la marca '%s'!"
+
+#: Endpointman_Advanced.class.php:2138
+#, php-format
+msgid "Error adding OUI '%s' to brand '%s'!"
+msgstr "¡Error al añadir OUI '%s' a la marca '%s'!"
+
+#: Endpointman_Advanced.class.php:2140
+#, php-format
+msgid "OUI '%s' added to brand '%s' successfully!"
+msgstr "OUI '%s' añadida a la marca '%s' satisfactoriamente!"
+
+#: Endpointman_Advanced.class.php:2229
 msgid "List Done!"
-msgstr "Listado Listo!"
+msgstr "¡Lista hecha!"
 
-#: Endpointman_Advanced.class.php:954
+#: Endpointman_Advanced.class.php:2239
 msgid "Not is directory: "
-msgstr "No es el directorio: "
+msgstr "No es el directorio:"
 
-#: Endpointman_Advanced.class.php:957
+#: Endpointman_Advanced.class.php:2242
 msgid "Directory no exists: "
-msgstr "El directorio no existe: "
+msgstr "El directorio no existe:"
 
-#: Endpointman_Advanced.class.php:965 Endpointman_Advanced.class.php:1039
-#: Endpointman_Advanced.class.php:1192
+#: Endpointman_Advanced.class.php:2250 Endpointman_Advanced.class.php:2331
+#: Endpointman_Advanced.class.php:2506
 msgid "Error: Can Not Find Uploaded Files!"
 msgstr "Error: No puede encontrar los archivos subidos!"
 
-#: Endpointman_Advanced.class.php:969
+#: Endpointman_Advanced.class.php:2254
 #, php-format
 msgid "Importing brand file %s..."
 msgstr "Importando archivo de marca %s  ..."
 
-#: Endpointman_Advanced.class.php:972 Endpointman_Advanced.class.php:1047
-#: Endpointman_Advanced.class.php:1202
+#: Endpointman_Advanced.class.php:2257 Endpointman_Advanced.class.php:2339
+#: Endpointman_Advanced.class.php:2516
 #, php-format
 msgid "Error: %s"
 msgstr "Error: %s"
 
-#: Endpointman_Advanced.class.php:987 Endpointman_Config.class.php:1079
+#: Endpointman_Advanced.class.php:2277
 msgid "Creating EPM temp directory..."
 msgstr "Creación de directorio temporal EPM ..."
 
-#: Endpointman_Advanced.class.php:989 Endpointman_Advanced.class.php:1005
-#: Endpointman_Advanced.class.php:1064 Endpointman_Advanced.class.php:1069
-#: Endpointman_Advanced.class.php:1084 Endpointman_Advanced.class.php:1161
-#: Endpointman_Config.class.php:984 Endpointman_Config.class.php:1108
-#: Endpointman_Config.class.php:1124 Endpointman_Config.class.php:1130
-#: Endpointman_Config.class.php:1273 Endpointman_Config.class.php:1347
-#: Endpointman_Config.class.php:1383 Endpointman_Config.class.php:1412
-#: Endpointman_Config.class.php:1455 Endpointman_Config.class.php:1470
-#: Endpointman_Config.class.php:1480 Endpointman_Config.class.php:1535
-#: Endpointman_Config.class.php:1629 Endpointman_Config.class.php:1662
+#: Endpointman_Advanced.class.php:2279 Endpointman_Advanced.class.php:2295
+#: Endpointman_Advanced.class.php:2358 Endpointman_Advanced.class.php:2366
+#: Endpointman_Advanced.class.php:2384 Endpointman_Advanced.class.php:2475
+#: Endpointman_Config.class.php:1241
 msgid "Done!"
 msgstr "Correcto!"
 
-#: Endpointman_Advanced.class.php:998
+#: Endpointman_Advanced.class.php:2288
 #, php-format
 msgid "Extracting Tarball %s to %s... "
 msgstr "Extrayendo Tarball %s to %s... "
 
-#: Endpointman_Advanced.class.php:1000
+#: Endpointman_Advanced.class.php:2290
 msgid "Extracting Tarball... "
 msgstr "Extrayendo Tarball... "
 
-#: Endpointman_Advanced.class.php:1011
+#: Endpointman_Advanced.class.php:2302
 #, php-format
 msgid "Looking for file %s to pass on to update_brand() ... "
 msgstr "Buscando el archivo %s para pasar a update_brand () ... "
 
-#: Endpointman_Advanced.class.php:1013
+#: Endpointman_Advanced.class.php:2304
 msgid "Looking file and update brand's ... "
 msgstr "Mirando archivo y actualizando las marcas … "
 
-#: Endpointman_Advanced.class.php:1019
+#: Endpointman_Advanced.class.php:2311
 msgid "Please name the Package the same name as your brand!"
 msgstr "Por favor, nombrar el Paquete con el mismo nombre que tu marca!"
 
-#: Endpointman_Advanced.class.php:1024
+#: Endpointman_Advanced.class.php:2316
 msgid "Error: No File Provided!"
 msgstr "Error: No archivo proporcionado!"
 
-#: Endpointman_Advanced.class.php:1029 Endpointman_Advanced.class.php:1091
+#: Endpointman_Advanced.class.php:2321 Endpointman_Advanced.class.php:2391
 msgid "Error: Invalid File Extension!"
 msgstr "Error: La extensión de archivo no es válida!"
 
-#: Endpointman_Advanced.class.php:1044
+#: Endpointman_Advanced.class.php:2336
 #, php-format
 msgid "Importing Provisioner file %s..."
 msgstr "Importando archivo %s de aprovisionamiento ..."
 
-#: Endpointman_Advanced.class.php:1060
+#: Endpointman_Advanced.class.php:2354
 msgid "Extracting Provisioner Package... "
 msgstr "Extrayendo Paquete de aprovisionamiento … "
 
-#: Endpointman_Advanced.class.php:1067
+#: Endpointman_Advanced.class.php:2364
 msgid "Creating Provisioner Directory... "
 msgstr "Creación directorio de aprovisionamiento … "
 
-#: Endpointman_Advanced.class.php:1081
+#: Endpointman_Advanced.class.php:2381
 msgid "Updating Last Modified... "
 msgstr "Actualizando Última Modificación … "
 
-#: Endpointman_Advanced.class.php:1088
+#: Endpointman_Advanced.class.php:2388
 msgid "Error: File Temp no Exists!"
 msgstr "Error: Archivo Temp no existe!"
 
-#: Endpointman_Advanced.class.php:1136
+#: Endpointman_Advanced.class.php:2448
 msgid "Error: No package set!"
 msgstr "Error: No se ha establecido paquete!"
 
-#: Endpointman_Advanced.class.php:1139
+#: Endpointman_Advanced.class.php:2451
 msgid "Error: Package not valid!"
 msgstr "Error: El paquete no es válido!"
 
-#: Endpointman_Advanced.class.php:1148
+#: Endpointman_Advanced.class.php:2460
 msgid "Error: ID Package send not valid, brand not exist!"
 msgstr "Error: ID del paquete enviado no es válida, la marca no existe!"
 
-#: Endpointman_Advanced.class.php:1151
+#: Endpointman_Advanced.class.php:2463
 #, php-format
 msgid "Exporting %s ... "
 msgstr "Exportando %s … "
 
-#: Endpointman_Advanced.class.php:1164
+#: Endpointman_Advanced.class.php:2478
 msgid "Click this link to download:"
 msgstr "Haga clic en este enlace para descargar:"
 
-#: Endpointman_Advanced.class.php:1165
+#: Endpointman_Advanced.class.php:2479
 msgid "Here"
 msgstr "Aquí"
 
-#: Endpointman_Advanced.class.php:1199
+#: Endpointman_Advanced.class.php:2513
 #, php-format
 msgid "Importing CSV file %s ...<br />"
-msgstr ""
+msgstr "Importar archivo CSV %s...<br />"
 
-#: Endpointman_Advanced.class.php:1208
+#: Endpointman_Advanced.class.php:2522
 #, php-format
 msgid "Error: We support only CSV and TXT files, type file %s no support!"
 msgstr ""
 
-#: Endpointman_Advanced.class.php:1211
+#: Endpointman_Advanced.class.php:2525
 #, php-format
 msgid "Error: File %s size is 0!"
 msgstr "Error: El tamaño del archivo %s es 0!"
 
-#: Endpointman_Advanced.class.php:1252
+#: Endpointman_Advanced.class.php:2566
 #, php-format
 msgid "Error: Invalid Extension Specified on line %d!"
 msgstr "Error: Extensión no válida especificada en la línea %d!"
 
-#: Endpointman_Advanced.class.php:1255
+#: Endpointman_Advanced.class.php:2569
 #, php-format
 msgid "Error: Invalid Model Specified on line %d!"
 msgstr ""
 
-#: Endpointman_Advanced.class.php:1258
+#: Endpointman_Advanced.class.php:2572
 #, php-format
 msgid "Error: Invalid Brand Specified on line %d!"
 msgstr "Error: Marca no válida especificada en la línea %d!"
 
-#: Endpointman_Advanced.class.php:1261
+#: Endpointman_Advanced.class.php:2575
 #, php-format
 msgid "Error: Invalid Mac on line %d!"
 msgstr "Error: MAC no valida en linea %d!"
 
-#: Endpointman_Advanced.class.php:1269
+#: Endpointman_Advanced.class.php:2583
 msgid ""
 "<font color='#FF0000'><b>Please reboot & rebuild all imported phones</b></"
 "font>"
 msgstr ""
 
-#: Endpointman_Advanced.class.php:1271
+#: Endpointman_Advanced.class.php:2585
 msgid "Error: Possible file upload attack!"
 msgstr "Error: Posible ataque de subida de archivos!"
 
-#: Endpointman_Advanced.class.php:1285
-msgid "No ID set!"
-msgstr "No se ha enviado ID!"
+#: Endpointman_Advanced.class.php:2631
+msgid "Local TFTP Server is not correctly configured!"
+msgstr "El servidor TFTP local no está configurado correctamente!"
 
-#: Endpointman_Advanced.class.php:1288
-msgid "ID  not valid!"
-msgstr "ID no valida!"
+#: Endpointman_Advanced.class.php:2639
+#, php-format
+msgid "Unable to write to '%s'!"
+msgstr "No se puede escribir en '%s'!"
 
-#: Endpointman_Advanced.class.php:1307
-msgid "No OUI set!"
-msgstr "No se ha establecido OUI!"
+#: Endpointman_Advanced.class.php:2652
+msgid ""
+"Disabled is set to \"yes\" in /etc/xinetd.d/tftp. Please fix <br />Then "
+"restart your TFTP service"
+msgstr ""
 
-#: Endpointman_Advanced.class.php:1310
-msgid "No Brand set!"
-msgstr "No se ha establecido una Marca!"
+#: Endpointman_Advanced.class.php:2659
+msgid ""
+"TFTP Server is not running. <br />See here for instructions on how to "
+"install one: <a href=\"http://wiki.provisioner.net/index.php/Tftp\" "
+"target=\"_blank\">http://wiki.provisioner.net/index.php/Tftp</a>"
+msgstr ""
 
-#: Endpointman_Advanced.class.php:1364
+#: Endpointman_Advanced.class.php:2668
+msgid "TFTP Server check failed on last past. Skipping"
+msgstr ""
+
+#: Endpointman_Advanced.class.php:2700
 msgid "The uploaded file exceeds the upload_max_filesize directive in php.ini"
 msgstr "El fichero subido excede la directiva upload_max_filesize de php.ini"
 
-#: Endpointman_Advanced.class.php:1366
+#: Endpointman_Advanced.class.php:2702
 msgid ""
 "The uploaded file exceeds the MAX_FILE_SIZE directive that was specified in "
 "the HTML form"
@@ -611,31 +1170,31 @@ msgstr ""
 "El fichero subido excede la directiva MAX_FILE_SIZE especificada en el "
 "formulario HTML"
 
-#: Endpointman_Advanced.class.php:1368
+#: Endpointman_Advanced.class.php:2704
 msgid "The uploaded file was only partially uploaded"
 msgstr "El fichero fue sólo parcialmente subido"
 
-#: Endpointman_Advanced.class.php:1370
+#: Endpointman_Advanced.class.php:2706
 msgid "No file was uploaded"
 msgstr "No se ha cargado el fichero"
 
-#: Endpointman_Advanced.class.php:1372
+#: Endpointman_Advanced.class.php:2708
 msgid "Missing a temporary folder"
 msgstr "Falta la carpeta temporal"
 
-#: Endpointman_Advanced.class.php:1374
+#: Endpointman_Advanced.class.php:2710
 msgid "Failed to write file to disk"
 msgstr "No se ha podido escribir el archivo en el disco"
 
-#: Endpointman_Advanced.class.php:1376
+#: Endpointman_Advanced.class.php:2712
 msgid "File upload stopped by extension"
 msgstr "Una extensión de PHP detuvo la subida de ficheros"
 
-#: Endpointman_Advanced.class.php:1378
+#: Endpointman_Advanced.class.php:2714
 msgid "Unknown upload error"
 msgstr "Error al subir Desconocido"
 
-#: Endpointman_Config.class.php:65
+#: Endpointman_Config.class.php:82
 msgid ""
 "If we can activate the model set terminals of the models.<br /> If this "
 "model is disabled will not appear in the list of models that can be "
@@ -645,7 +1204,7 @@ msgstr ""
 "esta desactivado este modelo no aparecera en la lista de modelos que se "
 "pueden configurar para la PBX."
 
-#: Endpointman_Config.class.php:66
+#: Endpointman_Config.class.php:83
 msgid ""
 "The button \"Install Firmware\" installs the necessary files to the server "
 "for the terminal alone are updated via TFTP or HTTP.<br /> The button "
@@ -662,7 +1221,7 @@ msgstr ""
 "<br /> El boton \"Actualizar\" aparece cuando se detecta una nueva version "
 "de Paquete de este modelo."
 
-#: Endpointman_Config.class.php:67
+#: Endpointman_Config.class.php:84
 msgid ""
 "The \"Install\" button installs the configuration package brand models we "
 "selected.<br /> The \"Uninstall\" button removes the package configuration "
@@ -676,531 +1235,752 @@ msgstr ""
 "El boton \"Actualizacion\" aparece si se detecta una nueva version del "
 "paquete que esta ya instalado para actualizar a la ultima version."
 
-#: Endpointman_Config.class.php:68
+#: Endpointman_Config.class.php:85
 msgid "New Package Modified"
 msgstr "Nuevo paquete Modificado"
 
-#: Endpointman_Config.class.php:69
+#: Endpointman_Config.class.php:86
 msgid "Package Last Modified"
 msgstr "Paquete última actualización"
 
-#: Endpointman_Config.class.php:70
+#: Endpointman_Config.class.php:87
 msgid "Check for Update "
 msgstr "Buscar actualizaciones "
 
-#: Endpointman_Config.class.php:71
+#: Endpointman_Config.class.php:88
 msgid "Check Online "
 msgstr "Verifique en línea "
 
-#: Endpointman_Config.class.php:72
+#: Endpointman_Config.class.php:89
 msgid "Install"
 msgstr "Instalar"
 
-#: Endpointman_Config.class.php:73
+#: Endpointman_Config.class.php:90
 msgid "Uninstall"
 msgstr "Desisntalar"
 
-#: Endpointman_Config.class.php:74 views/epm_devices_main.page.php:517
+#: Endpointman_Config.class.php:91 views/epm_devices_main.page.php:517
 msgid "Update"
 msgstr "Actualizar"
 
-#: Endpointman_Config.class.php:75
+#: Endpointman_Config.class.php:92
 msgid "FW Install"
 msgstr "FW Instalar"
 
-#: Endpointman_Config.class.php:76
+#: Endpointman_Config.class.php:93
 msgid "FW Delete"
 msgstr "FW Eliminar"
 
-#: Endpointman_Config.class.php:77
+#: Endpointman_Config.class.php:94
 msgid "FW Update"
 msgstr "FW Actualizar"
 
-#: Endpointman_Config.class.php:78
+#: Endpointman_Config.class.php:95
 msgid "Enable"
 msgstr "Activar"
 
-#: Endpointman_Config.class.php:79
+#: Endpointman_Config.class.php:96
 msgid "Disable"
 msgstr "Desactivar"
 
-#: Endpointman_Config.class.php:80
+#: Endpointman_Config.class.php:97
 msgid "Show"
 msgstr "Mostrar"
 
-#: Endpointman_Config.class.php:81
+#: Endpointman_Config.class.php:98
 msgid "Hide"
 msgstr "Ocultar"
 
-#: Endpointman_Config.class.php:82
+#: Endpointman_Config.class.php:99
 msgid "Ready!"
 msgstr "Listo!"
 
-#: Endpointman_Config.class.php:84
+#: Endpointman_Config.class.php:101
 msgid "Update!"
 msgstr "Actualizado!"
 
-#: Endpointman_Config.class.php:87
+#: Endpointman_Config.class.php:104
 msgid "Upload Content!"
 msgstr ""
 
-#: Endpointman_Config.class.php:88
+#: Endpointman_Config.class.php:105
 msgid "Check for Updates..."
 msgstr "Buscar actualizaciones..."
 
-#: Endpointman_Config.class.php:89
+#: Endpointman_Config.class.php:106
 msgid "Check for Updates... Ok!"
 msgstr "Buscar actualizaciones... Listo!"
 
-#: Endpointman_Config.class.php:90
+#: Endpointman_Config.class.php:107
 msgid "Update Content..."
 msgstr "Actualizar contenido...."
 
-#: Endpointman_Config.class.php:109 Endpointman_Devices.class.php:55
-#: Endpointman_Templates.class.php:78 Endpointman_Templates.class.php:109
-msgid "Command not found!"
-msgstr "Comando no valido!"
+#: Endpointman_Config.class.php:148
+#, php-format
+msgid "Command not found [%s]!"
+msgstr "¡Comando no encontrado [%s]!"
 
-#: Endpointman_Config.class.php:163
-msgid "ID Producto not is number"
-msgstr "ID Producto no es numero"
-
-#: Endpointman_Config.class.php:178
-msgid "ID Brand not is numbre"
-msgstr "ID Marca no es numero"
-
-#: Endpointman_Config.class.php:242
+#: Endpointman_Config.class.php:230
 msgid "Update data..."
 msgstr "Actualizar datos..."
 
-#: Endpointman_Config.class.php:244 Endpointman_Config.class.php:1233
-#: Endpointman_Config.class.php:1459 Endpointman_Config.class.php:1517
-msgid "All Done!"
-msgstr "Todo Correcto!"
+#: Endpointman_Config.class.php:233
+msgid "❌Something Went Wrong!"
+msgstr "❌¡Algo salió mal!"
 
-#: Endpointman_Config.class.php:252 Endpointman_Config.class.php:292
-msgid "Error: No send value!"
-msgstr "Error: No se envío valor!"
+#: Endpointman_Config.class.php:238
+msgid "🔳 Process Completed!"
+msgstr "🔳 ¡Proceso completado!"
 
-#: Endpointman_Config.class.php:260 Endpointman_Config.class.php:300
-msgid "Error: Value send is not number!"
-msgstr "Error: El valor enviado no es un numero!"
+#: Endpointman_Config.class.php:247
+msgid "❌ No ID Received!"
+msgstr "❌ ¡No se ha recibido ID!"
 
-#: Endpointman_Config.class.php:279 Endpointman_Config.class.php:319
-msgid "Error: Command not found!"
-msgstr "Error: Comando no valido!"
+#: Endpointman_Config.class.php:252
+#, php-format
+msgid "❌ ID [%s] Received Is Not a Number!"
+msgstr "❌ ID [%s] ¡Recibido no es un número!"
 
-#: Endpointman_Config.class.php:338 Endpointman_Templates.class.php:353
-msgid "Value send is not number!"
-msgstr "El valor enviado no es un numero!"
+#: Endpointman_Config.class.php:257
+msgid "❌ No Command Received or Command Is Not a String!"
+msgstr "❌ ¡No se ha recibido ningún comando o el comando no es una cadena!"
 
-#: Endpointman_Config.class.php:348
-msgid "Type Save Config is not valid!"
+#: Endpointman_Config.class.php:273
+#, php-format
+msgid "❌ Command [%s] not valid!"
+msgstr "❌ ¡Comando [%s] no válido!"
+
+#: Endpointman_Config.class.php:290
+msgid "❌ Error in the process of checking the request arguments!"
+msgstr ""
+"❌ ¡Error en el proceso de comprobación de los argumentos de la solicitud!"
+
+#: Endpointman_Config.class.php:311
+#, php-format
+msgid "❌ Install Firmware Error, ID '%s' is invalid!"
+msgstr "❌ Error de instalación de firmware, ¡el ID '%s' no es válido!"
+
+#: Endpointman_Config.class.php:321
+#, php-format
+msgid "❌ Remove Firmware Error, ID '%s' is invalid!"
+msgstr "❌ Eliminar error de firmware, ¡el ID '%s' no es válido!"
+
+#: Endpointman_Config.class.php:329
+#, php-format
+msgid "❌ Command '%s' not found!"
+msgstr "❌ ¡Comando '%s' no encontrado!"
+
+#: Endpointman_Config.class.php:363
+#, php-format
+msgid "Invalid TypeSaveCfg '%s'!"
+msgstr "TypeSaveCfg '%s' no válido"
+
+#: Endpointman_Config.class.php:367
+#, php-format
+msgid "Invalid Value '%s'!"
+msgstr "¡Valor no válido '%s'!"
+
+#: Endpointman_Config.class.php:378
+msgid "Error in the process of enabling the model!"
+msgstr "¡Error en el proceso de habilitación del modelo!"
+
+#: Endpointman_Config.class.php:384
+#, php-format
+msgid "IDType '%s' invalid for Enabled!"
+msgstr "¡IDType '%s' no válido para Enabled!"
+
+#: Endpointman_Config.class.php:395
+msgid "Error in the process of hiding the brand!"
+msgstr "¡Error en el proceso de ocultar la marca!"
+
+#: Endpointman_Config.class.php:404
+msgid "Error in the process of hiding the product!"
+msgstr "¡Error en el proceso de ocultación del producto!"
+
+#: Endpointman_Config.class.php:412
+msgid "Error in the process of hiding the model!"
+msgstr "¡Error al ocultar el modelo!"
+
+#: Endpointman_Config.class.php:417
+#, php-format
+msgid "IDType '%s' invalid!"
+msgstr "IDType '%s' ¡no válido!"
+
+#: Endpointman_Config.class.php:646 Endpointman_Config.class.php:699
+msgid "Error: No Version Found"
+msgstr "Error: No se ha encontrado ninguna versión"
+
+#: Endpointman_Config.class.php:703
+msgid "Error: Brand Data File Missing or Cannot Be Parsed"
+msgstr "Error: Falta el archivo de datos de marca o no se puede procesar"
+
+#: Endpointman_Config.class.php:707
+msgid "Error: Brand Not Found"
+msgstr "Error: Marca no encontrada"
+
+#: Endpointman_Config.class.php:711
+msgid "Error: Brand Data File Missing"
+msgstr "Error: Falta el archivo de datos de la marca"
+
+#: Endpointman_Config.class.php:718
+msgid "Undefinde"
 msgstr ""
 
-#: Endpointman_Config.class.php:352
-msgid "Invalid Value!"
-msgstr "¡Valor no válido!"
-
-#: Endpointman_Config.class.php:361
-msgid "IdType not valid to typesavecfg!"
-msgstr "IdType no es válido para typesavecfg!"
-
-#: Endpointman_Config.class.php:379
-msgid "IDType invalid: "
-msgstr "IDType no válido: "
-
-#: Endpointman_Config.class.php:661
+#: Endpointman_Config.class.php:823
 msgid ""
-"Error: Not able to connect to repository. Using local master file instead."
+"❌ The stream could not be opened: the requested url was not found or there "
+"was a problem with the request."
 msgstr ""
-"Error: No es capaz de conectarse al repositorio. Usando archivo maestro "
-"local."
+"❌ No se pudo abrir el flujo: no se encontró la url solicitada o hubo un "
+"problema con la solicitud."
 
-#: Endpointman_Config.class.php:689
+#: Endpointman_Config.class.php:838
 msgid ""
-"The stream could not be opened: the requested url was not found or there was "
-"a problem with the request."
+"❌ The Remote server did not return any status information, Please try again "
+"later!"
+msgstr ""
+"❌ El servidor remoto no devolvió ninguna información de estado, ¡Inténtelo "
+"de nuevo más tarde!"
+
+#: Endpointman_Config.class.php:843
+msgid ""
+"❌ The Remote Server Is Currently Syncing With the Master Server, Please try "
+"again later!"
 msgstr ""
 
-#: Endpointman_Config.class.php:704
-msgid "Not able to connect to repository. Using local Provisioner.net Package"
+#: Endpointman_Config.class.php:853
+msgid "Downloading master JSON file..."
+msgstr "Descargando archivo JSON maestro..."
+
+#: Endpointman_Config.class.php:865
+msgid ""
+"❌ Not able to connect to repository and no local master file found!<br>"
 msgstr ""
-"No es capaz de conectarse al repositorio. Usando copia local del paquete "
+"❌ ¡No se ha podido conectar al repositorio y no se ha encontrado ningún "
+"archivo maestro local!<br>"
+
+#: Endpointman_Config.class.php:870
+msgid ""
+"💥 Not able to connect to repository. Using local master file instead.<br>"
+msgstr ""
+"💥 No se puede conectar al repositorio. Usando archivo maestro local en su "
+"lugar.<br>"
+
+#: Endpointman_Config.class.php:875
+msgid "❌ No package found in master.json<br>"
+msgstr "❌ No se ha encontrado ningún paquete en master.json<br>"
+
+#: Endpointman_Config.class.php:887
+#, php-format
+msgid "The package has been updated from version %s to version %s ✔."
+msgstr "El paquete se ha actualizado de la versión %s a la versión %s ✔."
+
+#: Endpointman_Config.class.php:891
+#, php-format
+msgid "Package is up to date at version %s ✔"
+msgstr "El paquete está actualizado a la versión %s ✔"
+
+#: Endpointman_Config.class.php:896
+msgid "Error ❌"
+msgstr "Error ❌"
+
+#: Endpointman_Config.class.php:897
+msgid ""
+"💥 Not able to connect to repository. Using local Provisioner.net Package"
+msgstr ""
+"💥 No se puede conectar al repositorio. Utilizando el paquete local de "
 "Provisioner.net"
 
-#: Endpointman_Config.class.php:748
+#: Endpointman_Config.class.php:905
+#, php-format
+msgid ""
+"❌ Aborting Brand Downloads. Can't Get Master File, Assuming Timeout Issues!"
+"<br>Learn how to manually upload packages here (it's easy!): <a href='%s' "
+"target='_blank'>Click Here!</a><br>"
+msgstr ""
+
+#: Endpointman_Config.class.php:922
 #, php-format
 msgid "Update Brand (%s):"
-msgstr "Actualizando Marca (%s):"
+msgstr "Actualizar marca (%s):"
 
-#: Endpointman_Config.class.php:757
-#, php-format
-msgid "Not able to connect to repository. Using local brand [%s] file instead."
-msgstr ""
-"No se puede conectar al repositorio. Utilizando el archivo de marca local "
-"[%s]."
-
-#: Endpointman_Config.class.php:801
+#: Endpointman_Config.class.php:925
 #, php-format
 msgid ""
-"You can not add the mark (%s) as the ID (%d) already exists in the database!"
+"💥 Not able to connect to repository. Using local brand [%s] file instead!"
 msgstr ""
-"No se puede añadir la marca (%s) ya que el ID (%d) ya existe en la base de "
-"datos."
+"💥 No se puede conectar al repositorio. ¡Usando archivo local de marca [%s] "
+"en su lugar!"
 
-#: Endpointman_Config.class.php:826
+#: Endpointman_Config.class.php:932
 #, php-format
-msgid "Error: No Local File for %s !"
-msgstr "Error: ¡Ningún archivo local para %s!"
-
-#: Endpointman_Config.class.php:826 Endpointman_Config.class.php:858
-msgid "Learn how to manually upload packages here (it's easy!):"
-msgstr "Aprender cómo cargar manualmente los paquetes aquí (es fácil!):"
-
-#: Endpointman_Config.class.php:826 Endpointman_Config.class.php:858
-msgid "Click Here!"
-msgstr "Click Aquí!"
-
-#: Endpointman_Config.class.php:858
 msgid ""
-"Error: Aborting Brand Downloads. Can't Get Master File, Assuming Timeout "
-"Issues!"
+"❌ No Local File for %s!<br>Learn how to manually upload packages here (it's "
+"easy!): <a href='%s' target='_blank'> Click Here! </a>"
 msgstr ""
-"Error: Abortar Descargas de Marca. No se puede obtener del archivo Maestro, "
-"Suponiendo problemas de Timeout!"
 
-#: Endpointman_Config.class.php:869
-msgid ""
-"Error: The Remote server did not return any status information, Please try "
-"again later"
-msgstr ""
-"Error: El Servidor Remoto no devolvió ninguna información de estado, "
-"inténtelo de nuevo más tarde"
-
-#: Endpointman_Config.class.php:872
-msgid ""
-"Error: The Remote Server Is Currently Syncing With the Master Server, Please "
-"try again later"
-msgstr ""
-"Error: El Servidor Remoto está sincronizando actualmente con el servidor "
-"maestro, intente de nuevo más tarde"
-
-#: Endpointman_Config.class.php:953
+#: Endpointman_Config.class.php:940
 #, php-format
-msgid "Error: System Error in Sync Model [%s] Function, Load Failure!"
+msgid "❌ Unable to import JSON file for brand %s!"
 msgstr ""
-"Error: Error de sistema en la Función entronización de Modelo [%s], error de "
-"carga!"
 
-#: Endpointman_Config.class.php:970
+#: Endpointman_Config.class.php:949
+#, php-format
+msgid "✅ Brand '%s' already exists in the database."
+msgstr "✅ La marca '%s' ya existe en la base de datos."
+
+#: Endpointman_Config.class.php:962 Endpointman_Config.class.php:1097
+#, php-format
+msgid "✅ Brand '%s' added to the database."
+msgstr "✅ Marca '%s' añadida a la base de datos."
+
+#: Endpointman_Config.class.php:967 Endpointman_Config.class.php:1102
+#: Endpointman_Config.class.php:1493
+#, php-format
+msgid "❌ Unable to add brand '%s', error: %s"
+msgstr "❌ No se ha podido añadir la marca '%s', error: %s"
+
+#: Endpointman_Config.class.php:976
+#, php-format
+msgid "⚡ Update OUIs for brand '%s' ◾◾◾"
+msgstr "⚡ Actualizar OUIs para marca '%s' ◾◾◾◾"
+
+#: Endpointman_Config.class.php:1043
+msgid "Error: No package found in master.json"
+msgstr "Error: No se ha encontrado ningún paquete en master.json"
+
+#: Endpointman_Config.class.php:1069
+#, php-format
+msgid "Error: Unable to import JSON file for brand %s"
+msgstr "Error: No se ha podido importar el archivo JSON para la marca %s"
+
+#: Endpointman_Config.class.php:1130
+#, php-format
+msgid "Error: Unable to import JSON file for family %s"
+msgstr "Error: No se ha podido importar el archivo JSON de la familia %s"
+
+#: Endpointman_Config.class.php:1155
+#, php-format
+msgid "✅ Product '%s' added to the database."
+msgstr "✅ Producto '%s' añadido a la base de datos."
+
+#: Endpointman_Config.class.php:1160 Endpointman_Config.class.php:1541
+#, php-format
+msgid "❌ Unable to add product '%s', error: %s"
+msgstr "❌ No se ha podido añadir el producto '%s', error: %s"
+
+#: Endpointman_Config.class.php:1182 Endpointman_Config.class.php:1704
+#, php-format
+msgid "❌ Unable to update model '%s', error: %s"
+msgstr "❌ No se ha podido actualizar el modelo '%s', error: %s"
+
+#: Endpointman_Config.class.php:1204
+#, php-format
+msgid "❌ Unable to add model 11 '%s', error: %s"
+msgstr ""
+
+#: Endpointman_Config.class.php:1222
 #, php-format
 msgid "Moving/Removing Model '%s' not present in JSON file......"
-msgstr "Mover/Eliminar el Modelo '%s' no presente en el archivo JSON ......"
-
-#: Endpointman_Config.class.php:1019
-#, php-format
-msgid "Brand Directory '%s' Doesn't Exist! (%s)"
-msgstr "Directorio de la marca '%s' no existe! (%s)"
-
-#: Endpointman_Config.class.php:1023
-#, php-format
-msgid "Product Directory '%s' Doesn't Exist! (%s)"
-msgstr "Directorio de productos '%s' no existe! (%s)"
-
-#: Endpointman_Config.class.php:1027
-#, php-format
-msgid "File 'family_data.json' Doesn't exist in directory: %s"
-msgstr "Archivo 'family_data.json' no existe en el directorio: %s"
-
-#: Endpointman_Config.class.php:1071
-msgid "Install/Update Brand..."
-msgstr "Instalar/Actualizar Marca..."
-
-#: Endpointman_Config.class.php:1082
-#, php-format
-msgid "Error: Failed to create the directory '%s', please Check Permissions!"
 msgstr ""
-"Error: No se ha podido crear el directorio '%s', por favor verifique los "
-"permisos!"
 
-#: Endpointman_Config.class.php:1087
-msgid "Downloading Brand JSON....."
-msgstr "Descargando JSON Marca...."
-
-#: Endpointman_Config.class.php:1096
+#: Endpointman_Config.class.php:1229
 #, php-format
-msgid "Error: Brand with id '%s' not found!"
-msgstr "Error: ¡No se encontró la marca con el id '%s'!"
+msgid "Error: System Error in Delete Model [%s] Function, Load Failure!"
+msgstr ""
 
-#: Endpointman_Config.class.php:1113
-msgid "Downloading Brand Package..."
-msgstr "Descargando paquete de Marca...."
-
-#: Endpointman_Config.class.php:1121
-msgid "Checking MD5sum of Package.... "
-msgstr "Comprobando MD5sum de paquete... "
-
-#: Endpointman_Config.class.php:1126
-msgid "Extracting Tarball........ "
-msgstr "Extrayendo Tarball........ "
-
-#: Endpointman_Config.class.php:1138
-msgid "MD5 Did not match!"
-msgstr "- MD5 no coincide!"
-
-#: Endpointman_Config.class.php:1139
+#: Endpointman_Config.class.php:1237
 #, php-format
-msgid "MD5 XML: %s"
-msgstr "MD5 XML: %s"
-
-#: Endpointman_Config.class.php:1140
-#, php-format
-msgid "MD5 PKG: %s"
-msgstr "MD5 PKG: %s"
-
-#: Endpointman_Config.class.php:1145
-msgid "Error: Can't Find Downloaded File!"
-msgstr "Error: ¡No se puede encontrar el archivo descargado!"
-
-#: Endpointman_Config.class.php:1150
-msgid "Error download Brand package!"
-msgstr "Error de descarga paquete de marcas!"
-
-#: Endpointman_Config.class.php:1156
 msgid ""
-"Error Connecting to the Package Repository. Module not installed. Please Try "
-"again later."
+"Error: System Error in Sync MAC Brand By Model [%s] Function, Load Failure!"
 msgstr ""
-"Error al conectar al repositorio de paquetes. Módulo no instalado. Por favor "
-"Inténtalo más tarde."
 
-#: Endpointman_Config.class.php:1157
+#: Endpointman_Config.class.php:1269
+#, php-format
+msgid "❌ Invalid Brand ID '%s'!"
+msgstr "❌ ¡Identificación de marca '%s' no válida!"
+
+#: Endpointman_Config.class.php:1274
+msgid "❌ Installing brands is disabled while in repo mode!"
+msgstr "❌ ¡La instalación de marcas está desactivada en modo repo!"
+
+#: Endpointman_Config.class.php:1281
+#, php-format
+msgid "❌ Brand with id '%s' not found in the database!"
+msgstr "❌ ¡La marca con el id '%s' no se encuentra en la base de datos!"
+
+#: Endpointman_Config.class.php:1285
+#, php-format
+msgid "⚡ Install/Update Brand '%s' ..."
+msgstr "⚡ Instalar/Actualizar Marca '%s' ..."
+
+#: Endpointman_Config.class.php:1288 Endpointman_Config.class.php:1828
+msgid "❌ Brand Directory Is Not Set!"
+msgstr "❌ ¡El directorio de marcas no está configurado!"
+
+#: Endpointman_Config.class.php:1295
+msgid "❌ Brand Object is Empty!"
+msgstr "❌ ¡El objeto de marca está vacío!"
+
+#: Endpointman_Config.class.php:1299
+msgid "⚡ Downloading Brand JSON ..."
+msgstr "⚡ Descarga de Brand JSON ..."
+
+#: Endpointman_Config.class.php:1304
 msgid ""
-"You Can Also Manually Update The Repository By Downloading Files here: <a "
-"href='http://www.provisioner.net/releases3' target='_blank'> Release Repo </"
-"a>"
+"💥 Error Connecting to the Package Repository. Module not installed. Please "
+"Try again later."
 msgstr ""
-"También puede actualizar manualmente el repositorio descargando archivos "
-"aquí: <a href='http://www.provisioner.net/releases3' target='_blank'> "
-"Release Repo </a>"
+"💥 Error al conectar con el repositorio de paquetes. Módulo no instalado. "
+"Por favor, inténtelo de nuevo más tarde."
 
-#: Endpointman_Config.class.php:1158
-msgid "Then Use Manual Upload in Advanced Settings."
-msgstr "Utilizar carga Manual en configuración avanzada."
-
-#: Endpointman_Config.class.php:1164
-msgid "Error: Installing brands is disabled while in repo mode!"
-msgstr "Error: Instalación de marcas se desactiva en el modo de Repo!"
-
-#: Endpointman_Config.class.php:1174
+#: Endpointman_Config.class.php:1310 Endpointman_Config.class.php:1849
 #, php-format
-msgid "Update Brand %s ... "
-msgstr "Actualizando Marca %s ... "
-
-#: Endpointman_Config.class.php:1181
-#, php-format
-msgid "Processing %s..."
-msgstr "Procesando %s..."
-
-#: Endpointman_Config.class.php:1188
-msgid "Appears to be a valid Provisioner.net JSON file.....Continuing"
-msgstr "Parece ser un archivo JSON válido Provisioner.net ..... Continuando"
-
-#: Endpointman_Config.class.php:1196
-#, php-format
-msgid "Creating Directory Structure for Brand '%s' and Moving Files..."
+msgid "❌ %s"
 msgstr ""
-"Creando Estructura de Directorios para la Marca '%s'  y Moviendo Archivos..."
 
-#: Endpointman_Config.class.php:1226
-#, php-format
-msgid "- Error Moving %s!"
-msgstr "- Error Moviendo %s!"
-
-#: Endpointman_Config.class.php:1244
-#, php-format
-msgid "Inserting %s brand data ..."
-msgstr "Insertando datos de la marca %s ..."
-
-#: Endpointman_Config.class.php:1260
-#, php-format
-msgid "Updating %s brand data ..."
-msgstr "Actualizando datos de la marca %s ..."
-
-#: Endpointman_Config.class.php:1279
-msgid "Updating Family Lines ..."
-msgstr "Actualizando líneas de familia ..."
-
-#: Endpointman_Config.class.php:1289
-msgid "Firmware Requirment Detected!.........."
-msgstr "Requisito firmware detectado .........."
-
-#: Endpointman_Config.class.php:1316
-msgid "-- Updating Model Lines ... "
-msgstr "-- Actualizando Lineas de Modelos ... "
-
-#: Endpointman_Config.class.php:1327
-msgid "----Old Data Detected! Migrating ... "
-msgstr "----Antiguos datos detectados! Migrando ... "
-
-#: Endpointman_Config.class.php:1367 Endpointman_Config.class.php:1392
-msgid "Old Data Detected! Migrating ... "
-msgstr "Antiguos datos detectados! Migrando ... "
-
-#: Endpointman_Config.class.php:1418
-msgid "---Updating Model %_NAMEMOD_%"
-msgstr "--Actualizando Modelo  %_NAMEMOD_%"
-
-#: Endpointman_Config.class.php:1422
-msgid "---Inserting Model %_NAMEMOD_%"
-msgstr "---Insertando Modelo %_NAMEMOD_%"
-
-#: Endpointman_Config.class.php:1429
-msgid "Error: System Error in Sync Model Function, Load Failure!"
-msgstr "Error: Sistema de sincronización de modelos, Error de Carga!"
-
-#: Endpointman_Config.class.php:1430 lib/epm_system.class.php:200
-msgid "Error: "
-msgstr "Error: "
-
-#: Endpointman_Config.class.php:1443
-#, php-format
-msgid "Moving/Removing Model '%s' not present in JSON file ... "
-msgstr ""
-"Mover/Eliminar Modelo '%s' que no está presente en el archivo JSON ... "
-
-#: Endpointman_Config.class.php:1462
-msgid "Updating OUI list in DB ... "
-msgstr "Actualizando la lista de OUI en la DB ... "
-
-#: Endpointman_Config.class.php:1472
-#, php-format
-msgid "Error: Invalid JSON Structure in %s/brand_data.json"
-msgstr "Error: Estructura no valida JSON en %s/brand_data.json"
-
-#: Endpointman_Config.class.php:1475
-msgid "Error: No 'brand_data.xml' file exists!"
-msgstr "Error: No existe un archivo 'brand_data.xml'!"
-
-#: Endpointman_Config.class.php:1478
-msgid "Removing Temporary Files... "
-msgstr "Eliminando Archivos Temporales ... "
-
-#: Endpointman_Config.class.php:1488
-msgid "Uninstalla Brand..."
-msgstr "Desisntalando Marca..."
-
-#: Endpointman_Config.class.php:1538
-msgid "Error: Not allowed in repo mode!!"
-msgstr "Error: No permite en modo de repo!"
-
-#: Endpointman_Config.class.php:1547
-msgid "Installa frimware... "
-msgstr "Instalando Frimware... "
-
-#: Endpointman_Config.class.php:1555
-msgid "Error: The version of the firmware package is blank!"
-msgstr "Error: La versión del paquete de firmware está en blanco!"
-
-#: Endpointman_Config.class.php:1560
+#: Endpointman_Config.class.php:1311 Endpointman_Config.class.php:1329
 msgid ""
-"Error: The package name of the firmware to be downloaded is Null or blank!"
+"❌ Error Connecting to the Package Repository. Module not installed. Please "
+"Try again later."
 msgstr ""
-"Error: El nombre del paquete del firmware para ser descargado es nulo o "
-"blanco!"
+"❌ Error al conectar con el repositorio de paquetes. Módulo no instalado. "
+"Vuelva a intentarlo más tarde."
 
-#: Endpointman_Config.class.php:1574
-msgid "Skipping download, updated local version..."
-msgstr "Saltando descarga, version local actualizada..."
-
-#: Endpointman_Config.class.php:1576 Endpointman_Config.class.php:1584
-msgid "Downloading firmware..."
-msgstr "Descargando Frimware..."
-
-#: Endpointman_Config.class.php:1578 Endpointman_Config.class.php:1586
-msgid "Error download frimware package!"
-msgstr "Error al descarga paquete del firmware!"
-
-#: Endpointman_Config.class.php:1592
-msgid "Checking MD5sum of Package... "
-msgstr "Comprobando MD5sum de paquete... "
-
-#: Endpointman_Config.class.php:1594
-msgid "Matches!"
-msgstr "Correcto!"
-
-#: Endpointman_Config.class.php:1601
-msgid "Installing Firmware..."
-msgstr "Instalando Frimware..."
-
-#: Endpointman_Config.class.php:1610
+#: Endpointman_Config.class.php:1312
 #, php-format
-msgid "- Failed To Copy %s!"
-msgstr "- Error al copiar %s!"
-
-#: Endpointman_Config.class.php:1613
-#, php-format
-msgid "- Copied %s to %s."
-msgstr "- Copiar %s a %s."
-
-#: Endpointman_Config.class.php:1624
-msgid "Copy Error Detected! Aborting Install!"
-msgstr "Detectado error al copiar! Abortada la Instalacion!"
-
-#: Endpointman_Config.class.php:1626
-msgid "Info: Please Check Directory/Permissions!"
-msgstr "Info: Compruebe los permisos del directorio!"
-
-#: Endpointman_Config.class.php:1633
-msgid "Firmware MD5 didn't match!"
-msgstr "MD5 de Frimware no coincide!"
-
-#: Endpointman_Config.class.php:1637
-msgid "Your Firmware is already up to date."
-msgstr "Tu Frimware ya esta actualizado."
-
-#: Endpointman_Config.class.php:1646
-msgid "Uninstalla frimware... "
-msgstr "Desisntalando Frimware… "
-
-#: Endpointman_Config.class.php:1828
-#, php-format
-msgid "<b>ERROR:</b> file2json return false for the file '%s'."
-msgstr "<b>ERROR:</b> file2json devuelve false para el fichero '%s'."
-
-#: Endpointman_Config.class.php:1834
-#, php-format
-msgid "<b>ERROR:</b> %s"
-msgstr "<b>ERROR:</b> %s"
-
-#: Endpointman_Config.class.php:1840
-#, php-format
-msgid "ERROR: Category in the file <b>'%s'</b> is not array!"
-msgstr "ERROR: ¡La categoría en el archivo <b>'%s'</b> no es un array!"
-
-#: Endpointman_Config.class.php:1850
-#, php-format
-msgid "ERROR: Subcategory <b>'%s'</b> in the file <b>'%s'</b> is not array!"
+msgid ""
+"❌ You Can Also Manually Update The Repository By Downloading Files here: <a "
+"href='%s' target='_blank'> Release Repo </a>"
 msgstr ""
-"ERROR: ¡La subcategoría <b>'%s'</b> en el archivo <b>'%s'</b> no es un array!"
+"❌ También puede actualizar manualmente el repositorio descargando los "
+"archivos aquí: <a href='%s' target='_blank'> Release Repo </a>"
 
-#: Endpointman_Config.class.php:1900
-#, php-format
-msgid "<b>Skip:</b> Loop Variable <b>'%s'</b> format not valid!"
+#: Endpointman_Config.class.php:1313
+msgid "❌ Then Use Manual Upload in Advanced Settings."
+msgstr "❌ A continuación, utilice Carga manual en Configuración avanzada."
+
+#: Endpointman_Config.class.php:1320
+msgid "❌ No Package Found in JSON File!"
+msgstr "❌ ¡No se ha encontrado ningún paquete en el archivo JSON!"
+
+#: Endpointman_Config.class.php:1324
+msgid "⚡ Downloading Brand Package ..."
+msgstr "⚡ Descarga del paquete de la marca..."
+
+#: Endpointman_Config.class.php:1340
+msgid "❌ Can't Find Downloaded File!"
+msgstr "❌ ¡No encuentro el archivo descargado!"
+
+#: Endpointman_Config.class.php:1346
+msgid "💥 Skipping MD5 Check!"
+msgstr "💥 ¡Omitiendo comprobación MD5!"
+
+#: Endpointman_Config.class.php:1350
+msgid "⚡ Checking MD5sum of Package ..."
+msgstr "⚡ Comprobación de la suma MD5 del paquete ..."
+
+#: Endpointman_Config.class.php:1354
+msgid "💥 Error MD5 Check Failed!"
+msgstr "💥 ¡Error MD5 Check Failed!"
+
+#: Endpointman_Config.class.php:1361
+msgid "✅ MD5 Check Passed!"
+msgstr "✅ ¡Comprobación MD5 superada!"
+
+#: Endpointman_Config.class.php:1365
+msgid "⚡ Extracting Tarball ..."
+msgstr "⚡ Extrayendo Tarball ..."
+
+#: Endpointman_Config.class.php:1370
+msgid " ❌"
 msgstr ""
-"<b>Saltarse:</b> ¡El formato de la variable <b>de bucle '%s'</b> no es "
-"válido!"
 
-#: Endpointman_Devices.class.php:29
+#: Endpointman_Config.class.php:1371
+msgid "💥 Error Extracting Package!"
+msgstr "💥 ¡Error al extraer el paquete!"
+
+#: Endpointman_Config.class.php:1387
+msgid "⚡ Removing Temporary Files ..."
+msgstr "⚡ Eliminación de archivos temporales..."
+
+#: Endpointman_Config.class.php:1394
+msgid "✅ Brand Installed/Updated Successfully!"
+msgstr "✅ ¡Marca instalada/actualizada con éxito!"
+
+#: Endpointman_Config.class.php:1412
+msgid "❌ Update Brand Error, No Brand Object Given!"
+msgstr ""
+"❌ Error de actualización de marca, ¡no se ha proporcionado ningún objeto de "
+"marca!"
+
+#: Endpointman_Config.class.php:1416
+#, php-format
+msgid "⚡ Update Brand '%s' ..."
+msgstr "⚡ Actualizar Marca '%s' ..."
+
+#: Endpointman_Config.class.php:1417
+#, php-format
+msgid "⚡ Processing '%s' ..."
+msgstr "⚡ Procesando '%s' ..."
+
+#: Endpointman_Config.class.php:1420
+msgid "❌ Error: Invalid JSON Structure in file json!"
+msgstr "❌ Error: ¡Estructura JSON no válida en el archivo json!"
+
+#: Endpointman_Config.class.php:1425
+msgid "✅ Appears to be a valid Provisioner.net JSON file.....Continuing ✔"
+msgstr ""
+"✅ Parece ser un archivo JSON válido de Provisioner.net.....Continuing ✔"
+
+#: Endpointman_Config.class.php:1426
+#, php-format
+msgid "⚡ Creating Directory Structure for Brand '%s' and Moving Files ..."
+msgstr "⚡ Crear estructura de directorios para marca '%s' y mover archivos..."
+
+#: Endpointman_Config.class.php:1435
+#, php-format
+msgid "💥 Warning: Unable to move file '%s'"
+msgstr "💥 Advertencia: No se ha podido mover el archivo '%s'"
+
+#: Endpointman_Config.class.php:1441
+msgid "❌ Error: Unable to move files!"
+msgstr "❌ Error: ¡No se pueden mover los archivos!"
+
+#: Endpointman_Config.class.php:1469
+#, php-format
+msgid "⚡ Updating Brand '%s' ..."
+msgstr "⚡ Actualizando Marca '%s' ..."
+
+#: Endpointman_Config.class.php:1476
+#, php-format
+msgid "⚡ Inserting Brand '%s' ..."
+msgstr "⚡ Insertando Marca '%s' ..."
+
+#: Endpointman_Config.class.php:1499
+msgid "⚡ Updating OUI list in DB ..."
+msgstr "⚡ Actualizando lista OUI en BD ...."
+
+#: Endpointman_Config.class.php:1511
+msgid "⚡ Updating Family Lines ..."
+msgstr "⚡ Actualización de las líneas familiares..."
+
+#: Endpointman_Config.class.php:1514
+#, php-format
+msgid "⚡ - Updating Family '%s'..."
+msgstr "⚡ - Actualizando Familia '%s'..."
+
+#: Endpointman_Config.class.php:1522
+#, php-format
+msgid "⚡ - Inserting Family '%s'..."
+msgstr "⚡ - Insertando Familia '%s'..."
+
+#: Endpointman_Config.class.php:1550
+msgid "⚡ - Updating Model Lines ... "
+msgstr "⚡ - Actualización de las líneas modelo ..."
+
+#: Endpointman_Config.class.php:1561
+msgid "⚡ -- Old Data Detected! Migrating ... "
+msgstr "⚡ -- ¡Datos antiguos detectados! Migrando..."
+
+#: Endpointman_Config.class.php:1618 Endpointman_Config.class.php:1651
+msgid "⚡ -- Old Data Detected! Migrating ..."
+msgstr "⚡ -- ¡Datos antiguos detectados! Migrando..."
+
+#: Endpointman_Config.class.php:1692
+#, php-format
+msgid "⚡ - Updating Model '%s' ..."
+msgstr "⚡ - Actualización del modelo '%s' ..."
+
+#: Endpointman_Config.class.php:1709
+#, php-format
+msgid "⚡ - Inserting Model '%s' ..."
+msgstr "⚡ - Insertando Modelo '%s' ..."
+
+#: Endpointman_Config.class.php:1730
+#, php-format
+msgid "❌ Unable to add model '%s', error: %s"
+msgstr "❌ No se ha podido añadir el modelo '%s', error: %s"
+
+#: Endpointman_Config.class.php:1751
+#, php-format
+msgid "Moving/Removing Model '%s' not present in JSON file ..."
+msgstr "Mover/Eliminar el modelo '%s' no está presente en el archivo JSON ..."
+
+#: Endpointman_Config.class.php:1784
+msgid "✅ All Done!"
+msgstr "✅ ¡Todo Correcto!"
+
+#: Endpointman_Config.class.php:1801
+#, php-format
+msgid "❌ Uninstall Brand Error, Brand ID '%s' is invalid!"
+msgstr ""
+"❌ Error de desinstalación de marca, ¡El ID de marca '%s' no es válido!"
+
+#: Endpointman_Config.class.php:1806
+msgid "❌ Uninstalling brands is disabled while in repo mode!"
+msgstr "❌ ¡La desinstalación de marcas está desactivada en modo repo!"
+
+#: Endpointman_Config.class.php:1814
+#, php-format
+msgid "❌ Uninstall Brand Error, Brand ID '%s' not found in the database!"
+msgstr ""
+"❌ Error de desinstalación de marca, ¡El ID de marca '%s' no se encuentra en "
+"la base de datos!"
+
+#: Endpointman_Config.class.php:1819
+msgid "❌ Failed to get data from the json file!"
+msgstr "❌ ¡Fallo al obtener datos del archivo json!"
+
+#: Endpointman_Config.class.php:1823
+#, php-format
+msgid "⚡ Uninstalla Brand '%s' ..."
+msgstr "⚡ Desinstalar marca '%s' ..."
+
+#: Endpointman_Config.class.php:1853
+msgid "✅ Uninstall Brand Success!"
+msgstr "✅ ¡Desinstalación de la marca con éxito!"
+
+#: Endpointman_Config.class.php:1869
+msgid "❌ Install Firmware Error, Product Object is empty!"
+msgstr ""
+"❌ Error de instalación de firmware, ¡el objeto de producto está vacío!"
+
+#: Endpointman_Config.class.php:1874
+msgid "❌ Install Firmware Error, Product ID not found in the database!"
+msgstr ""
+"❌ Error de instalación del firmware, ¡no se ha encontrado el ID del "
+"producto en la base de datos!"
+
+#: Endpointman_Config.class.php:1881
+msgid "❌ Install Firmware Error, Product JSON is empty!"
+msgstr "❌ Error de instalación de firmware, ¡JSON del producto está vacío!"
+
+#: Endpointman_Config.class.php:1885
+#, php-format
+msgid "⚡ Installa frimware for Product '%s' ..."
+msgstr "⚡ Installa frimware para Producto '%s' ..."
+
+#: Endpointman_Config.class.php:1893
+msgid "❌ The firmware version is Null or blank!"
+msgstr "❌ ¡La versión del firmware es Nula o está en blanco!"
+
+#: Endpointman_Config.class.php:1898
+msgid "❌ The firmware package is Null or blank!"
+msgstr "❌ ¡El paquete de firmware es Nulo o está en blanco!"
+
+#: Endpointman_Config.class.php:1904
+#, php-format
+msgid "⚡ New Firmware Version Detected '%s'!"
+msgstr "⚡ ¡Nueva versión de firmware detectada '%s'!"
+
+#: Endpointman_Config.class.php:1907
+msgid "✅ Firmware file is already downloaded, skipping download!"
+msgstr "✅ El archivo de firmware ya está descargado, ¡salta la descarga!"
+
+#: Endpointman_Config.class.php:1911
+msgid "⚡ Downloading firmware..."
+msgstr "⚡ Descargando firmware..."
+
+#: Endpointman_Config.class.php:1916
+msgid "❌ Error Downloading Firmware!"
+msgstr "❌ ¡Error al descargar el firmware!"
+
+#: Endpointman_Config.class.php:1925
+msgid "⚡ Checking MD5sum of Package thas was downloaded ..."
+msgstr "⚡ Comprobación de MD5 del paquete descargado ..."
+
+#: Endpointman_Config.class.php:1929
+#, php-format
+msgid "❌ Firmware MD5 for the package '%s' is invalid!"
+msgstr "❌ ¡El MD5 del firmware del paquete '%s' no es válido!"
+
+#: Endpointman_Config.class.php:1935
+msgid "⚡ Installing Firmware..."
+msgstr "⚡ Instalando Frimware..."
+
+#: Endpointman_Config.class.php:1958
+#, php-format
+msgid "❌ Failed To Copy %s!"
+msgstr "❌ ¡Fallo al copiar %s!"
+
+#: Endpointman_Config.class.php:1965
+#, php-format
+msgid "👁‍🗨 Copied '%s' to '%s'!"
+msgstr "👁‍🗨 ¡Copiado '%s' a '%s'!"
+
+#: Endpointman_Config.class.php:1972
+msgid "❌ Copy Error Detected! Aborting Install!"
+msgstr "❌ ¡Error de copia detectado! ¡Abortar la instalación!"
+
+#: Endpointman_Config.class.php:1974
+msgid "👁‍🗨Info: Please Check Directory/Permissions!"
+msgstr "👁‍🗨Info: Por favor, compruebe el Directorio/Permisos"
+
+#: Endpointman_Config.class.php:1979
+msgid "✅ Firmware Installed Successfully!"
+msgstr "✅ ¡Firmware instalado correctamente!"
+
+#: Endpointman_Config.class.php:1984
+msgid "✅ Your Firmware is already up to date!"
+msgstr "✅ ¡Tu Firmware ya está actualizado!"
+
+#: Endpointman_Config.class.php:2000
+msgid "❌ Remove Firmware Error, Product Object is empty!"
+msgstr "❌ Error al Elimina Firmware, ¡Objeto de producto vacío!"
+
+#: Endpointman_Config.class.php:2005
+msgid "❌ Remove Firmware Error, Product ID not found in the database!"
+msgstr ""
+"❌ Error al Elimina Firmware, ¡ID de producto no encontrado en la base de "
+"datos!"
+
+#: Endpointman_Config.class.php:2009
+#, php-format
+msgid "⚡ Uninstall Firmware for Product '%s' ..."
+msgstr "⚡ Desinstalar el firmware del producto '%s' ..."
+
+#: Endpointman_Config.class.php:2012
+msgid "💥Skipping, the brand does not have any firmware files."
+msgstr "💥Skipping, la marca no tiene ningún archivo de firmware."
+
+#: Endpointman_Config.class.php:2019
+msgid "⭕ Skipping, Config Location tftp is not set!"
+msgstr ""
+
+#: Endpointman_Config.class.php:2023
+msgid "⭕ Skipping, Location tftp does not exist!"
+msgstr "⭕ Omitiendo, ¡La ubicación tftp no existe!"
+
+#: Endpointman_Config.class.php:2038
+#, php-format
+msgid "❌ Unable to remove firmware file '%s' due to permissions!"
+msgstr ""
+"❌ ¡No se puede eliminar el archivo de firmware '%s' debido a permisos!"
+
+#: Endpointman_Config.class.php:2045
+#, php-format
+msgid "❌ Unable to remove firmware file '%s'!"
+msgstr "❌ ¡No se puede eliminar el archivo de firmware '%s'!"
+
+#: Endpointman_Config.class.php:2054
+msgid "✅ Firmware Removed Successfully!"
+msgstr "✅ ¡Firmware eliminado con éxito!"
+
+#: Endpointman_Devices.class.php:28
 msgid "Devices"
 msgstr "Dispositivos"
 
-#: Endpointman_Devices.class.php:60 Endpointman_Templates.class.php:114
+#: Endpointman_Devices.class.php:54 Endpointman_Templates.class.php:78
+#: Endpointman_Templates.class.php:109
+msgid "Command not found!"
+msgstr "Comando no valido!"
+
+#: Endpointman_Devices.class.php:59 Endpointman_Templates.class.php:114
 msgid "Tab not found!"
 msgstr "Tab no encontrado!"
 
-#: Endpointman_Templates.class.php:147 views/epm_advanced_poce.page.php:83
+#: Endpointman_Templates.class.php:147 views/epm_advanced_poce.page.php:77
 #: views/epm_devices_main.page.php:313
 #: views/epm_templates/editor.views.dialog.edit.cfg.php:19
 #: views/epm_templates_manager.page.php:129
@@ -1226,11 +2006,15 @@ msgstr "TID no es un numero!"
 msgid "Global Config Read OK!"
 msgstr "Global configuración leida OK!"
 
+#: Endpointman_Templates.class.php:242
+msgid "Directory Not Writable!"
+msgstr "Directorio no escribible!"
+
 #: Endpointman_Templates.class.php:246
 msgid "Not a Vaild Directory"
 msgstr "No es un directorio válido"
 
-#: Endpointman_Templates.class.php:274 views/epm_advanced_settings.page.php:86
+#: Endpointman_Templates.class.php:274
 #: views/epm_templates/editor.views.dialog.cfg.global.php:76
 msgid "Updated!"
 msgstr "Actualizado!"
@@ -1254,6 +2038,14 @@ msgstr "ID enviado es negativo!"
 #: Endpointman_Templates.class.php:335
 msgid "Delete Template OK!"
 msgstr "Eliminacion Plantilla OK!"
+
+#: Endpointman_Templates.class.php:346
+msgid "No send value!"
+msgstr "No se ha enviado VALOR!"
+
+#: Endpointman_Templates.class.php:353
+msgid "Value send is not number!"
+msgstr "El valor enviado no es un numero!"
 
 #: Endpointman_Templates.class.php:358
 msgid "Name is null!"
@@ -1283,28 +2075,686 @@ msgstr "ID enviado es un numero no valido!"
 msgid "Generate list Ok!"
 msgstr "Lista Generada Ok!"
 
+#: assets/js/epm_advanced.js:290
+msgid "Refrash Success!"
+msgstr ""
+
+#: assets/js/epm_advanced.js:303
+#, javascript-format
+msgid "Are you sure to delete OUI '%s' for the brand '%s'?"
+msgstr "¿Estás seguro de borrar OUI '%s' para la marca '%s'?"
+
+#: assets/js/epm_advanced.js:304 assets/js/epm_advanced.js:941
+#: assets/js/epm_advanced.js:1053 assets/js/epm_advanced.js:1227
+msgid "YES"
+msgstr "SÍ"
+
+#: assets/js/epm_advanced.js:304 assets/js/epm_advanced.js:941
+#: assets/js/epm_advanced.js:1053 assets/js/epm_advanced.js:1227
+msgid "NO"
+msgstr "NO"
+
+#: assets/js/epm_advanced.js:325
+msgid "The row data is invalid!"
+msgstr "Los datos de la fila no son válidos"
+
+#: assets/js/epm_advanced.js:685 views/epm_advanced_poce.page.php:44
+#: views/epm_advanced_poce.page.php:98
+#: views/epm_templates/editor.views.dialog.edit.cfg.php:14
+msgid "No Selected"
+msgstr "No Seleccionado"
+
+#: assets/js/epm_advanced.js:784 assets/js/epm_advanced.js:961
+#: assets/js/epm_advanced.js:1078 assets/js/epm_advanced.js:1158
+#: assets/js/epm_advanced.js:1303 assets/js/epm_advanced.js:1380
+#, javascript-format
+msgid "ERROR AJAX (%s): %s"
+msgstr "ERROR AJAX (%s): %s"
+
+#: assets/js/epm_advanced.js:933 assets/js/epm_advanced.js:994
+#: assets/js/epm_advanced.js:1126
+msgid "The form is not ready!"
+msgstr "El formulario no está listo"
+
+#: assets/js/epm_advanced.js:940
+#, javascript-format
+msgid "Are you sure to delete the file [%s]?"
+msgstr "¿Estás seguro de borrar el archivo [%s]?"
+
+#: assets/js/epm_advanced.js:999
+msgid "The editor is not activated!"
+msgstr "El editor no está activado"
+
+#: assets/js/epm_advanced.js:1004
+msgid "The editor is duplicated!"
+msgstr "El editor está duplicado"
+
+#: assets/js/epm_advanced.js:1035
+msgid "The new file name is empty!"
+msgstr "El nuevo nombre de archivo está vacío"
+
+#: assets/js/epm_advanced.js:1040
+msgid "The new file name is the same as the original!"
+msgstr "El nuevo nombre de archivo es el mismo que el original"
+
+#: assets/js/epm_advanced.js:1043
+#, javascript-format
+msgid "Are you sure to create a new file '%s'?"
+msgstr "¿Estás seguro de crear un nuevo archivo '%s'?"
+
+#: assets/js/epm_advanced.js:1048
+#, javascript-format
+msgid ""
+"Are you sure to save your changes in '%s'? Will be overwritten irreversibly!"
+msgstr ""
+"¿Estás seguro de guardar tus cambios en '%s'? ¡Se sobrescribirán "
+"irreversiblemente!"
+
+#: assets/js/epm_advanced.js:1204
+msgid "Custom"
+msgstr "Personalizado"
+
+#: assets/js/epm_advanced.js:1208
+msgid "Required"
+msgstr "Necesario"
+
+#: assets/js/epm_advanced.js:1217
+msgid "Missing ID!"
+msgstr "Falta el ID!"
+
+#: assets/js/epm_advanced.js:1222
+msgid "ID is not a number!"
+msgstr "El ID no es numero!"
+
+#: assets/js/epm_advanced.js:1226
+msgid "Are you sure you want to delete the OUI?"
+msgstr "¿Estás seguro de que quieres borrar la OUI?"
+
+#: assets/js/epm_advanced.js:1425
+msgid "ERROR: Missing tabs!"
+msgstr "ERROR: ¡Faltan pestañas!"
+
+#: assets/js/epm_advanced.js:1432
+msgid "ERROR: Value is Null!"
+msgstr ""
+
+#: assets/js/epm_advanced.js:1451
+#, javascript-format
+msgid "ERROR AJAX: %s"
+msgstr "ERROR AJAX: %s"
+
 #: assets/js/epm_config.js:87
 msgid "Error to Save Change!"
 msgstr "¡Error al guardar el cambio!"
 
-#: functions.inc.php:36
-#, php-format
-msgid "Failed to install %s due to the following conflicting module(s): %s"
+#: assets/js/epm_config.js:445
+msgid "Brand not installed"
+msgstr "Marca no instalada"
+
+#: assets/js/epm_config.js:446
+msgid ""
+"This Brand is not installed, click the Install button to install the package."
 msgstr ""
-"No se pudo instalar %s debido a los siguientes módulos conflictivos: %s"
+"Esta marca no está instalada, haga clic en el botón Instalar para instalar "
+"el paquete."
 
-#: lib/epm_system.class.php:168 lib/epm_system.class.php:198
+#: assets/js/epm_config.js:541
+msgid "This brand has no models!"
+msgstr "¡Esta marca no tiene modelos!"
+
+#: assets/js/epm_config.js:542
+msgid "This brand does not have any model."
+msgstr "Esta marca no tiene ningún modelo."
+
+#: lib/epm_packages.class.php:22 lib/epm_packages_db.class.php:22
+#: lib/provisioner/ProvisionerBrandDB.class.php:23
+msgid "Endpoint Manager object is required"
+msgstr "Se requiere el objeto Endpoint Manager"
+
+#: lib/epm_packages.class.php:203
+msgid "Family JSON file is required"
+msgstr "Se requiere un archivo JSON familiar"
+
+#: lib/epm_packages_db.class.php:188
+msgid "Brand ID is required"
+msgstr "Se requiere ID de marca"
+
+#: lib/epm_packages_db.class.php:199
 #, php-format
-msgid "Downloading %s ..."
-msgstr "Descargando %s ..."
+msgid "Brand ID '%s' already exists"
+msgstr "El ID de marca '%s' ya existe"
 
-#: lib/epm_system.class.php:170 lib/epm_system.class.php:180
+#: lib/epm_system.class.php:237 lib/epm_system.class.php:317
+#, php-format
+msgid "Directory could not be created: %s"
+msgstr "No se ha podido crear el directorio: %s"
+
+#: lib/epm_system.class.php:244 lib/epm_system.class.php:324
+#, php-format
+msgid "Directory '%s' is not writable! Unable to download files"
+msgstr ""
+"El directorio '%s' no tiene permisos de escritura No se pueden descargar "
+"archivos"
+
+#: lib/epm_system.class.php:251 lib/epm_system.class.php:343
+#, php-format
+msgid "Could not open target file: %s"
+msgstr "No se ha podido abrir el archivo de destino: %s"
+
+#: lib/epm_system.class.php:266 lib/epm_system.class.php:387
+#, php-format
+msgid "Error Downloading file '%s' (%s): %s"
+msgstr "Error al descargar el archivo '%s' (%s): %s"
+
+#: lib/epm_system.class.php:332
+#, php-format
+msgid "⚡ Downloading %s ..."
+msgstr "⚡ Descargando %s ..."
+
+#: lib/epm_system.class.php:335
+msgid "(Complete)"
+msgstr "(Completado)"
+
+#: lib/epm_system.class.php:363
 msgid "Complete"
 msgstr "Completado"
 
-#: lib/epm_system.class.php:192
+#: lib/epm_system.class.php:381
 msgid "Success"
 msgstr "Correcto"
+
+#: lib/epm_system.class.php:390
+#, php-format
+msgid "Error: HTTP %s"
+msgstr "Error: HTTP %s"
+
+#: lib/epm_system.class.php:514
+#, php-format
+msgid "The file does not have a valid extension (.tgz or .tar.gz): %s"
+msgstr "El archivo no tiene una extensión válida (.tgz o .tar.gz): %s"
+
+#: lib/epm_system.class.php:532
+#, php-format
+msgid "Could not open .gz file: %s"
+msgstr "No se ha podido abrir el archivo .gz: %s"
+
+#: lib/epm_system.class.php:536
+#, php-format
+msgid "Could not open .tar file: %s"
+msgstr "No se ha podido abrir el archivo .tar: %s"
+
+#: lib/epm_system.class.php:555
+#, php-format
+msgid "Error Reading .tar File: %s"
+msgstr "Error al leer el archivo .tar: %s"
+
+#: lib/epm_system.class.php:559
+#, php-format
+msgid "Unsupported Method in phardata: %s"
+msgstr ""
+
+#: lib/epm_system.class.php:563
+#, php-format
+msgid "Error in phardata: %s"
+msgstr ""
+
+#: lib/epm_system.class.php:633
+msgid "No file specified"
+msgstr "No se ha especificado ningún archivo"
+
+#: lib/epm_system.class.php:645
+msgid "Invalid JSON data"
+msgstr "Datos JSON no válidos"
+
+#: lib/epm_system.class.php:651
+msgid "Maximum stack depth exceeded"
+msgstr "Se ha excedido la profundidad máxima de la pila"
+
+#: lib/epm_system.class.php:655
+msgid "Underflow or the modes mismatch"
+msgstr "JSON con formato incorrecto o inválido"
+
+#: lib/epm_system.class.php:659
+msgid "Unexpected control character found"
+msgstr ""
+"Error del carácter de control, posiblemente se ha codificado de forma "
+"incorrecta"
+
+#: lib/epm_system.class.php:663
+msgid "Syntax error, malformed JSON"
+msgstr "Error de sintaxis, JSON malformada"
+
+#: lib/epm_system.class.php:667
+msgid "Malformed UTF-8 characters, possibly incorrectly encoded"
+msgstr ""
+"Caracteres UTF-8 mal formados, posiblemente codificados de forma incorrecta"
+
+#: lib/epm_system.class.php:671
+msgid "Unknown error"
+msgstr "Error desconocido"
+
+#: lib/epm_system.class.php:677
+#, php-format
+msgid "Cant find file: %s"
+msgstr "No se puede encontrar el archivo: %s"
+
+#: lib/epm_system.class.php:701
+msgid "Source and destination directories must be specified"
+msgstr "Deben especificarse los directorios de origen y destino"
+
+#: lib/epm_system.class.php:713
+#, php-format
+msgid "Could not create directory: %s"
+msgstr "No se ha podido crear el directorio: %s"
+
+#: lib/epm_system.class.php:721
+#, php-format
+msgid "Could not set permissions on directory: %s"
+msgstr "No se han podido establecer permisos en el directorio: %s"
+
+#: lib/epm_system.class.php:747
+#, php-format
+msgid "Could not copy directory: %s"
+msgstr "No se ha podido copiar el directorio: %s"
+
+#: lib/epm_system.class.php:765
+#, php-format
+msgid "Could not copy file: %s"
+msgstr "No se ha podido copiar el archivo: %s"
+
+#: lib/epm_system.class.php:773
+#, php-format
+msgid "Could not set permissions on file: %s"
+msgstr "No se han podido establecer permisos en el archivo: %s"
+
+#: lib/epm_system.class.php:829
+#, php-format
+msgid "Missing values '%s'"
+msgstr ""
+
+#: lib/epm_system.class.php:833
+#, php-format
+msgid "Invalid values '%s'"
+msgstr "Valores no válidos '%s'"
+
+#: lib/epm_system.class.php:841
+msgid " and "
+msgstr " y "
+
+#: lib/provisioner/MasterJSON.class.php:77
+msgid "Empty JSON data and JSON file!"
+msgstr "¡Datos JSON y archivo JSON vacíos!"
+
+#: lib/provisioner/MasterJSON.class.php:82
+#, php-format
+msgid "JSON file '%s' does not exist!"
+msgstr "¡El fichero JSON '%s' no existe!"
+
+#: lib/provisioner/MasterJSON.class.php:92
+#, php-format
+msgid "Empty JSON data [%s]!"
+msgstr "¡Datos JSON vacíos [%s]!"
+
+#: lib/provisioner/MasterJSON.class.php:103
+#: lib/provisioner/ProvisionerBrand.class.php:105
+#: lib/provisioner/ProvisionerFamily.class.php:97
+#: lib/provisioner/ProvisionerFamily.class.php:344
+#: lib/provisioner/ProvisionerFamily.class.php:390
+#: lib/provisioner/ProvisionerTemplate.class.php:76
+#, php-format
+msgid "%s [%s]!"
+msgstr ""
+
+#: lib/provisioner/MasterJSON.class.php:109
+#: lib/provisioner/ProvisionerBrand.class.php:111
+#: lib/provisioner/ProvisionerFamily.class.php:103
+#: lib/provisioner/ProvisionerTemplate.class.php:84
+#, php-format
+msgid "Invalid JSON data [%s]!"
+msgstr "¡Datos JSON no válidos [%s]!"
+
+#: lib/provisioner/MasterJSON.class.php:125
+#, php-format
+msgid "Invalid brand data, name '%s', directory '%s'"
+msgstr "Datos de marca no válidos, nombre '%s', directorio '%s'"
+
+#: lib/provisioner/MasterJSON.class.php:366
+#: lib/provisioner/ProvisionerBrand.class.php:500
+#: lib/provisioner/ProvisionerBrand.class.php:538
+msgid "Empty URL or file!"
+msgstr "¡URL o archivo vacío!"
+
+#: lib/provisioner/MasterJSON.class.php:413
+msgid "Empty URL, file, package or extract path!"
+msgstr "¡URL, archivo, paquete o ruta de extracción vacíos!"
+
+#: lib/provisioner/MasterJSON.class.php:436
+msgid "❌ "
+msgstr ""
+
+#: lib/provisioner/ProvisionerBrand.class.php:86
+#: lib/provisioner/ProvisionerFamily.class.php:73
+#, php-format
+msgid "Empty directory [%s]!"
+msgstr "¡Directorio vacío [%s]!"
+
+#: lib/provisioner/ProvisionerBrand.class.php:91
+#: lib/provisioner/ProvisionerFamily.class.php:83
+#, php-format
+msgid "Empty JSON data and File '%s' not exist [%s]!"
+msgstr "¡Datos JSON vacíos y Archivo '%s' no existe [%s]!"
+
+#: lib/provisioner/ProvisionerBrand.class.php:116
+#, php-format
+msgid "Invalid JSON data, missing 'brands' key [%s]!"
+msgstr "Datos JSON no válidos, ¡falta la clave 'brands' [%s]!"
+
+#: lib/provisioner/ProvisionerBrand.class.php:142
+#, php-format
+msgid ""
+"Invalid familyData data, id '%s', name '%s', directory '%s', brand_id '%s'"
+msgstr ""
+"Datos familyData no válidos, id '%s', name '%s', directory '%s', brand_id "
+"'%s'"
+
+#: lib/provisioner/ProvisionerBrand.class.php:577
+#: lib/provisioner/ProvisionerBrand.class.php:722
+msgid "Empty temp file or brand directory!"
+msgstr "¡Archivo temporal vacío o directorio de marca!"
+
+#: lib/provisioner/ProvisionerBrand.class.php:666
+msgid "Not set temp Package file!"
+msgstr "¡No se ha configurado el archivo temporal Package!"
+
+#: lib/provisioner/ProvisionerBrand.class.php:695
+msgid "Empty MD5sum or temp file not exist or not set!"
+msgstr ""
+"¡El MD5 está vacía o el archivo temporal no existe o no está configurado!"
+
+#: lib/provisioner/ProvisionerBrand.class.php:728
+msgid "Source directory not exist!"
+msgstr "¡El directorio origen no existe!"
+
+#: lib/provisioner/ProvisionerBrandDB.class.php:46
+#: lib/provisioner/ProvisionerFamilyDB.class.php:127
+#: lib/provisioner/ProvisionerModelDB.class.php:130
+msgid "Parent object is not set!"
+msgstr ""
+
+#: lib/provisioner/ProvisionerBrandDB.class.php:56
+#: lib/provisioner/ProvisionerFamilyDB.class.php:137
+#: lib/provisioner/ProvisionerModelDB.class.php:140
+msgid "No data to create the brand!"
+msgstr ""
+
+#: lib/provisioner/ProvisionerBrandDB.class.php:66
+#: lib/provisioner/ProvisionerFamilyDB.class.php:147
+#: lib/provisioner/ProvisionerModelDB.class.php:150
+msgid "The data to create the brand must be an array!"
+msgstr ""
+
+#: lib/provisioner/ProvisionerBrandDB.class.php:79
+#: lib/provisioner/ProvisionerFamilyDB.class.php:160
+#: lib/provisioner/ProvisionerModelDB.class.php:163
+#, php-format
+msgid "Missing keys: %s"
+msgstr ""
+
+#: lib/provisioner/ProvisionerBrandDB.class.php:92
+#, php-format
+msgid "Brand ID '%s' already exists!"
+msgstr ""
+
+#: lib/provisioner/ProvisionerBrandDB.class.php:115
+#: lib/provisioner/ProvisionerFamilyDB.class.php:195
+#: lib/provisioner/ProvisionerModelDB.class.php:203
+msgid "Insert Query Failed!"
+msgstr ""
+
+#: lib/provisioner/ProvisionerBrandDB.class.php:147
+#, php-format
+msgid ""
+"The brand has %s products. You must delete the products before deleting the "
+"brand."
+msgstr ""
+
+#: lib/provisioner/ProvisionerBrandDB.class.php:158
+#, php-format
+msgid ""
+"The brand has %s OUIs. You must delete the OUIs before deleting the brand."
+msgstr ""
+
+#: lib/provisioner/ProvisionerBrandDB.class.php:164
+msgid "Delete Query Failed!"
+msgstr ""
+
+#: lib/provisioner/ProvisionerBrandDB.class.php:256
+#: lib/provisioner/ProvisionerFamilyDB.class.php:59
+#: lib/provisioner/ProvisionerModelDB.class.php:60
+msgid "The object is destroyed!"
+msgstr ""
+
+#: lib/provisioner/ProvisionerBrandDB.class.php:265
+#: lib/provisioner/ProvisionerFamilyDB.class.php:68
+#: lib/provisioner/ProvisionerModelDB.class.php:69
+msgid "The ID is required!"
+msgstr "¡ID de marca es obligatorio!"
+
+#: lib/provisioner/ProvisionerFamily.class.php:78
+#, php-format
+msgid "Empty parent brand directory [%s]!"
+msgstr ""
+
+#: lib/provisioner/ProvisionerFamily.class.php:153
+#, php-format
+msgid "Invalid model data, id '%s', model '%s', brandid '%s', family_id '%s'!"
+msgstr ""
+
+#: lib/provisioner/ProvisionerFamily.class.php:315
+#, php-format
+msgid "Invalid configuration file '%s' [%s]!"
+msgstr ""
+
+#: lib/provisioner/ProvisionerFamily.class.php:322
+#: lib/provisioner/ProvisionerFamily.class.php:364
+msgid "Empty configuration file path!"
+msgstr ""
+
+#: lib/provisioner/ProvisionerFamily.class.php:326
+#, php-format
+msgid "Configuration file '%s' not exist!"
+msgstr "¡El fichero de configuración '%s' no existe!"
+
+#: lib/provisioner/ProvisionerFamily.class.php:330
+#: lib/provisioner/ProvisionerFamily.class.php:372
+#, php-format
+msgid "Configuration file '%s' is not a file!"
+msgstr ""
+
+#: lib/provisioner/ProvisionerFamily.class.php:334
+#, php-format
+msgid "Configuration file '%s' is not readable!"
+msgstr ""
+
+#: lib/provisioner/ProvisionerFamily.class.php:368
+#, php-format
+msgid "Configuration file '%s' already exist!"
+msgstr ""
+
+#: lib/provisioner/ProvisionerFamily.class.php:376
+#, php-format
+msgid "Configuration directory '%s' is not writable!"
+msgstr ""
+
+#: lib/provisioner/ProvisionerFamily.class.php:380
+#, php-format
+msgid "Configuration file '%s' is not writable!"
+msgstr ""
+
+#: lib/provisioner/ProvisionerFamily.class.php:566
+#, php-format
+msgid "Empty URL or path for firmware package [%s]!"
+msgstr ""
+
+#: lib/provisioner/ProvisionerFamily.class.php:571
+#, php-format
+msgid "Empty firmware package name [%s]!"
+msgstr ""
+
+#: lib/provisioner/ProvisionerFamily.class.php:617
+#, php-format
+msgid "Firmware package '%s' not exist or empty directory [%s]!"
+msgstr ""
+
+#: lib/provisioner/ProvisionerFamily.class.php:623
+#, php-format
+msgid "Empty brand or family directory [%s]!"
+msgstr ""
+
+#: lib/provisioner/ProvisionerFamily.class.php:628
+#, php-format
+msgid "Destination directory '%s' not exist [%s]!"
+msgstr ""
+
+#: lib/provisioner/ProvisionerFamily.class.php:640
+#, php-format
+msgid "Failed to remove old firmware directory '%s' [%s]!"
+msgstr ""
+
+#: lib/provisioner/ProvisionerFamily.class.php:646
+#, fuzzy, php-format
+#| msgid ""
+#| "Error: Failed to create the directory '%s', please Check Permissions!"
+msgid "Failed to create firmware directory '%s' [%s]!"
+msgstr ""
+"Error: No se ha podido crear el directorio '%s', por favor verifique los "
+"permisos!"
+
+#: lib/provisioner/ProvisionerFamilyDB.class.php:23
+#: lib/provisioner/ProvisionerModelDB.class.php:24
+msgid "Parent object is required!"
+msgstr ""
+
+#: lib/provisioner/ProvisionerFamilyDB.class.php:173
+#: lib/provisioner/ProvisionerModelDB.class.php:176
+#, fuzzy, php-format
+#| msgid "Product Directory '%s' Doesn't Exist! (%s)"
+msgid "Product ID '%s' already exists!"
+msgstr "Directorio de productos '%s' no existe! (%s)"
+
+#: lib/provisioner/ProvisionerFamilyDB.class.php:206
+#, fuzzy
+#| msgid "Product Line:"
+msgid "Product not created!"
+msgstr "Línea de Productos:"
+
+#: lib/provisioner/ProvisionerFamilyDB.class.php:233
+#, php-format
+msgid "There are %s models that are not deleted!"
+msgstr ""
+
+#: lib/provisioner/ProvisionerFamilyDB.class.php:659
+msgid "The family (product) does not exist!"
+msgstr ""
+
+#: lib/provisioner/ProvisionerFamilyDB.class.php:671
+msgid "The original name, name, and data are required!"
+msgstr ""
+
+#: lib/provisioner/ProvisionerFamilyDB.class.php:733
+#, fuzzy
+#| msgid "File Configuration Editor"
+msgid "The configuration already exists!"
+msgstr "Editar Archivo de Configuracion"
+
+#: lib/provisioner/ProvisionerModel.class.php:53
+#: lib/provisioner/ProvisionerTemplate.class.php:36
+#, fuzzy
+#| msgid "Value send is not number!"
+msgid "Parent Brand is not set!"
+msgstr "El valor enviado no es un numero!"
+
+#: lib/provisioner/ProvisionerModel.class.php:58
+#: lib/provisioner/ProvisionerTemplate.class.php:55
+msgid "Brand or Family directory is empty!"
+msgstr ""
+
+#: lib/provisioner/ProvisionerModel.class.php:64
+#: lib/provisioner/ProvisionerTemplate.class.php:42
+msgid "Parent Family is not set!"
+msgstr ""
+
+#: lib/provisioner/ProvisionerModel.class.php:73
+#, php-format
+msgid "❌ File '%s' not found [%s]!"
+msgstr "❌ ¡Fichero '%s' no encontrado [%s]!"
+
+#: lib/provisioner/ProvisionerModel.class.php:83
+#, php-format
+msgid "❌ %s [%s]!"
+msgstr ""
+
+#: lib/provisioner/ProvisionerModel.class.php:89
+#, php-format
+msgid "❌ Invalid JSON data [%s]!"
+msgstr "❌ ¡Datos JSON no válidos [%s]!"
+
+#: lib/provisioner/ProvisionerModel.class.php:94
+#, php-format
+msgid "❌ Invalid JSON data, missing 'category' is empty or is not array [%s]!"
+msgstr ""
+"❌ ¡Datos JSON no válidos, falta 'category' está vacía o no es un array [%s]!"
+
+#: lib/provisioner/ProvisionerModel.class.php:106
+#, fuzzy, php-format
+#| msgid "ERROR: Subcategory <b>'%s'</b> in the file <b>'%s'</b> is not array!"
+msgid "❌ERROR: Subcategory '%s' in the file '%s' is empty or is not array!"
+msgstr ""
+"ERROR: ¡La subcategoría <b>'%s'</b> en el archivo <b>'%s'</b> no es un array!"
+
+#: lib/provisioner/ProvisionerModel.class.php:157
+#, fuzzy, php-format
+#| msgid "<b>Skip:</b> Loop Variable <b>'%s'</b> format not valid!"
+msgid "❌ Skip: Loop Variable '%s' format not valid!"
+msgstr ""
+"<b>Saltarse:</b> ¡El formato de la variable <b>de bucle '%s'</b> no es "
+"válido!"
+
+#: lib/provisioner/ProvisionerModelDB.class.php:214
+#, php-format
+msgid "Model ID '%s' not created!"
+msgstr ""
+
+#: lib/provisioner/ProvisionerTemplate.class.php:48
+#, fuzzy
+#| msgid "Clone Model is not number!"
+msgid "Parent Model is not set!"
+msgstr "Modelo Clone no es número!"
+
+#: lib/provisioner/ProvisionerTemplate.class.php:61
+#, fuzzy
+#| msgid "File Temp no Exists!"
+msgid "File template is empty!"
+msgstr "Archivo Temp no Existe!"
+
+#: lib/provisioner/ProvisionerTemplate.class.php:89
+#, php-format
+msgid "Invalid JSON data, missing 'category' is empty or is not array [%s]!"
+msgstr ""
+
+#: lib/provisioner/ProvisionerTemplate.class.php:108
+#, fuzzy, php-format
+#| msgid "ERROR: Subcategory <b>'%s'</b> in the file <b>'%s'</b> is not array!"
+msgid "Skip: Subcategory '%s' in the file <b>'%s'</b> is not array!"
+msgstr ""
+"ERROR: ¡La subcategoría <b>'%s'</b> en el archivo <b>'%s'</b> no es un array!"
+
+#: lib/provisioner/ProvisionerTemplate.class.php:160
+#, php-format
+msgid "<b>Skip:</b> Loop Variable <b>'%s'</b> format not valid!"
+msgstr ""
+"<b>Saltarse:</b> ¡El formato de la variable <b>de bucle '%s'</b> no es "
+"válido!"
 
 #: page.epm_devices.php:31
 msgid "/tftpboot is not writable"
@@ -1454,20 +2904,6 @@ msgstr "¡Aviso!"
 msgid "List Bran's Availables empty."
 msgstr "Lista de Marcas disponibles vacia."
 
-#: views/epm_advanced_manual_upload.page.php:99
-#: views/epm_advanced_oui_manager.page.php:77
-#: views/epm_advanced_settings.page.php:192 views/epm_devices_main.page.php:536
-#: views/epm_templates_manager.page.php:85
-#: views/epm_templates_manager.page.php:113 views/page.main.config.php:18
-#: views/page.main.config.php:39
-msgid "Search"
-msgstr "Buscar"
-
-#: views/epm_advanced_manual_upload.page.php:100
-#: views/epm_advanced_oui_manager.page.php:78
-msgid "Select Brand:"
-msgstr "Seleccionar Marca:"
-
 #: views/epm_advanced_manual_upload.page.php:117
 msgid "Explor a package brand's availables."
 msgstr "Exportar paquete de Marcas disponibles."
@@ -1477,8 +2913,7 @@ msgid "List of other exports"
 msgstr "Lista de otras exportaciones"
 
 #: views/epm_advanced_manual_upload.page.php:134
-#: views/epm_advanced_poce.page.php:119 views/epm_config_editor.page.php:14
-#: views/page.main.config.php:65
+#: views/epm_config_editor.page.php:14 views/page.main.config.php:62
 msgid "Loading..."
 msgstr "Cargando…"
 
@@ -1525,391 +2960,119 @@ msgstr ""
 "Son los primeros 6 caracteres del dispositivo MAC que identifica a la marca "
 "(fabricante)."
 
-#: views/epm_advanced_oui_manager.page.php:90
+#: views/epm_advanced_oui_manager.page.php:96
 msgid "It is the brand of OUI we specified."
 msgstr "Es la marca del OUI que hemos especificado."
 
-#: views/epm_advanced_oui_manager.page.php:96
+#: views/epm_advanced_oui_manager.page.php:102
 #: views/epm_templates/editor.views.dialog.edit.cfg.php:20
 #: views/epm_templates_manager.page.php:128
 msgid "Cancel"
 msgstr "Cancelar"
 
-#: views/epm_advanced_oui_manager.page.php:97
-msgid "Add New"
+#: views/epm_advanced_oui_manager.page.php:103
+#, fuzzy
+#| msgid "Add New"
+msgid "Add New OUIf"
 msgstr "Añadir Nuevo"
 
-#: views/epm_advanced_poce.page.php:15
-msgid "Local File Configs"
-msgstr "Cargar Archivo de Configuracion"
+#: views/epm_advanced_poce.page.php:12
+#, fuzzy
+#| msgid "Reload Config"
+msgid "Reload"
+msgstr "Recargar Configuración"
 
-#: views/epm_advanced_poce.page.php:18 views/epm_advanced_poce.page.php:29
-#: views/epm_advanced_poce.page.php:40
-msgid "Emtry"
+#: views/epm_advanced_poce.page.php:16
+msgid "Expand All"
 msgstr ""
 
-#: views/epm_advanced_poce.page.php:37
-msgid "User File Configs"
-msgstr "Usar Archivo de Configuracion"
+#: views/epm_advanced_poce.page.php:19
+msgid "Collapse All"
+msgstr ""
 
-#: views/epm_advanced_poce.page.php:53
+#: views/epm_advanced_poce.page.php:27
+#, fuzzy
+#| msgid "Search"
+msgid "Search..."
+msgstr "Buscar"
+
+#: views/epm_advanced_poce.page.php:44
 msgid "Product:"
 msgstr "Producto:"
 
-#: views/epm_advanced_poce.page.php:53 views/epm_advanced_poce.page.php:72
-#: views/epm_templates/editor.views.dialog.edit.cfg.php:14
-msgid "No Selected"
-msgstr "No Seleccionado"
+#: views/epm_advanced_poce.page.php:60
+#, fuzzy
+#| msgid "No send File Name!"
+msgid "File Name"
+msgstr "No enviar nombre de archivo!"
 
-#: views/epm_advanced_poce.page.php:71
-msgid "Full Screen F11"
-msgstr "Pantalla Completa F11"
+#: views/epm_advanced_poce.page.php:62
+#, fuzzy
+#| msgid "Name File..."
+msgid "New Name File..."
+msgstr "Nombre Archivo..."
 
-#: views/epm_advanced_poce.page.php:72
-#: views/epm_templates/editor.views.dialog.edit.cfg.php:14
-msgid "Content of the file:"
-msgstr "Contenido del archivo:"
+#: views/epm_advanced_poce.page.php:64
+#, fuzzy
+#| msgid ""
+#| "NOTE: File is permanently saved and not over-written during next package "
+#| "update."
+msgid ""
+"File is permanently saved and not over-written during next package update."
+msgstr ""
+"Nota: El archivo se guarda permanentemente y no sobrescribir durante las "
+"siguientes actualizaciónes de paquetes."
+
+#: views/epm_advanced_poce.page.php:65
+msgid "Save As..."
+msgstr "Gardar Como..."
+
+#: views/epm_advanced_poce.page.php:73
+msgid ""
+"Upload this configuration file to the 'Provisioner.net' Team. Files shared "
+"are confidential and help improve the quality of releases."
+msgstr ""
 
 #: views/epm_advanced_poce.page.php:74
-msgid "NOTE: Key F11 Full Screen, ESC Exit FullScreen."
-msgstr ""
-"Nota: Presione F11 para modo pantalla completa, ESC para salir de Pantalla "
-"Completa."
+msgid "Share"
+msgstr "Compartir"
 
-#: views/epm_advanced_poce.page.php:80
+#: views/epm_advanced_poce.page.php:76
+#, fuzzy
+#| msgid ""
+#| "NOTE: File may be over-written during next package update. We suggest "
+#| "also using the <b>Share</b> button below to improve the next release."
 msgid ""
-"NOTE: File may be over-written during next package update. We suggest also "
-"using the <b>Share</b> button below to improve the next release."
+"File may be over-written during next package update. We suggest also using "
+"the 'Share' button below to improve the next release."
 msgstr ""
 "NOTA: El archivo se puede sobrescribir durante la próxima actualización del "
 "paquete. Le sugerimos que utilice el botón <b>Compartir</b> a continuación "
 "para mejorar la próxima versión."
 
-#: views/epm_advanced_poce.page.php:90
-msgid ""
-"NOTE: File is permanently saved and not over-written during next package "
-"update."
+#: views/epm_advanced_poce.page.php:84
+#, fuzzy
+#| msgid "NOTE: Key F11 Full Screen, ESC Exit FullScreen."
+msgid "Key F11 Full Screen, ESC Exit FullScreen."
 msgstr ""
-"Nota: El archivo se guarda permanentemente y no sobrescribir durante las "
-"siguientes actualizaciónes de paquetes."
+"Nota: Presione F11 para modo pantalla completa, ESC para salir de Pantalla "
+"Completa."
 
-#: views/epm_advanced_poce.page.php:94
-msgid "Name File..."
-msgstr "Nombre Archivo..."
-
-#: views/epm_advanced_poce.page.php:96
-msgid "Save As..."
-msgstr "Gardar Como..."
-
-#: views/epm_advanced_poce.page.php:104
-msgid ""
-"Upload this configuration file to the <b>Provisioner.net Team</b>. Files "
-"shared are confidential and help improve the quality of releases."
+#: views/epm_advanced_poce.page.php:85
+msgid "F11"
 msgstr ""
 
-#: views/epm_advanced_poce.page.php:107
-msgid "Share"
-msgstr "Compartir"
-
-#: views/epm_advanced_settings.page.php:4
-#: views/epm_templates/editor.views.dialog.cfg.global.php:26
-msgid "Setting Provision"
-msgstr "Ajustes Provision"
-
-#: views/epm_advanced_settings.page.php:15
-#: views/epm_templates/editor.views.dialog.cfg.global.php:37
-msgid "IP address of phone server"
-msgstr "Dirección IP del servidor telefónico (PBX)"
-
-#: views/epm_advanced_settings.page.php:20
-#: views/epm_advanced_settings.page.php:49
-#: views/epm_templates/editor.views.dialog.cfg.global.php:42
-msgid "Server PBX..."
-msgstr "Servidor PBX..."
-
-#: views/epm_advanced_settings.page.php:22
-#: views/epm_advanced_settings.page.php:51
-#: views/epm_advanced_settings.page.php:227
-#: views/epm_templates/editor.views.dialog.cfg.global.php:44
-#: views/epm_templates/editor.views.dialog.cfg.global.php:172
-msgid "Use me!"
-msgstr "Usame!"
-
-#: views/epm_advanced_settings.page.php:32
-msgid "IP Address of your PBX."
-msgstr "Dirección IP de su centralita."
-
-#: views/epm_advanced_settings.page.php:44
-#: views/epm_advanced_settings.page.php:61
-msgid "Internal IP address of phone server"
+#: views/epm_advanced_poce.page.php:98
+msgid "File:"
 msgstr ""
 
-#: views/epm_advanced_settings.page.php:73
-#: views/epm_templates/editor.views.dialog.cfg.global.php:66
-msgid "Configuration Type"
-msgstr "Tipo de Configuracion"
-
-#: views/epm_advanced_settings.page.php:78
-#: views/epm_templates/editor.views.dialog.cfg.global.php:71
-msgid "File (TFTP/FTP)"
-msgstr "Archivos (TFTP/FTP)"
-
-#: views/epm_advanced_settings.page.php:79
-#: views/epm_templates/editor.views.dialog.cfg.global.php:72
-msgid "Web (HTTP)"
-msgstr "Web (HTTP)"
-
-#: views/epm_advanced_settings.page.php:80
-#: views/epm_templates/editor.views.dialog.cfg.global.php:73
-msgid "Web (HTTPS)"
-msgstr "Web (HTTPS)"
-
-#: views/epm_advanced_settings.page.php:86
-#, php-format
-msgid " - Point your phones to: %s"
-msgstr " - Apunte sus teléfonos a: %s"
-
-#: views/epm_advanced_settings.page.php:96
-msgid ""
-"Type the server by aprovisonament setting. Server TFTP, Server HTTP, Server "
-"HTTPS."
+#: views/epm_advanced_settings.page.php:26
+#: views/epm_advanced_settings.page.php:33
+msgid "Input Text..."
 msgstr ""
 
-#: views/epm_advanced_settings.page.php:109
-#: views/epm_templates/editor.views.dialog.cfg.global.php:97
-msgid "Global Final Config & Firmware Directory"
-msgstr "Directorio global de firmware y configuración final"
-
-#: views/epm_advanced_settings.page.php:121
-msgid "Path location root TFTP server."
-msgstr ""
-
-#: views/epm_advanced_settings.page.php:133
-msgid "Phone Admin Password"
-msgstr "Contraseña de administrador del teléfono"
-
-#: views/epm_advanced_settings.page.php:145
-msgid ""
-"Enter a admin password for your phones. Must be 6 characters and only "
-"nummeric is recommendet!"
-msgstr ""
-
-#: views/epm_advanced_settings.page.php:157
-msgid "Phone User Password"
-msgstr "Contraseña de usuario del teléfono"
-
-#: views/epm_advanced_settings.page.php:169
-msgid ""
-"Enter a user password for your phones. Must be 6 characters and only "
-"nummeric is recommendet!"
-msgstr ""
-
-#: views/epm_advanced_settings.page.php:177
-#: views/epm_templates/editor.views.dialog.cfg.global.php:119
-msgid "Time"
-msgstr "Hora"
-
-#: views/epm_advanced_settings.page.php:187
-#: views/epm_templates/editor.views.dialog.cfg.global.php:129
-msgid "Time Zone"
-msgstr "Zona Horaria"
-
-#: views/epm_advanced_settings.page.php:198
-#: views/epm_templates/editor.views.dialog.cfg.global.php:143
-msgid "TimeZone PBX"
-msgstr "Zona Horaria de la PBX"
-
-#: views/epm_advanced_settings.page.php:208
-msgid "TimeZone configuration terminasl. Like England/London"
-msgstr ""
-"Zona Horaria que se usar para configura los terminales. Ejemplo Europa/Madrid"
-
-#: views/epm_advanced_settings.page.php:220
-#: views/epm_templates/editor.views.dialog.cfg.global.php:165
-msgid "Time Server (NTP Server)"
-msgstr "Servidor de Tiempo (NTP Server)"
-
-#: views/epm_advanced_settings.page.php:225
-#: views/epm_templates/editor.views.dialog.cfg.global.php:170
-msgid "Server NTP..."
-msgstr "Servidor NTP..."
-
-#: views/epm_advanced_settings.page.php:238
-msgid "Server NTP use the configuration terminals."
-msgstr "Servidor NTP que se usa para configurar los terminales."
-
-#: views/epm_advanced_settings.page.php:246
-msgid "Local Paths"
-msgstr "Rutas Locales"
-
-#: views/epm_advanced_settings.page.php:256
-msgid "NMAP Executable Path"
-msgstr "Ruta Ejecutable NMAP"
-
-#: views/epm_advanced_settings.page.php:268
-msgid "Path location NMAP."
-msgstr "Ubicación de NMAP."
-
-#: views/epm_advanced_settings.page.php:280
-msgid "ARP Executable Path"
-msgstr "Ruta Ejecutable ARP"
-
-#: views/epm_advanced_settings.page.php:292
-msgid "Path location ARP."
-msgstr "Ubicacion de ARP."
-
-#: views/epm_advanced_settings.page.php:304
-msgid "Asterisk Executable Path"
-msgstr "Ruta Ejecutable Asterisk"
-
-#: views/epm_advanced_settings.page.php:316
-msgid "Path location Asterisk."
-msgstr "Ubicacion de Asterisk."
-
-#: views/epm_advanced_settings.page.php:328
-msgid "Tar Executable Path"
-msgstr "Ruta del ejecutable Tar"
-
-#: views/epm_advanced_settings.page.php:340
-msgid "Path location Tar."
-msgstr "Ubicación de la ruta Tar."
-
-#: views/epm_advanced_settings.page.php:352
-msgid "Netstat Executable Path"
-msgstr "Ruta ejecutable de Netstat"
-
-#: views/epm_advanced_settings.page.php:364
-msgid "Path location Netstat."
-msgstr "Ubicación de la ruta Netstat."
-
-#: views/epm_advanced_settings.page.php:372
-msgid "Web Directories"
-msgstr "Directorios Web"
-
-#: views/epm_advanced_settings.page.php:382
-msgid "Package Server"
-msgstr "Servidor de Paquetes"
-
-#: views/epm_advanced_settings.page.php:387
-msgid "Server Packages..."
-msgstr ""
-
-#: views/epm_advanced_settings.page.php:389
-msgid "Default Mirror FreePBX"
-msgstr "Mirror por defecto de FreePBX"
-
-#: views/epm_advanced_settings.page.php:399
-msgid "URL download files and packages the configuration terminals."
-msgstr ""
-"URL de descarga de archivos y paquetes de los terminales de configuración."
-
-#: views/epm_advanced_settings.page.php:407
-msgid "Other Settings"
-msgstr "Otros ajustes"
-
-#: views/epm_advanced_settings.page.php:417
-msgid "Disable Endpoint Manager Conflict Warning"
-msgstr "Deshabilitar la advertencia de conflicto de Endpoint Manager"
-
-#: views/epm_advanced_settings.page.php:421
-#: views/epm_advanced_settings.page.php:454
-#: views/epm_advanced_settings.page.php:489
-#: views/epm_advanced_settings.page.php:516
-#: views/epm_advanced_settings.page.php:543
-#: views/epm_advanced_settings.page.php:570
-#: views/epm_advanced_settings.page.php:597
-#: views/epm_advanced_settings.page.php:624
-msgid "Yes"
-msgstr "Yes"
-
-#: views/epm_advanced_settings.page.php:423
-#: views/epm_advanced_settings.page.php:456
-#: views/epm_advanced_settings.page.php:491
-#: views/epm_advanced_settings.page.php:518
-#: views/epm_advanced_settings.page.php:545
-#: views/epm_advanced_settings.page.php:572
-#: views/epm_advanced_settings.page.php:599
-#: views/epm_advanced_settings.page.php:626
-msgid "No"
-msgstr "No"
-
-#: views/epm_advanced_settings.page.php:432
-msgid ""
-"Enable this setting if you dont want to get a warning message anymore if you "
-"have the Commercial Endpoint Manager installed together with OSS Endpoint "
-"Manager"
-msgstr ""
-
-#: views/epm_advanced_settings.page.php:440
-msgid "Experimental"
-msgstr "Experimental"
-
-#: views/epm_advanced_settings.page.php:450
-msgid "Enable FreePBX ARI Module"
-msgstr "Habilitar el módulo ARI de FreePBX"
-
-#: views/epm_advanced_settings.page.php:465
-msgid ""
-"Enable FreePBX ARI Module <a href=\"http://wiki.provisioner.net/index.php/"
-"Endpoint_manager_manual_ari\" target=\"_blank\">What?</a>"
-msgstr ""
-"¿Habilitar el módulo ARI de FreePBX <a href=\"http://wiki.provisioner.net/"
-"index.php/Endpoint_manager_manual_ari\" target=\"_blank\">aqui?</a>"
-
-#: views/epm_advanced_settings.page.php:485
-msgid "Enable Debug Mode"
-msgstr "Activar Debug Mode"
-
-#: views/epm_advanced_settings.page.php:500
-msgid "Enable Advanced debugging mode for endpoint manager"
-msgstr ""
-
-#: views/epm_advanced_settings.page.php:512
-msgid "Disable Tooltips"
-msgstr "Desactivar las sugerencias"
-
-#: views/epm_advanced_settings.page.php:527
-msgid "Disable Tooltip popups"
-msgstr ""
-
-#: views/epm_advanced_settings.page.php:539
-msgid "Allow Duplicate Extensions"
-msgstr "Permitir extensiones duplicadas"
-
-#: views/epm_advanced_settings.page.php:554
-msgid ""
-"Assign the same extension to multiple phones (Note: This is not supported by "
-"Asterisk)"
-msgstr ""
-
-#: views/epm_advanced_settings.page.php:566
-msgid "Allow Saving Over Default Configuration Files"
-msgstr "Permitir guardar Sobre los archivos de configuración predeterminados"
-
-#: views/epm_advanced_settings.page.php:581
-msgid ""
-"When editing the configuration files allows one to save over the global "
-"template default instead of saving directly to the database. These types of "
-"changes can and will be overwritten when updating the brand packages from "
-"the configuration/installation page"
-msgstr ""
-
-#: views/epm_advanced_settings.page.php:593
-msgid "Disable TFTP Server Check"
-msgstr "Desactivar comprobación de servidor TFTP"
-
-#: views/epm_advanced_settings.page.php:608
-msgid ""
-"Disable checking for a valid, working TFTP server which can sometimes cause "
-"Apache to crash"
-msgstr ""
-
-#: views/epm_advanced_settings.page.php:620
-msgid "Disable Configuration File Backups"
-msgstr "Desactivar las copias de seguridad del archivo de configuración"
-
-#: views/epm_advanced_settings.page.php:635
-msgid "Disable backing up the tftboot directory on every phone rebuild or save"
+#: views/epm_advanced_settings.page.php:46
+msgid "Serach"
 msgstr ""
 
 #: views/epm_config_editor.page.php:5
@@ -2093,9 +3256,30 @@ msgstr "Por favor, seleccione un modelo"
 msgid "End Point Configuration Manager"
 msgstr "Configurar Administracion End Point"
 
+#: views/epm_templates/editor.views.dialog.cfg.global.php:26
+msgid "Setting Provision"
+msgstr "Ajustes Provision"
+
+#: views/epm_templates/editor.views.dialog.cfg.global.php:42
+msgid "Server PBX..."
+msgstr "Servidor PBX..."
+
+#: views/epm_templates/editor.views.dialog.cfg.global.php:44
+#: views/epm_templates/editor.views.dialog.cfg.global.php:172
+msgid "Use me!"
+msgstr "Usame!"
+
 #: views/epm_templates/editor.views.dialog.cfg.global.php:54
 msgid "IP address of the PBX server that will use the terminals."
 msgstr "Dirección IP del servidor PBX que van a utilizar los terminales."
+
+#: views/epm_templates/editor.views.dialog.cfg.global.php:72
+msgid "Web (HTTP)"
+msgstr "Web (HTTP)"
+
+#: views/epm_templates/editor.views.dialog.cfg.global.php:73
+msgid "Web (HTTPS)"
+msgstr "Web (HTTPS)"
 
 #: views/epm_templates/editor.views.dialog.cfg.global.php:76
 msgid " - Point your phones to: "
@@ -2120,9 +3304,21 @@ msgstr ""
 "Lugar donde se alojan los archivos de configuración y firmware para los "
 "terminales."
 
+#: views/epm_templates/editor.views.dialog.cfg.global.php:119
+msgid "Time"
+msgstr "Hora"
+
+#: views/epm_templates/editor.views.dialog.cfg.global.php:143
+msgid "TimeZone PBX"
+msgstr "Zona Horaria de la PBX"
+
 #: views/epm_templates/editor.views.dialog.cfg.global.php:153
 msgid "Select the time zone for the terminals. Example England/London"
 msgstr "Seleccione la zona horaria de los terminales. Ejemplo Europa/Madrid"
+
+#: views/epm_templates/editor.views.dialog.cfg.global.php:170
+msgid "Server NTP..."
+msgstr "Servidor NTP..."
 
 #: views/epm_templates/editor.views.dialog.cfg.global.php:183
 msgid "NTP server that syncs the time the terminals."
@@ -2139,6 +3335,10 @@ msgstr "Actualizar Configuración Personalizada"
 #: views/epm_templates/editor.views.dialog.cfg.global.php:197
 msgid "Reset Global Overrides to Default"
 msgstr "Restablecer valores por defecto"
+
+#: views/epm_templates/editor.views.dialog.edit.cfg.php:14
+msgid "Content of the file:"
+msgstr "Contenido del archivo:"
 
 #: views/epm_templates/editor.views.rnav.php:5 views/epm_templates/rnav.php:5
 msgid "List Tempalte Custom"
@@ -2303,21 +3503,21 @@ msgstr "Buscar actualizaciones"
 msgid "Search Model..."
 msgstr "Buscar Modelo..."
 
-#: views/page.main.config.php:26
+#: views/page.main.config.php:25
 msgid "Hidden Packages"
 msgstr "Paquetes ocultos"
 
-#: views/page.main.config.php:29
+#: views/page.main.config.php:28
 msgid "Hidden Brands:"
 msgstr "Marcas ocultas:"
 
-#: views/page.main.config.php:50
+#: views/page.main.config.php:49
 msgid ""
 "This list contains all the Brands <br /> that have been hidden. Clicking on "
 "any of them will unhide them."
 msgstr ""
 
-#: views/page.main.config.php:60
+#: views/page.main.config.php:57
 msgid "List Packages Manager"
 msgstr "Administracion Lista de Paquetes"
 
@@ -2727,8 +3927,213 @@ msgstr "Administrador de Plantillas"
 msgid "Config File Placeholders"
 msgstr ""
 
-#~ msgid "Configuration Directory is not writable!"
-#~ msgstr "En el directorio de configuración no se puede escribir!"
+#~ msgid "Creating Phone Modules Directory..."
+#~ msgstr "Creación de un directorio de módulos telefónicos..."
+
+#~ msgid "Moving Auto Provisioner Class..."
+#~ msgstr "Mover la clase de aprovisionador automático..."
+
+#~ msgid "Creating temp folder..."
+#~ msgstr "Creando una carpeta temporal..."
+
+#, php-format
+#~ msgid ""
+#~ "<strong>Your permissions are wrong on %s, web provisioning link not "
+#~ "created!</strong>"
+#~ msgstr ""
+#~ "<strong>¡Sus permisos son incorrectos en %s, enlace de aprovisionamiento "
+#~ "web no creado!</strong>"
+
+#~ msgid "Locating NMAP + ARP + ASTERISK Executables"
+#~ msgstr "Localización de ejecutables NMAP + ARP + ASTERISK"
+
+#, php-format
+#~ msgid "Update Version Number to %s..."
+#~ msgstr "Actualice el número de versión a %s..."
+
+#~ msgid "Removing Phone Modules Directory"
+#~ msgstr "Eliminación del directorio de módulos telefónicos"
+
+#~ msgid "Not a Vaild Directory.<br /> Try to run 'mkdir "
+#~ msgstr "No es un directorio válido. <br / Intente ejecutar \"mkdir "
+
+#~ msgid "Ok!"
+#~ msgstr "Ok!"
+
+#~ msgid "No send Product Select!"
+#~ msgstr "No se envío producto seleccionado!"
+
+#~ msgid "File not readable, check the permission! "
+#~ msgstr "Archivo no legible, ¡verifique el permiso! "
+
+#~ msgid "No send Type File!"
+#~ msgstr "No se envío tipo de archivo!"
+
+#~ msgid "No send SendID!"
+#~ msgstr "No se envío ID!"
+
+#~ msgid "No ID set!"
+#~ msgstr "No se ha enviado ID!"
+
+#~ msgid "ID  not valid!"
+#~ msgstr "ID no valida!"
+
+#~ msgid "ID Producto not is number"
+#~ msgstr "ID Producto no es numero"
+
+#~ msgid "ID Brand not is numbre"
+#~ msgstr "ID Marca no es numero"
+
+#~ msgid "Error: No send value!"
+#~ msgstr "Error: No se envío valor!"
+
+#~ msgid "Error: Value send is not number!"
+#~ msgstr "Error: El valor enviado no es un numero!"
+
+#~ msgid "Error: Command not found!"
+#~ msgstr "Error: Comando no valido!"
+
+#~ msgid "IdType not valid to typesavecfg!"
+#~ msgstr "IdType no es válido para typesavecfg!"
+
+#~ msgid ""
+#~ "Error: Not able to connect to repository. Using local master file instead."
+#~ msgstr ""
+#~ "Error: No es capaz de conectarse al repositorio. Usando archivo maestro "
+#~ "local."
+
+#, php-format
+#~ msgid "Error: No Local File for %s !"
+#~ msgstr "Error: ¡Ningún archivo local para %s!"
+
+#~ msgid "Learn how to manually upload packages here (it's easy!):"
+#~ msgstr "Aprender cómo cargar manualmente los paquetes aquí (es fácil!):"
+
+#~ msgid "Click Here!"
+#~ msgstr "Click Aquí!"
+
+#~ msgid ""
+#~ "Error: Aborting Brand Downloads. Can't Get Master File, Assuming Timeout "
+#~ "Issues!"
+#~ msgstr ""
+#~ "Error: Abortar Descargas de Marca. No se puede obtener del archivo "
+#~ "Maestro, Suponiendo problemas de Timeout!"
+
+#, php-format
+#~ msgid "File 'family_data.json' Doesn't exist in directory: %s"
+#~ msgstr "Archivo 'family_data.json' no existe en el directorio: %s"
+
+#~ msgid "Checking MD5sum of Package.... "
+#~ msgstr "Comprobando MD5sum de paquete... "
+
+#~ msgid "Extracting Tarball........ "
+#~ msgstr "Extrayendo Tarball........ "
+
+#~ msgid "MD5 Did not match!"
+#~ msgstr "- MD5 no coincide!"
+
+#, php-format
+#~ msgid "MD5 XML: %s"
+#~ msgstr "MD5 XML: %s"
+
+#, php-format
+#~ msgid "MD5 PKG: %s"
+#~ msgstr "MD5 PKG: %s"
+
+#~ msgid "Error: Can't Find Downloaded File!"
+#~ msgstr "Error: ¡No se puede encontrar el archivo descargado!"
+
+#~ msgid "Error download Brand package!"
+#~ msgstr "Error de descarga paquete de marcas!"
+
+#~ msgid "Error: Installing brands is disabled while in repo mode!"
+#~ msgstr "Error: Instalación de marcas se desactiva en el modo de Repo!"
+
+#, php-format
+#~ msgid "- Error Moving %s!"
+#~ msgstr "- Error Moviendo %s!"
+
+#, php-format
+#~ msgid "Updating %s brand data ..."
+#~ msgstr "Actualizando datos de la marca %s ..."
+
+#~ msgid "Firmware Requirment Detected!.........."
+#~ msgstr "Requisito firmware detectado .........."
+
+#~ msgid "Old Data Detected! Migrating ... "
+#~ msgstr "Antiguos datos detectados! Migrando ... "
+
+#~ msgid "---Updating Model %_NAMEMOD_%"
+#~ msgstr "--Actualizando Modelo  %_NAMEMOD_%"
+
+#~ msgid "---Inserting Model %_NAMEMOD_%"
+#~ msgstr "---Insertando Modelo %_NAMEMOD_%"
+
+#~ msgid "Error: System Error in Sync Model Function, Load Failure!"
+#~ msgstr "Error: Sistema de sincronización de modelos, Error de Carga!"
+
+#~ msgid "Error: Not allowed in repo mode!!"
+#~ msgstr "Error: No permite en modo de repo!"
+
+#~ msgid "Skipping download, updated local version..."
+#~ msgstr "Saltando descarga, version local actualizada..."
+
+#~ msgid "Checking MD5sum of Package... "
+#~ msgstr "Comprobando MD5sum de paquete... "
+
+#~ msgid "Matches!"
+#~ msgstr "Correcto!"
+
+#~ msgid "Firmware MD5 didn't match!"
+#~ msgstr "MD5 de Frimware no coincide!"
+
+#~ msgid "Your Firmware is already up to date."
+#~ msgstr "Tu Frimware ya esta actualizado."
+
+#~ msgid "Uninstalla frimware... "
+#~ msgstr "Desisntalando Frimware… "
+
+#, php-format
+#~ msgid "<b>ERROR:</b> file2json return false for the file '%s'."
+#~ msgstr "<b>ERROR:</b> file2json devuelve false para el fichero '%s'."
+
+#, php-format
+#~ msgid "<b>ERROR:</b> %s"
+#~ msgstr "<b>ERROR:</b> %s"
+
+#, php-format
+#~ msgid "ERROR: Category in the file <b>'%s'</b> is not array!"
+#~ msgstr "ERROR: ¡La categoría en el archivo <b>'%s'</b> no es un array!"
+
+#, php-format
+#~ msgid "Failed to install %s due to the following conflicting module(s): %s"
+#~ msgstr ""
+#~ "No se pudo instalar %s debido a los siguientes módulos conflictivos: %s"
+
+#~ msgid "Local File Configs"
+#~ msgstr "Cargar Archivo de Configuracion"
+
+#~ msgid "Full Screen F11"
+#~ msgstr "Pantalla Completa F11"
+
+#~ msgid "IP Address of your PBX."
+#~ msgstr "Dirección IP de su centralita."
+
+#~ msgid "Server NTP use the configuration terminals."
+#~ msgstr "Servidor NTP que se usa para configurar los terminales."
+
+#~ msgid "Path location NMAP."
+#~ msgstr "Ubicación de NMAP."
+
+#~ msgid ""
+#~ "Enable FreePBX ARI Module <a href=\"http://wiki.provisioner.net/index.php/"
+#~ "Endpoint_manager_manual_ari\" target=\"_blank\">What?</a>"
+#~ msgstr ""
+#~ "¿Habilitar el módulo ARI de FreePBX <a href=\"http://wiki.provisioner.net/"
+#~ "index.php/Endpoint_manager_manual_ari\" target=\"_blank\">aqui?</a>"
+
+#~ msgid "Enable Debug Mode"
+#~ msgstr "Activar Debug Mode"
 
 #~ msgid "Please change the location:"
 #~ msgstr "Por favor, cambia la ubicación:"
@@ -2741,9 +4146,6 @@ msgstr ""
 
 #~ msgid "Downloading Brand JSON..... "
 #~ msgstr "Descargando JSON Marca.... "
-
-#~ msgid "Custom Template Files"
-#~ msgstr "Archivos de plantilla personalizada"
 
 #~ msgid "Brand Configurations/Setup"
 #~ msgstr "Marca Configuraciones/Configurar"
@@ -2837,17 +4239,8 @@ msgstr ""
 #~ msgid "Can Not Find Uploaded Files!"
 #~ msgstr "No se pueden encontrar archivos cargados!"
 
-#~ msgid "Can't Find Downloaded File!"
-#~ msgstr "No puede encontrar el archivo descargado."
-
-#~ msgid "Checking MD5sum of Package..."
-#~ msgstr "Comprobando MD5sum en Paquete..."
-
 #~ msgid "Checking MD5sum of Package...."
 #~ msgstr "Comprobando MD5sum de paquete..."
-
-#~ msgid "Clone Model is not number!"
-#~ msgstr "Modelo Clone no es número!"
 
 #~ msgid ""
 #~ "Creating Directory Structure for Brand '%_NAME_%' and Moving Files .."
@@ -2861,14 +4254,8 @@ msgstr ""
 #~ msgid "Edit Global Settings Overrides:"
 #~ msgstr "Editar anulaciones de configuraciones globales:"
 
-#~ msgid "Error creating directory: %_DIR_%"
-#~ msgstr "Error al crear el directorio: %_DIR_%"
-
 #~ msgid "Error: No Local File for %_name_% !"
 #~ msgstr "Error: No hay archivo local para %_name_%!"
-
-#~ msgid "Error: Not send command!"
-#~ msgstr "Error: No se ha enviado comando!"
 
 #~ msgid "Exporting %_NAME_%"
 #~ msgstr "Exportando %_NAME_%"
@@ -2884,9 +4271,6 @@ msgstr ""
 
 #~ msgid "File %_FILE_% size is 0!"
 #~ msgstr "Archivo %_FILE_% tamaño es 0!"
-
-#~ msgid "File Temp no Exists!"
-#~ msgstr "Archivo Temp no Existe!"
 
 #~ msgid "ID Package send not valid, brand not exist!"
 #~ msgstr "¡El ID del paquete enviado no válido, la marca no existe!"
@@ -2930,9 +4314,6 @@ msgstr ""
 
 #~ msgid "Install/Unistall"
 #~ msgstr "Instalar/Desisntalar"
-
-#~ msgid "Installing brands is disabled while in repo mode!"
-#~ msgstr "Instalación de marcas se desactiva en el modo de Repo!"
 
 #~ msgid "Invalid Brand Specified on line %_LINE_%!"
 #~ msgstr "Marca no válida especificada en la línea %_LINE_%!"
@@ -2985,17 +4366,11 @@ msgstr ""
 #~ msgid "No File Provided!"
 #~ msgstr "¡Ningún archivo proporcionado!"
 
-#~ msgid "No package set!"
-#~ msgstr "No hay conjunto de paquetes!"
-
 #~ msgid "No send Clone Model!"
 #~ msgstr "¡No envíe el modelo del clon!"
 
 #~ msgid "No send File ID!"
 #~ msgstr "No enviar ID de archivo!"
-
-#~ msgid "No send File Name!"
-#~ msgstr "No enviar nombre de archivo!"
 
 #~ msgid "No send Name File!"
 #~ msgstr "No enviar nombre de archivo!"
@@ -3005,9 +4380,6 @@ msgstr ""
 
 #~ msgid "No send Origianl Name File!"
 #~ msgstr "No enviar archivo de nombre original!"
-
-#~ msgid "No send Product!"
-#~ msgstr "No envíe producto!"
 
 #~ msgid "No send SQL Select!"
 #~ msgstr "No enviar SQL Select!"
@@ -3039,11 +4411,6 @@ msgstr ""
 #~ msgstr ""
 #~ "No se puede conectar al repositorio. Usando el archivo de marca local "
 #~ "[%_brandname_%] en su lugar."
-
-#~ msgid "Not able to connect to repository. Using local master file instead."
-#~ msgstr ""
-#~ "No se puede conectar al repositorio. Uso del archivo maestro local en su "
-#~ "lugar."
 
 #~ msgid "Not allowed in repo mode!!"
 #~ msgstr "No permite en modo de repo!"
@@ -3100,9 +4467,6 @@ msgstr ""
 #~ msgstr ""
 #~ "También puede actualizar manualmente el repositorio mediante la descarga "
 #~ "de archivos aquí: %_URL_INI_% de lanzamiento Repo %_URL_END_%"
-
-#~ msgid "Your Firmware is already up to date"
-#~ msgstr "Tu Frimware ya esta actualizado"
 
 #~ msgid "update_brand(): Debug is set to %_DEBUG_MODE_%"
 #~ msgstr "update_brand (): depuración se establece en %_DEBUG_MODE_%"
@@ -3162,14 +4526,8 @@ msgstr ""
 #~ msgid "Exception:"
 #~ msgstr "Excepcion:"
 
-#~ msgid "File Configuration Editor"
-#~ msgstr "Editar Archivo de Configuracion"
-
 #~ msgid "Function:"
 #~ msgstr "Funcion:"
-
-#~ msgid "ID sent is not a number!"
-#~ msgstr "El ID que se ha envido no es un numero!"
 
 #~ msgid "INVALID OPTION!"
 #~ msgstr "OPCION NO VALIDA!"
@@ -3182,9 +4540,6 @@ msgstr ""
 #~ "Si activamos el modelo podremos configurar terminales de dicho modelos."
 #~ "<br /> Si esta desactivado este modelo no aparecera en la lista de "
 #~ "modelos que se pueden configurar para la PBX."
-
-#~ msgid "Invalid level!"
-#~ msgstr "Nivel no válido!"
 
 #~ msgid "List Bran's Availables emtry."
 #~ msgstr "Lista de Marcas disponibles vacia."
@@ -3219,9 +4574,6 @@ msgstr ""
 
 #~ msgid "Then Use Manual Upload in Advanced Settings.<br/>"
 #~ msgstr "Utilizar carga Manual en configuración avanzada.<br/>"
-
-#~ msgid "Type invalid: "
-#~ msgstr "Tipo no valido!"
 
 #~ msgid "UPDATE CONTENT..."
 #~ msgstr "Actualizar contenido...."

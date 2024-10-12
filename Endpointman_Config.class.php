@@ -2042,7 +2042,7 @@ class Endpointman_Config
 					// Remove files from tftp directory
 					if (!unlink($file_path))
 					{
-						out(sprintf(_("❌ Unable to remove firmware file '%'s!"), $file));
+						out(sprintf(_("❌ Unable to remove firmware file '%s'!"), $file));
 					}
 				}
 			}

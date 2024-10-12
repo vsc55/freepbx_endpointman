@@ -537,7 +537,14 @@ class ProvisionerBrandDB extends ProvisionerBaseDB
         return count($oui);
     }
 
-    public function setOUI(string $oui, int $custom = 0)
+    /**
+     * Add a new OUI to the brand.
+     * 
+     * @param string $oui The OUI to add to the brand.
+     * @param bool $custom If true, it will set the OUI as custom otherwise not custom.
+     * @return bool True if the OUI is added, false otherwise.
+     */
+    public function setOUI(string $oui, bool $custom = false)
     {
         if (! $this->isExistID())
         {
@@ -546,9 +553,54 @@ class ProvisionerBrandDB extends ProvisionerBaseDB
         $new = [
             'brand'  => $this->id,
             'oui'    => $oui,
-            'custom' => $custom,
+            'custom' => $custom ? 1 : 0,
         ];
         return $this->remplaceQuery("endpointman_oui_list", $new);
+    }
+
+    /**
+     * Check if the OUI exists in the database.
+     * 
+     * @param string $oui The OUI to check if exists in the database.
+     * @return bool True if the OUI exists, false otherwise.
+     */
+    public function isExistOUI(string $oui)
+    {
+        if (! $this->isExistID())
+        {
+            return false;
+        }
+        $where = [
+            'brand' => [
+                'operator' => "=", 
+                'value'    => $this->getID()
+            ],
+            'oui' => [
+                'operator' => "=", 
+                'value'    => $oui
+            ],
+        ];
+        $count = $this->querySelect("endpointman_oui_list", "COUNT(*) as total", $where, 1, true);
+        if ($count === 0)
+        {
+            return false;
+        }
+        return true;
+    }
+
+    /**
+     * Delete the OUI by the ID.
+     * 
+     * @param int $oui_id The ID of the OUI to delete.
+     * @return bool True if the OUI is deleted, false otherwise.
+     */
+    public function deleteOUIByID(int $oui_id)
+    {
+        if (! $this->isExistID())
+        {
+            return false;
+        }
+        return $this->deleteQuery("endpointman_oui_list", $oui_id);
     }
 
 

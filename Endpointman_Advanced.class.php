@@ -35,8 +35,9 @@ class Endpointman_Advanced
 	{
 		$allowRequest = array(
 			"oui",							// Tab OUI Manager
+			"oui_brands",					// Tab OUI Manager
 			"oui_add",						// Tab OUI Manager
-			"oui_del",						// Tab OUI Manager
+			"oui_remove",					// Tab OUI Manager
 			"poce_tree", 					// Tab POCE
 			// "poce_list_brands",
 			// "poce_select",
@@ -97,7 +98,7 @@ class Endpointman_Advanced
 						default:
 							$command_allow = false;
 					}
-					break;
+				break;
 
 				case 'oui_manager':
 					switch ($command)
@@ -122,19 +123,22 @@ class Endpointman_Advanced
 							return $ret;
 							break;
 		
+						case "oui_brands":
+							$retarr = $this->epm_advanced_oui_brands($data, true, []);
+							break;
+							
 						case "oui_add":
-							$retarr = $this->epm_advanced_oui_add();
+							$retarr = $this->epm_advanced_oui_add($data);
 							break;
 		
-						case "oui_del":
-							$retarr = $this->epm_advanced_oui_remove();
+						case "oui_remove":
+							$retarr = $this->epm_advanced_oui_remove($data);
 							break;
 		
 						default:
 							$command_allow = false;
 					}
-					break;
-
+				break;
 
 				case 'iedl':
 					switch ($command)
@@ -143,7 +147,7 @@ class Endpointman_Advanced
 							$command_allow = false;
 					}
 					
-					break;
+				break;
 				
 				case 'poce':
 					switch ($command)
@@ -183,7 +187,7 @@ class Endpointman_Advanced
 						default:
 							$command_allow = false;
 					}
-					break;
+				break;
 				
 				case 'manual_upload':
 					switch ($command)
@@ -195,7 +199,7 @@ class Endpointman_Advanced
 						default:
 							$command_allow = false;
 					}
-					break;
+				break;
 
 				default:
 					$retarr = array(
@@ -204,12 +208,10 @@ class Endpointman_Advanced
 					);
 			}
 
-
-
 			if (! $command_allow)
 			{
 				$retarr = array(
-					"status" => false,
+					"status"  => false,
 					"message" => sprintf(_("Command '%s' not found!"), $command)
 				);
 			}
@@ -236,9 +238,6 @@ class Endpointman_Advanced
 			$endprocess = false;
 			switch ($mod_tab)
 			{
-				case "oui_manager":
-					break;
-
 				case "iedl":
 					switch ($command)
 					{
@@ -255,7 +254,7 @@ class Endpointman_Advanced
 							$this->epm_advanced_iedl_import();
 							break;
 					}
-					break;
+				break;
 
 				case "manual_upload":
 					switch ($command)
@@ -285,7 +284,7 @@ class Endpointman_Advanced
 							$this->epm_advanced_manual_upload_provisioner();
 							break;
 					}
-					break;
+				break;
 			}
 
 			if ($endprocess)
@@ -297,6 +296,7 @@ class Endpointman_Advanced
 		}
 	}
 
+	// Force flush all output buffers, need for AJAX
 	private function activeFlush()
 	{
 		ob_implicit_flush(true);
@@ -750,37 +750,24 @@ class Endpointman_Advanced
 							)
 						)
 					);
-					break;
+				break;
 
 				case "manual_upload":
 					$provisioner_ver 						= $this->epm->getConfig("endpoint_vers");
 					$data_tab['config']['provisioner_ver']  = sprintf(_("%s at %s"), date("d-M-Y", $provisioner_ver) , date("g:ia", $provisioner_ver));
 					$data_tab['config']['brands_available'] = $this->epm->brands_available("", false);
-					break;
+				break;
 
 				case "iedl":
 					$data_tab['config']['url_export'] = "config.php?display=epm_advanced&subpage=iedl&command=export";
-					break;
+				break;
 
 				case "oui_manager":
-					// $data_tab['config']['brands']   = sql('SELECT * from '. self::TABLES['epm_brands_list'] .' WHERE id > 0 ORDER BY name ASC', 'getAll', \PDO::FETCH_ASSOC);
-
-					$data_tab['config']['brands'] = [];
-					foreach($this->epm->packagesdb->getBrands(true, 'name', 'ASC') as $brand)
-					{
-						$data_tab['config']['brands'][] = array(
-							'id'   => $brand->getId(),
-							'name' => $brand->getName()
-						);
-					}
-
-					// Send the brands list to the view to be used in the select box for the win new OUI is added
-					// $data_tab['config']['brands']   = $this->get_hw_brand_list(true, 'name', 'ASC');
 					$data_tab['config']['url_grid'] = sprintf("ajax.php?module=endpointman&amp;module_sec=epm_advanced&amp;module_tab=%s&amp;command=oui", $key);
-					break;
+				break;
 
 				case "poce":
-					break;
+				break;
 			}
 			$data_tab = array_merge($data, $data_tab);
 
@@ -789,6 +776,8 @@ class Endpointman_Advanced
 		$data['tabs'] = $tabs;
 		unset($tabs);
 	}
+
+
 
 
 
@@ -980,6 +969,9 @@ class Endpointman_Advanced
 
 		return array("status" => true, "message" => "OK", "name" => $name, "value" => $value);
 	}
+
+
+
 
 
 	/**** FUNCIONES SEC MODULO "epm_advanced\poce" ****/
@@ -1921,7 +1913,6 @@ class Endpointman_Advanced
 		return $retarr;
 	}
 
-
     /**
      * Used to send sample configurations to provisioner.net
      * NOTE: The user has to explicitly click a link that states they are sending the configuration to the project
@@ -1969,6 +1960,185 @@ class Endpointman_Advanced
 
 
 
+
+	/**** FUNCIONES SEC MODULO "epm_advanced\oui_manager" ****/
+	/**
+	 * Get the list of OUIs
+	 * 
+	 * @param bool $include_one_select True to include the first option in the list with the text "Select Brand:" and false to not include it
+	 * @param array $select Array with the IDs of the selected brands
+	 * @return array Array with the status, message, brands, count, select and count_select.
+	 * 
+	 * 
+	 */
+	private function epm_advanced_oui_brands(array $data, bool $include_one_select = true, array $select = [])
+	{
+		$brands = [];
+		if ($include_one_select)
+		{
+			$brands[] = array(
+				'id'   		=> '',
+				'name' 		=> _("Select Brand:"),
+				'is_select' => empty($select),
+			);
+		}
+		foreach($this->epm->packagesdb->getBrands(true, 'name', 'ASC') as $brand)
+		{
+			$brands[] = array(
+				'id'   		=> $brand->getId(),
+				'name' 		=> $brand->getName(),
+				'is_select' => in_array($brand->getId(), $select),
+			);
+		}
+		return array(
+			"status"  		=> true,
+			"message" 		=> "OK",
+			"brands"  		=> $brands,
+			"count"   		=> count($brands),
+			'select'  		=> $select,
+			'count_select'  => count($select),
+		);
+	}
+		
+	private function epm_advanced_oui_remove(array $data)
+	{
+		$request 		  = $data['request'] ?? [];
+		$request_args 	  = array("oui_remove");
+		$args_check 	  = $this->epm->system->check_request_args($request, $request_args);
+
+		switch(true)
+		{
+			case (empty($args_check)):
+			case ($args_check === false):
+				return array("status" => false, "message" => _("Error in the process of checking the request arguments!"));
+
+			case ($args_check === true):
+				break;
+
+			case (is_string($args_check)):
+			default:
+				return array("status" => false, "message" => $args_check);
+		}
+
+		$oui_id	 = trim($request['oui_remove']);
+		$oui	 = null;
+		$all_oui = $this->epm->packagesdb->getOUIAll(true);
+		$err_msg = null;
+
+
+		if (empty($oui_id))
+		{
+			$err_msg = _("OUI is empty!");
+		}
+		else if (!is_numeric($oui_id))
+		{
+			$err_msg =  _("OUI must be a number!");
+		}
+		foreach($all_oui as $oui_key => $oui_data)
+		{
+			if ($oui_data['id'] == $oui_id)
+			{
+				if ($oui_data['custom'] != '1') 
+				{
+					$err_msg = _("OUI is not custom!");
+					break;
+				}
+				$oui = $oui_data;
+				break;
+			}
+		}
+		if (empty($err_msg) && empty($oui))
+		{
+			$err_msg = _("OUI not found!");
+		}
+
+		if (!empty($err_msg))
+		{
+			return array("status" => false, "message" => $err_msg);
+		}
+
+		$brand = $this->epm->packagesdb->getBrandByID($oui['brand_id']);
+		if (! $brand->deleteOUIByID($oui_id))
+		{
+		 	return array("status" => false, "message" => sprintf(_("Error deleting OUI '%s' from brand '%s'!"), $oui['oui'], $brand->getName()));
+		}
+		return array("status" => true, "message" => sprintf(_("OUI '%s' deleted from brand '%s' successfully!"), $oui['oui'], $brand->getName()));
+	}
+
+	private function epm_advanced_oui_add(array $data)
+	{
+		$request 		  = $data['request'] ?? [];
+		$request_args 	  = array("new_oui_number", "new_oui_brand");
+		$args_check 	  = $this->epm->system->check_request_args($request, $request_args);
+
+		switch(true)
+		{
+			case (empty($args_check)):
+			case ($args_check === false):
+				return array("status" => false, "message" => _("Error in the process of checking the request arguments!"));
+
+			case ($args_check === true):
+				break;
+
+			case (is_string($args_check)):
+			default:
+				return array("status" => false, "message" => $args_check);
+		}
+
+		$brand 	  = null;
+		$brand_id = trim($request['new_oui_brand']);
+		$oui	  = strtoupper(preg_replace("/[^a-zA-Z0-9]/", "", trim($request['new_oui_number'])));
+		$all_oui  = $this->epm->packagesdb->getOUIAll(true);
+
+		$err_msg = null;
+		if (empty($brand_id))
+		{
+			$err_msg = _("Brand is empty!");
+		}
+		else if ($brand_id < 0)
+		{
+			$err_msg = _("Brand send is number not valid!");
+		}
+		else if ($this->epm->packagesdb->isBrandExist($brand_id) == false)
+		{
+			$err_msg = sprintf(_("Brand '%s' not found!"), $brand_id);
+		}
+		else if (empty($oui))
+		{
+			$err_msg = _("OUI is empty!");
+		}
+		else if (strlen($oui) < 6)
+		{
+			$err_msg =  _("OUI must be at least 6 characters!");
+		}
+		else if (! preg_match('/^[a-fA-F0-9]+$/', $oui))
+		{
+			$err_msg =  _("OUI must be hexadecimal!");
+		}
+		else if (in_array($oui, array_keys($all_oui)))
+		{
+			$oui_exist = $all_oui[$oui];
+			if ($oui_exist['brand_id'] == $brand_id)
+			{
+				$err_msg = sprintf(_("OUI '%s' already exists!"), $oui);
+			}
+			else
+			{
+				$err_msg = sprintf(_("OUI '%s' already exists for brand '%s'!"), $oui, $oui_exist['brand']);
+			}
+		}
+		if (!empty($err_msg))
+		{
+			return array("status" => false, "message" => $err_msg);
+		}
+
+		$brand = $this->epm->packagesdb->getBrandByID($brand_id);
+		if (! $brand->setOUI($oui, true))
+		{
+			return array("status" => false, "message" => sprintf(_("Error adding OUI '%s' to brand '%s'!"), $oui, $brand->getName()));
+		}
+		return array("status" => true, "message" => sprintf(_("OUI '%s' added to brand '%s' successfully!"), $oui, $brand->getName()));
+	}
 
 
 
@@ -2420,51 +2590,6 @@ FreePBX::Endpointman()->add_device($mac, $model_id, $ext, 0, $line_id, $descript
 		}
 	}
 
-
-	/**** FUNCIONES SEC MODULO "epm_advanced\oui_manager" ****/
-	private function epm_advanced_oui_remove()
-	{
-		//TODO: Añadir validacion de si es custom o no
-		if ((! isset($_REQUEST['id_del'])) OR ($_REQUEST['id_del'] == "")) {
-			$retarr = array("status" => false, "message" => _("No ID set!"));
-		}
-		elseif ((! is_numeric($_REQUEST['id_del'])) OR ($_REQUEST['id_del'] < 0)) {
-			$retarr = array("status" => false, "message" => _("ID  not valid!"), "id" => $_REQUEST['id']);
-		}
-		else
-		{
-			$dget['id'] = $_REQUEST['id_del'];
-
-			$sql = "DELETE FROM endpointman_oui_list WHERE id = " . $dget['id'];
-			sql($sql);
-
-			$retarr = array("status" => true, "message" => "OK", "id" => $dget['id']);
-			unset($dget);
-		}
-		return $retarr;
-	}
-
-	private function epm_advanced_oui_add()
-	{
-		//TODO: Pendiente añadir isExiste datos.
-		if ((! isset($_REQUEST['number_new_oui'])) OR ($_REQUEST['number_new_oui'] == "")) {
-			$retarr = array("status" => false, "message" => _("No OUI set!"));
-		}
-		elseif ((! isset($_REQUEST['brand_new_oui'])) OR ($_REQUEST['brand_new_oui'] == "")) {
-			$retarr = array("status" => false, "message" => _("No Brand set!"));
-		}
-		else {
-			$dget['oui'] = $_REQUEST['number_new_oui'];
-			$dget['brand'] = $_REQUEST['brand_new_oui'];
-
-			$sql = "INSERT INTO  endpointman_oui_list (oui, brand, custom) VALUES ('" . $dget['oui'] . "',  '" . $dget['brand'] . "',  '1')";
-			sql($sql);
-
-			$retarr = array("status" => true, "message" => "OK", "oui" => $dget['oui'], "brand" => $dget['brand']);
-			unset($dget);
-		}
-		return $retarr;
-	}
 
 
 

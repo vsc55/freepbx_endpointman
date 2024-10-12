@@ -237,13 +237,38 @@ class PackagesDB
 
 
 
-
     public function getModelsEnabled()
     {
         $models = [];
         
         return $models;
         
+    }
+
+
+    public function getOUIAll(bool $indexOUI = true)
+    {
+        $ouis = [];
+        foreach ($this->getBrands(true, 'name') as $brand)
+        {
+            $brand_id 	= $brand->getId();
+            $brand_name = $brand->getName();
+            foreach($brand->getOUI_All() as $oui)
+            {
+                $ouis[$oui['oui']] = array(
+                    'id' 	   => $oui['id'],
+                    'oui' 	   => $oui['oui'],
+                    'brand_id' => $brand_id,
+                    'brand'    => $brand_name, 
+                    'custom'   => $oui['custom']
+                );
+            }
+        }
+        if (!$indexOUI)
+        {
+            $ouis = array_values($ouis);
+        }
+        return $ouis;
     }
 
 }

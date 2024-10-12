@@ -4,7 +4,6 @@
 <div class="container-fluid">
     <div class="row">
 
-    <!-- <div class="col-12 col-sm-12 col-md-12 col-lg-6 col-xl-5"> -->
         <div class="col-12 col-sm-12 col-md-12 col-lg-6 col-xl-4">
             <div class="section_tree">
                 <div id="toolbar_poce_tree" class="d-flex flex-wrap toolbar" role="toolbar">
@@ -40,7 +39,6 @@
             </div>
         </div>
         
-        <!-- <div class="col-12 col-sm-12 col-md-12 col-lg-6 col-xl-7"> -->
         <div class="col-12 col-sm-12 col-md-12 col-lg-6 col-xl-8">
             <div class="card section_editor">
                 <h6 class="card-header"><?= _('Product:') ?> <span id="poce_NameProductSelect"><?= _("No Selected") ?></span></h6>

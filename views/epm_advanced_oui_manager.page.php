@@ -4,10 +4,10 @@
 	<div class="row">
 		<div class="col-sm-12">
 			<div id="toolbar-all">
-				<button type="button" class="btn btn-primary btn-lg" data-toggle="modal" data-target="#AddDlgModal"><i class='fa fa-plus'></i> <?= _('Add Custom OUI') ?></button>
-				<a class='btn btn-default' href="javascript:epm_advanced_tab_oui_manager_refresh_table();" ><i class='fa fa-refresh'></i> <?= _('Refresh Table') ?></a>
+				<button type="button" class="btn btn-primary btn-lg" data-toggle="modal" data-target="#epm_advanced_tab_oui_add_modal" data-whatever="@mdo"><i class='fa fa-plus'></i> <?= _('Add Custom OUI') ?></button>
+				<button type="button" class="btn btn-primary btn-lg" id="epm_advanced_tab_oui_refresh"><i class='fa fa-refresh'></i> <?= _('Refresh Table') ?></button>
 			</div>
-			<table id="mygrid"
+			<table id="epm_advanced_tab_oui_grid"
 				data-url="<?= $config['url_grid'] ?>"
 				data-cache="false"
 				data-cookie="true"
@@ -25,7 +25,7 @@
 					<tr>
 						<th data-field="oui" data-sortable="true" data-formatter="<code>%s</code>"><?= _("OUI")?></th>
 						<th data-field="brand" data-sortable="true"><?php echo _("Brand")?></th>
-						<th data-field="custom" data-formatter="epm_advanced_tab_oui_manager_grid_customFormatter"><?= _("Type")?></th>
+						<th data-field="custom" data-sortable="true" data-formatter="epm_advanced_tab_oui_manager_grid_customFormatter"><?= _("Type")?></th>
 						<th data-field="id" data-formatter="epm_advanced_tab_oui_manager_grid_actionFormatter"><?= _("Actions")?></th>
 					</tr>
 				</thead>
@@ -35,11 +35,11 @@
 </div>
 
 
-<div class="modal fade" id="AddDlgModal" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
-	<div class="modal-dialog" role="document">
+<div class="modal fade" id="epm_advanced_tab_oui_add_modal" tabindex="-1" role="dialog" data-backdrop="static" data-keyboard="false" aria-labelledby="epm_advanced_tab_oui_add_modal_label" aria-hidden="true">
+	<div class="modal-dialog modal-dialog-centered" role="document">
 		<div class="modal-content">
 			<div class="modal-header">
-				<h4 class="modal-title"><?= _('New OUI Custom') ?></h4>
+				<h4 id="epm_advanced_tab_oui_add_modal_label" class="modal-title"><?= _('New OUI Custom') ?></h4>
 			</div>
 			<div class="modal-body">
 				<div class="element-container">
@@ -48,11 +48,11 @@
 							<div class="row">
 								<div class="form-group">
 									<div class="col-md-3">
-										<label class="control-label" for="number_new_oui"><?= _("OUI") ?></label>
-										<i class="fa fa-question-circle fpbx-help-icon" data-for="number_new_oui"></i>
+										<label class="control-label" for="modal_form_new_oui_number"><?= _("OUI") ?></label>
+										<i class="fa fa-question-circle fpbx-help-icon" data-for="modal_form_new_oui_number"></i>
 									</div>
 									<div class="col-md-9">
-										<input type="text" maxlength="6" class="form-control" id="number_new_oui" name="number_new_oui" value="" placeholder="<?= _("OUI Brand") ?>">
+										<input type="text" maxlength="6" class="form-control" id="modal_form_new_oui_number" name="modal_form_new_oui_number" value="" placeholder="<?= _("OUI Brand") ?>">
 									</div>
 								</div>
 							</div>
@@ -60,7 +60,7 @@
 					</div>
 					<div class="row">
 						<div class="col-md-12">
-							<span class="help-block fpbx-help-block" id="number_new_oui-help"><?= _("They are the first 6 characters of the MAC device that identifies the brand (manufacturer).") ?></span>
+							<span class="help-block fpbx-help-block" id="modal_form_new_oui_number-help"><?= _("They are the first 6 characters of the MAC device that identifies the brand (manufacturer).") ?></span>
 						</div>
 					</div>
 				</div>
@@ -70,16 +70,22 @@
 							<div class="row">
 								<div class="form-group">
 									<div class="col-md-3">
-										<label class="control-label" for="brand_new_oui"><?= _("Brand") ?></label>
-										<i class="fa fa-question-circle fpbx-help-icon" data-for="brand_new_oui"></i>
+										<label class="control-label" for="modal_form_new_oui_brand"><?= _("Brand") ?></label>
+										<i class="fa fa-question-circle fpbx-help-icon" data-for="modal_form_new_oui_brand"></i>
 									</div>
 									<div class="col-md-9">
-			      						<select class="form-control selectpicker show-tick" data-style="btn-info" data-live-search-placeholder="<?= _('Search') ?>" data-size="10" data-live-search="true" id="brand_new_oui" name="brand_new_oui">
-			      							<option value=""><?= _("Select Brand:") ?></option>
-											<?php foreach ($config['brands']  as $row) : ?>
-												<option value="<?= $row['id'] ?>"><?= $row['name'] ?></option>
-											<?php endforeach; ?>
-										</select>
+
+										<div class="input-group">
+											<select class="form-control selectpicker show-tick" data-style="btn-info" data-live-search-placeholder="<?= _('Search') ?>" data-size="10" data-live-search="true" id="modal_form_new_oui_brand" name="modal_form_new_oui_brand">
+												<option value=""><?= _("Select Brand:") ?></option>
+											</select>
+											<div class="input-group-append">
+												<button class="btn btn-secondary" type="button" id="epm_advanced_tab_oui_add_modal_btn_refresh">
+													<i class="fa fa-refresh" aria-hidden="true"></i>
+												</button>
+											</div>
+										</div>
+
 									</div>
 								</div>
 							</div>
@@ -87,14 +93,14 @@
 					</div>
 					<div class="row">
 						<div class="col-md-12">
-							<span class="help-block fpbx-help-block" id="brand_new_oui-help"><?= _("It is the brand of OUI we specified.") ?></span>
+							<span class="help-block fpbx-help-block" id="modal_form_new_oui_brand-help"><?= _("It is the brand of OUI we specified.") ?></span>
 						</div>
 					</div>
 				</div>
 			</div>
 			<div class="modal-footer">
 				<button type="button" class="btn btn-danger" data-dismiss="modal"><i class='fa fa-times'></i> <?= _("Cancel") ?></button>
-				<button type="button" class="btn btn-primary" id="AddDlgModal_bt_new"><i class='fa fa-check'></i> <?= _("Add New") ?></button>
+				<button type="button" class="btn btn-primary" id="modal_form_new_oui_btn_add"><i class='fa fa-check'></i> <?= _("Add New OUI") ?></button>
 			</div>
 		</div><!-- /.modal-content -->
 	</div><!-- /.modal-dialog -->

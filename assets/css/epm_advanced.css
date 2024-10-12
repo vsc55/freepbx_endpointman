@@ -147,3 +147,32 @@
 .section_editor .CodeMirror pre {
     background-color: #FFFFCC !important;
 }
+
+
+#epm_advanced_tab_oui_grid th:nth-child(1),
+#epm_advanced_tab_oui_grid th:nth-child(3), 
+#epm_advanced_tab_oui_grid th:nth-child(4) {
+    width: 100px;
+    white-space: nowrap;        /* Not wrap the text */
+    overflow: hidden;           /* Hide the text that overflows the width */
+    text-overflow: ellipsis;    /* Show an ellipsis (...) when the text overflows */
+}
+
+#epm_advanced_tab_oui_grid th:nth-child(4),
+#epm_advanced_tab_oui_grid td:nth-child(4) {
+    text-align: center;
+}
+
+#epm_advanced_tab_oui_grid th:nth-child(2) {
+    width: auto; /* Allow the text to wrap */
+}
+
+.action-btn,
+.action-btn:disabled,
+.action-btn:hover,
+.action-btn:active,
+.action-btn:focus {
+    background-color: transparent;
+    border: none;
+    padding: 0;
+}

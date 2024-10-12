@@ -1,5 +1,5 @@
 "use strict";
-var cmeditor = null;
+var cmeditor   = null;
 var jsoneditor = null;
 
 function epm_advanced_document_ready () {
@@ -14,7 +14,8 @@ function epm_advanced_document_ready () {
 		x.src = item;
 		document.getElementsByTagName("head")[0].appendChild(x);
 	});
-	
+
+
 	//TAB POCE
 	epm_advanced_tab_poce_unselect();
 	window.addEventListener('resize', epm_advanced_tab_poce_resize);
@@ -192,13 +193,139 @@ function epm_advanced_document_ready () {
 	$('#settings input[type=text]').change(function(){ epm_advanced_tab_setting_input_change(this); });
 	$('#settings input[type=radio]').change(function(){ epm_advanced_tab_setting_input_change(this); });
 	$('#settings select').change(function(){ epm_advanced_tab_setting_input_change(this); });
-	
-	
+
+
 	//TAB OUT_MANAGER
-	$('#AddDlgModal').on('show.bs.modal', function (event) {
-		$(this).find('input, select').val("");
+	$('#epm_advanced_tab_oui_add_modal_btn_refresh').on('click', function() {
+		
+		var modal 		 = $("#epm_advanced_tab_oui_add_modal");
+		var select_brand = $('#modal_form_new_oui_brand');
+		epm_advanced_tab_oui_manager_new_list_brands(modal, select_brand);
 	});
-	$('#AddDlgModal_bt_new').on("click", function(){ epm_advanced_tab_oui_manager_bt_new(); });
+
+	$('#epm_advanced_tab_oui_add_modal')
+	.on('show.bs.modal', function (event) {
+		var modal 		 = $(this);
+		var select_brand = $('#modal_form_new_oui_brand');
+
+		// Check if the ajaxState is initialized
+		if (typeof modal.data('ajaxState') === 'undefined')
+		{
+			// Initialize in the first time in mode false
+			modal.data('ajaxState', 'not-started');
+		}
+
+		// Check if the ajax request is in progress
+		switch (modal.data('ajaxState'))
+		{
+			case 'in-progress':
+				// Ajax request in progress, prevent the modal from opening
+				event.preventDefault();
+				return;
+	
+			case 'completed':
+				// Ajax request completed, allow the modal to open without making the ajax request again
+				waitingDialog.hide();
+				return;
+	
+			case 'not-started':
+				// Ajax request not started, make the ajax request now
+				modal.data('ajaxState', 'in-progress');
+				waitingDialog.show();
+				break;
+	
+			default:
+				// Unknown state, prevent the modal from opening
+				event.preventDefault();
+				return;
+		}
+
+		modal.find('input[type="text"]').val("");
+
+		epm_advanced_tab_oui_manager_new_list_brands(modal, select_brand, function(status, data) {
+			if (status === true)
+			{
+				modal.data('ajaxState', 'completed');
+				modal.modal('show');
+			}
+			else
+			{
+				modal.data('ajaxState', 'not-started');
+				event.preventDefault(); // Prevent the opening of the modal opening
+			}
+			return status;
+		});
+
+		// Prevent the opening of the modal until the ajax request is completed
+		return false;
+	}).on('hidden.bs.modal', function (event) {
+		// Clear the input fields and select elements when the modal is closed
+		var modal = $(this);
+		modal.find('input[type="text"]').val('');
+		modal.find('select').empty().selectpicker('refresh');
+		modal.data('ajaxState', 'not-started');
+    });
+
+	$('#modal_form_new_oui_btn_add').on("click", function() {
+		var data_ajax = { 
+			'module'		: "endpointman",
+			'module_sec'	: "epm_advanced",
+			'module_tab'	: "oui_manager",
+			'command'		: "oui_add",
+			'new_oui_number': $("#modal_form_new_oui_number").val().trim(),
+			'new_oui_brand'	: $("#modal_form_new_oui_brand").val().trim()
+		};
+		epm_advanced_tab_oui_manager_ajax(data_ajax, function(status, data) {
+			if (status === true)
+			{
+				fpbxToast(data.message, '', 'success');
+				$("#epm_advanced_tab_oui_add_modal").modal('hide');
+				$("#epm_advanced_tab_oui_grid").bootstrapTable('refresh');
+			}
+		});
+	});
+
+	$('#epm_advanced_tab_oui_refresh').on("click", function(){
+		$("#epm_advanced_tab_oui_grid").bootstrapTable('refresh');
+		fpbxToast(_("Refrash Success!"), '', 'success');
+	});
+
+	$(document).on("click", ".tab_oui_grid_remove_row", function() {
+		var $button  = $(this);
+		var $row 	 = $button.closest('tr');						// Find the parent row of the button (the <tr>)
+		var $table 	 = $row.closest('table');						// Find the parent table of the button
+		var rowIndex = $row.data('index');							// Get the row index from the 'data-index' attribute that Bootstrap Table uses
+		var rowData  = $table.bootstrapTable('getData')[rowIndex]; 	// Get the row data using the index (this assumes the table uses Bootstrap Table)
+
+		if (rowData && rowData.id)
+		{
+			fpbxConfirm(
+				sprintf(_("Are you sure to delete OUI '%s' for the brand '%s'?"), rowData.oui, rowData.brand),
+				_("YES"), _("NO"),
+				function()
+				{
+					var data_ajax = { 
+						'module'	 : "endpointman",
+						'module_sec' : "epm_advanced",
+						'module_tab' : "oui_manager",
+						'command'	 : "oui_remove",
+						'oui_remove' : rowData.id
+					};
+					epm_advanced_tab_oui_manager_ajax(data_ajax, function(status, data) {
+						if (status === true)
+						{
+							fpbxToast(data.message, '', 'success');
+							$table.bootstrapTable('refresh');
+						}
+					});
+				}
+			);
+		}
+		else {
+			fpbxToast(_("The row data is invalid!"), '', 'warning');
+		}
+	});
+
 }
 
 function epm_advanced_windows_load (nTab = "") {
@@ -1054,103 +1181,226 @@ function epm_advanced_tab_poce_share()
 
 
 // INI: FUNCTION TAB OUI MANAGER
-function epm_advanced_tab_oui_manager_grid_actionFormatter(value, row, index){
-	var html = '';
-    if (row.custom == 1) {
-    	html += '<a href="javascript:epm_advanced_tab_oui_manager_bt_del('+value+')" class="delAction"><i class="fa fa-trash"></i></a>';
+function epm_advanced_tab_oui_manager_grid_actionFormatter(value, row, index)
+{
+	var html = sprintf('<button type="button" class="btn btn-primary action-btn tab_oui_grid_remove_row" %s><i class="fa fa-trash" aria-hidden="true"></i></button>', row.custom == 1 ? '' : 'disabled');
+
+    // if (row.custom == 1)
+	// {
+    // 	html += sprintf('<a href="javascript:epm_advanced_tab_oui_manager_bt_del(%s)" class="delAction"><i class="fa fa-trash"></i></a>', value);
+	// }
+    // else
+	// {
+    // 	html += '<i class="fa fa-trash"></i>';
+    // }
+    return html;
+}
+
+function epm_advanced_tab_oui_manager_grid_customFormatter(value, row, index)
+{
+	var html = '<i class="fa %s"></i> %s';
+    if (value == 1)
+	{
+    	html = sprintf(html, "fa-pencil-square-o", _("Custom"));
 	}
-    else {
-    	html += '<i class="fa fa-trash"></i>';
+    else
+	{
+		html = sprintf(html, "fa-lock", _("Required"));
     }
     return html;
 }
 
-function epm_advanced_tab_oui_manager_grid_customFormatter(value, row, index){
-	var html = '';
-    if (value == 1) {
-    	html += '<i class="fa fa-pencil-square-o"></i> Custom';
-	}
-    else {
-    	html += '<i class="fa fa-lock"></i> Required';
-    }
-    return html;
-}
-
-
-function epm_advanced_tab_oui_manager_refresh_table(showmsg = true)
+function epm_advanced_tab_oui_manager_bt_del(id_del = null)
 {
-	$("#mygrid").bootstrapTable('refresh');
-	if (showmsg === true) {
-		fpbxToast("Table Refrash Ok!", '', 'success');
+	if (id_del === "" || id_del === null || id_del === undefined)
+	{
+		fpbxToast(_('Missing ID!'), '', 'error');
+		return false;
 	}
-}
-
-function epm_advanced_tab_oui_manager_bt_new()
-{
-	var new_oui = $("#number_new_oui").val().trim();
-	var new_brand = $("#brand_new_oui").val();
-	
-	if (new_oui.length < "6") {
-		fpbxToast('New: Input OUI not valid!','Warning!','warning');
+	else if (isNaN(id_del))
+	{
+		fpbxToast(_('ID is not a number!'), '', 'error');
+		return false;
 	}
-	else if (new_brand === "") {
-		fpbxToast('New: No select Brand!','Warning!','warning');
-	}
-	else {
-		var data_ajax = { module: "endpointman", module_sec: "epm_advanced", module_tab: "oui_manager", command: "oui_add", number_new_oui: new_oui, brand_new_oui: new_brand };
-		if (epm_advanced_tab_oui_manager_ajax(data_ajax) === true) {
-			fpbxToast("New OUI add Ok!", '', 'success');
-			$("#mygrid").bootstrapTable('refresh');
-			$("#AddDlgModal").modal('hide');
-		}
-
-		//epm_advanced_tab_oui_manager_ajax("new", data_ajax, objbox);
-	}
-}
-
-function epm_advanced_tab_oui_manager_bt_del(id_del)
-{
-	if (id_del === "") {
-		fpbxToast('Delete: No ID set!','Warning!','warning');
-	}
-	else {
-		var data_ajax = { module: "endpointman", module_sec: "epm_advanced", module_tab: "oui_manager", command: "oui_del", id_del: id_del };
-		if (epm_advanced_tab_oui_manager_ajax(data_ajax) === true) {
-			fpbxToast("OUI delete Ok!", '', 'success');	
-			$("#mygrid").bootstrapTable('refresh');
-		}
-		
-		//epm_advanced_tab_oui_manager_ajax("del", data_ajax);
-	}
-}
-
-function epm_advanced_tab_oui_manager_ajax (data_ajax = "")
-{
-	var response = false;
-	if (data_ajax !== "") { 
-		$.ajax({
-	        async: false,
-			type: 'POST',
-			url: window.FreePBX.ajaxurl,
-			data:  data_ajax,
-			dataType: 'json',
-			timeout: 60000,
-			error: function(xhr, ajaxOptions, thrownError) {
-				fpbxToast('ERROR AJAX:' + thrownError,'ERROR (' + xhr.status + ')!','error');
-				return false;
-			},
-			success: function(data) {
-				if (data.status === true) {
-					response  = true;
-				} 
-				else {
-					fpbxToast(data.message, "Error!", 'error');
-					response  = false;
+	fpbxConfirm(
+		_('Are you sure you want to delete the OUI?'),
+		_("YES"), _("NO"),
+		function()
+		{
+			var data_ajax = {
+				'module': 	  "endpointman",
+				'module_sec': "epm_advanced",
+				'module_tab': "oui_manager",
+				'command': 	  "oui_del",
+				'id_del': 	  id_del
+			};
+			epm_advanced_tab_oui_manager_ajax(data_ajax, function(status, data) {
+				if (status === true)
+				{
+					fpbxToast("OUI delete Success!", '', 'success');
+					$("#epm_advanced_tab_oui_grid").bootstrapTable('refresh');
 				}
-			}
-		});
+			});
+		}
+	);
+}
+
+/**
+ * Perform an AJAX request to FreePBX and handle the response.
+ *
+ * @param {Array|null} data_ajax - Array containing the data to be sent with the AJAX request. Must be an array of key-value pairs or null.
+ * @param {function} [callback] - Optional callback function that will be called after the AJAX request completes. It receives two parameters:
+ *                                - {boolean} status: `true` if the request was successful, `false` otherwise.
+ *                                - {Object|null} data: The data returned from the server on success, or `null` on failure.
+ * @returns {boolean} Returns `false` if `data_ajax` is invalid, otherwise performs the AJAX request.
+ * 
+ * @example
+ * // Example 1: Call the function with valid data and a callback
+ * var data = {
+ *     module: "endpointman",
+ *     module_sec: "epm_advanced",
+ *     module_tab: "oui_manager",
+ *     command: "oui_brands"
+ * };
+ * epm_advanced_tab_oui_manager_ajax(data, function(status, response) {
+ *     if (status) {
+ *         console.log('AJAX request succeeded', response);
+ *     } else {
+ *         console.error('AJAX request failed');
+ *     }
+ * });
+ * 
+ * @example
+ * // Example 2: Call the function without a callback
+ * var data = {
+ *     module: "endpointman",
+ *     module_sec: "epm_advanced",
+ *     module_tab: "oui_manager",
+ *     command: "oui_brands"
+ * };
+ * epm_advanced_tab_oui_manager_ajax(data);
+ */
+function epm_advanced_tab_oui_manager_ajax(data_ajax = null, callback)
+{
+	// Set callback to function if not defined
+	callback = callback || function(status, data) { };
+
+	// Check if the modal is valid
+	if (typeof data_ajax === 'undefined' || data_ajax === null || data_ajax === "" || data_ajax === false || typeof data_ajax !== 'object')
+	{
+		callback(false, null);
+		return false;
 	}
-	return response;
+
+	$.ajax({
+		type	: 'POST',
+		url		: window.FreePBX.ajaxurl,
+		data	: data_ajax,
+		dataType: 'json',
+		timeout	: 60000,
+		error: function(xhr, ajaxOptions, thrownError)
+		{
+			fpbxToast( sprintf(_('ERROR AJAX (%s): %s'), xhr.status, thrownError), '', 'error');
+			callback(false, null);
+			return;
+		},
+		success: function(data)
+		{
+			if (data.status !== true)
+			{
+				fpbxToast(data.message, '', 'error');
+			}
+			callback(data.status, data);
+		}
+	});
+}
+
+/**
+* Fetch the list of brands via AJAX and populate the select element in the modal.
+ * 
+ * @param {jQuery} modal - jQuery object representing the modal container.
+ * @param {jQuery} select_brand - jQuery object representing the select element for brands.
+ * @param {function} [callback] - Optional callback function to be called after the AJAX request.
+ *                                 It receives two parameters: 
+ *                                 - {boolean} status: Whether the request was successful or not.
+ *                                 - {Object|null} data: The data returned from the server, or null on error.
+ * @returns {boolean} Returns `false` if the `modal` or `select_brand` are invalid, otherwise performs the AJAX request.
+ * 
+ * @example
+ * // Example 1: Basic usage with a modal and select element
+ * var modal = $('#myModal');
+ * var select_brand = modal.find('#modal_form_new_oui_brand');
+ * epm_advanced_tab_oui_manager_new_list_brands(modal, select_brand, function(status, data) {
+ *     if (status) {
+ *         console.log('Brands loaded successfully');
+ *     } else {
+ *         console.error('Failed to load brands');
+ *     }
+ * });
+ * 
+ * @example
+ * // Example 2: Usage without a callback function (default behavior)
+ * var modal = $('#myModal');
+ * var select_brand = modal.find('#modal_form_new_oui_brand');
+ * epm_advanced_tab_oui_manager_new_list_brands(modal, select_brand);
+ */
+function epm_advanced_tab_oui_manager_new_list_brands(modal, select_brand, callback)
+{
+	// Set callback to function if not defined
+	callback = callback || function(status, data) { };
+
+	// Check if the modal is valid
+	if (typeof modal === 'undefined' || modal === null || modal === "" || modal === false)
+	{
+		callback(false, null);
+		return false;
+	}
+
+	// Check if the select_brand is valid
+	if (typeof select_brand === 'undefined' || select_brand === null || select_brand === "" || select_brand === false)
+	{
+		callback(false, null);
+		return false;
+	}
+
+	modal.find('select').empty().val('').selectpicker('refresh');
+	$.ajax({
+		type: 'POST',
+		url: window.FreePBX.ajaxurl,
+		data: {
+			'module'	: "endpointman",
+			'module_sec': "epm_advanced",
+			'module_tab': "oui_manager",
+			'command'	: "oui_brands"
+		},
+		dataType: 'json',
+		timeout: 60000,
+		error: function(xhr, ajaxOptions, thrownError)
+		{
+			fpbxToast( sprintf(_('ERROR AJAX (%s): %s'), xhr.status, thrownError), '', 'error');
+			callback(false, null);
+		},
+		success: function(data)
+		{
+			if (data.status === true)
+			{
+				$.each(data.brands, function(index, value)
+				{
+					select_brand.append($('<option>', {
+						value: value.id,
+						text: value.name,
+						selected: value.is_select
+					}));
+				});
+				select_brand.selectpicker('refresh');
+			}
+			else
+			{
+				fpbxToast(data.message, '', 'error');
+			}
+			callback(data.status, data);
+		}
+	});
 }
 // END: FUNCTION TAB OUI MANAGER
 
