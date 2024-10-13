@@ -1,7 +1,6 @@
 <?php if (!defined('FREEPBX_IS_AUTH')) { die('No direct script access allowed'); } ?>
 
 <?= $endpoint_warn ?>
-<br>
 <div class="alert alert-info" role="alert">
 	<h3 class="alert-heading"><?= _('Open Source Information') ?></h3>
   	<p><?= _('OSS PBX End Point Manager is the community supported PBX Endpoint Manager for FreePBX.') ?></p>

@@ -4,7 +4,7 @@
 	<div class="row">
 		<div class="col-sm-12">
 			<div id="toolbar-all">
-				<button type="button" class="btn btn-primary btn-lg" data-toggle="modal" data-target="#epm_advanced_tab_oui_add_modal" data-whatever="@mdo"><i class='fa fa-plus'></i> <?= _('Add Custom OUI') ?></button>
+				<button type="button" class="btn btn-primary btn-lg" data-toggle="modal" data-target="#epm_advanced_tab_oui_add_modal"><i class='fa fa-plus'></i> <?= _('Add Custom OUI') ?></button>
 				<button type="button" class="btn btn-primary btn-lg" id="epm_advanced_tab_oui_refresh"><i class='fa fa-refresh'></i> <?= _('Refresh Table') ?></button>
 			</div>
 			<table id="epm_advanced_tab_oui_grid"

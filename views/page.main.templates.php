@@ -3,49 +3,75 @@
 <?= $endpoint_warn ?>
 <div class="container-fluid" id="epm_templates">
 	<h1><?= _("End Point Configuration Manager") ?></h1>
+
 	<?php foreach($tabs as $key => $page) : ?>
-		<?php if (strtolower($subpage) == $key) : ?>
-            <h2><?= $page['name'] ?></h2>
-            <div class="display">
-                <div class="row">
-                    <div class="col-sm-12">
-                        <div class="fpbx-container">
-                            <div class="display <?= ($key == "editor") ? "full" : "no" ?>-border">
-                                <?php if((!$product_list) && (!$mac_list)) : ?>
+		<?php if (strtolower($subpage) != $key) { continue; } ?>
 
-                                    <div class="alert alert-warning" role="alert">
-                                        <strong><?= _("Warning!") ?></strong><br>
-                                        <?= _("Welcome to Endpoint Manager. You have no products (Modules) installed, click <a href=\"config.php?display=epm_config\"><b>here</b></a> to install some") ?>
+        <h2><?= $page['name'] ?></h2>
+        <div class="display">
+            <div class="row">
+                <div class="col-sm-12">
+                    <div class="fpbx-container">
+                        <div class="display <?= ($key == "edit") ? "full" : "no" ?>-border">
+
+                            <?php if ($main['warning']['no_modules_install']) : ?>
+
+                                <div class="card text-center alert-warning">
+                                    <div class="card-header">
+                                        <strong><?= _("Warning!") ?></strong>
                                     </div>
-
-                                <?php elseif(!$product_list) : ?>
-
-                                    <div class="alert alert-warning" role="alert">';
-                                        <strong><?= _("Warning!")?> </strong> <?= _("Thanks for upgrading to version 2.0! Please head on over to <a href=\"config.php?display=epm_config\">Brand Configurations/Setup</b></a> to setup and install phone configurations") ?>
+                                    <div class="card-body">
+                                        <h5 class="card-title"><?= _("Welcome to Endpoint Manager") ?></h5>
+                                        <p class="card-text"><?= _("You do not have products (modules) installed, it is necessary to install some to continue.") ?></p>
+                                        <br>
+                                        <a href="config.php?display=epm_config" class="btn btn-primary"><?= _("Click Here to Install Some") ?></a>
                                     </div>
+                                </div>
 
-                                <?php else : ?>
+                            <?php elseif ($main['warning']['update_from_ver_previous_2']) : ?>
 
-                                    <?= $page['content'] ?>
-                                    
-                                <?php endif; ?>
+                                <div class="card text-center alert-warning">
+                                    <div class="card-header">
+                                        <strong><?= _("Warning!") ?></strong>
+                                    </div>
+                                    <div class="card-body">
+                                        <p class="card-text">
+                                            <?= _("Thanks for upgrading to new version! Please head on over to <b>Brand Configurations/Setup</b> to setup and install phone configurations.") ?>
+                                        </p>
+                                        <br>
+                                        <a href="config.php?display=epm_config" class="btn btn-primary"><?= _("Click Here to Go Brand Configurations/Setup") ?></a>
+                                    </div>
+                                </div>
 
-                            </div>
+                            <?php else : ?>
+
+                                <?= $page['content'] ?>
+                                
+                            <?php endif; ?>
+
                         </div>
                     </div>
                 </div>
             </div>
-        <?php endif; ?>    
+        </div>
+        
     <?php endforeach; ?>
 </div>
 
-<?php if ($subpage == "editor") : ?>
+
+
+
+
+
+
+<?php if ($subpage == "edit") : ?>
 	<br />
     <br />
     <br />
 <?php endif; ?>
 
 <?php
+/*
 if ($command == 'save_template')
 {
     $epm->save_template($i, $custom, $request);
@@ -54,3 +80,4 @@ if ($command == 'save_template')
         $epm->message['general'] = _('Saved');
     }
 }
+*/

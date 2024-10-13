@@ -279,6 +279,181 @@ function epm_global_input_value_change_bt(sNameID = "", sValue = "", bSetFocus =
 
 
 
+/**
+ * Perform an AJAX request to FreePBX and handle the response.
+ *
+ * @param {object|null} data_ajax     - Array containing the data to be sent with the AJAX request. Must be an array of key-value pairs or null.
+ * @param {function} [callback]       - Optional callback function that will be called after the AJAX request completes. It receives two parameters:
+ *                                    - {boolean} status: `true` if the request was successful, `false` otherwise.
+ *                                    - {Object|null} data: The data returned from the server on success, or `null` on failure.
+ * @param {boolean} [errShowMsg=true] - Whether or not to show an error message if the request fails.
+ * @returns {boolean} Returns `false` if `data_ajax` is invalid, otherwise performs the AJAX request.
+ * 
+ * @example
+ * // Example 1: Call the function with valid data and a callback
+ * var data = {
+ *     module: "endpointman",
+ *     module_sec: "epm_advanced",
+ *     module_tab: "oui_manager",
+ *     command: "oui_brands"
+ * };
+ * epm_gloabl_manager_ajax(data, function(status, response) {
+ *     if (status) {
+ *         console.log('AJAX request succeeded', response);
+ *     } else {
+ *         console.error('AJAX request failed');
+ *     }
+ * });
+ * 
+ * @example
+ * // Example 2: Call the function without a callback and not showing an error message of the request fails
+ * var data = {
+ *     module: "endpointman",
+ *     module_sec: "epm_advanced",
+ *     module_tab: "oui_manager",
+ *     command: "oui_brands"
+ * };
+ * epm_gloabl_manager_ajax(data, null, false);
+ */
+function epm_gloabl_manager_ajax(data_ajax = null, callback, errShowMsg = true)
+{
+	// Set callback to function if not defined
+	callback = callback || function(status, data) { };
+
+	// Check if the modal is valid
+	if (typeof data_ajax !== 'object' || data_ajax === null)
+	{
+		callback(false, null);
+		return false;
+	}
+
+	$.ajax({
+		type	: 'POST',
+		url		: window.FreePBX.ajaxurl,
+		data	: data_ajax,
+		dataType: 'json',
+		timeout	: 60000,
+		error: function(xhr, ajaxOptions, thrownError)
+		{
+			fpbxToast( sprintf(_('ERROR AJAX (%s): %s'), xhr.status, thrownError), '', 'error');
+			callback(false, null);
+			return;
+		},
+		success: function(data)
+		{
+			if (data.status !== true && errShowMsg === true)
+			{
+				fpbxToast(data.message, '', 'error');
+			}
+			callback(data.status, data);
+		}
+	});
+	return true;
+}
+
+
+/**
+ * Fetch the list of brands via AJAX and populate the select element in the modal.
+ * 
+ * @param {jQuery} modal 		- jQuery object representing the modal container.
+ * @param {jQuery} select_list 	- jQuery object representing the select element for brands.
+ * @param {object} ajaxData		- Object containing the data to be sent via AJAX.
+ * @param {function} [callback] - Optional callback function to be called after the AJAX request.
+ *                                 It receives two parameters: 
+ *                                 - {boolean} status: Whether the request was successful or not.
+ *                                 - {Object|null} data: The data returned from the server, or null on error.
+ * @returns {boolean} Returns `false` if the `modal` or `select_list` are invalid, otherwise performs the AJAX request.
+ * 
+ * @example
+ * // Example 1: Basic usage with a modal and select element
+ * var modal = $('#myModal');
+ * var select_list = modal.find('#modal_form_new_oui_brand');
+ * var ajaxData = {
+ *    module: "endpointman",
+ *    module_sec: "epm_templates",
+ *    module_tab: "manager",
+ *    command: "add_template_list_products"
+ * };
+ * epm_global_options_list_ajax(modal, select_list, ajaxData, function(status, data) {
+ *     if (status) {
+ *         console.log('Brands loaded successfully');
+ *     } else {
+ *         console.error('Failed to load brands');
+ *     }
+ * });
+ * 
+ * @example
+ * // Example 2: Usage without a callback function (default behavior)
+ * var modal = $('#myModal');
+ * var select_list = modal.find('#modal_form_new_oui_brand');
+ * var ajaxData = {
+ *    module: "endpointman",
+ *    module_sec: "epm_templates",
+ *    module_tab: "manager",
+ *    command: "add_template_list_products"
+ * };
+ * epm_global_options_list_ajax(modal, select_list, ajaxData);
+ */
+function epm_global_options_list_ajax(modal, select_list, ajaxData, callback)
+{
+	// Set callback to function if not defined
+	callback = callback || function(status, data) { };
+
+	// Check if the ajaxData is valid
+	if (typeof ajaxData !== 'object' || ajaxData === null) {
+		callback(false, null);
+		return false;
+	}
+
+	// Check if the modal is valid
+	if (typeof modal === 'undefined' || modal === null || modal === "" || modal === false)
+	{
+		callback(false, null);
+		return false;
+	}
+
+	// Check if the select_list is valid
+	if (typeof select_list === 'undefined' || select_list === null || select_list === "" || select_list === false)
+	{
+		callback(false, null);
+		return false;
+	}
+
+	select_list.empty().val('').selectpicker('refresh');
+
+	$.ajax({
+		type: 'POST',
+		url: window.FreePBX.ajaxurl,
+		data: ajaxData,
+		dataType: 'json',
+		timeout: 60000,
+		error: function(xhr, ajaxOptions, thrownError)
+		{
+			fpbxToast( sprintf(_('ERROR AJAX (%s): %s'), xhr.status, thrownError), '', 'error');
+			callback(false, null);
+		},
+		success: function(data)
+		{
+			if (data.status === true)
+			{
+				$.each(data.options, function(index, value)
+				{
+					select_list.append($('<option>', {
+						value: value.id,
+						text: value.name,
+						selected: value.is_select
+					}));
+				});
+				select_list.selectpicker('refresh');
+			}
+			else
+			{
+				fpbxToast(data.message, '', 'error');
+			}
+			callback(data.status, data);
+		}
+	});
+}
 
 
 

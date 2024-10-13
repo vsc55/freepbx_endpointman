@@ -275,7 +275,7 @@ function epm_advanced_document_ready () {
 			'new_oui_number': $("#modal_form_new_oui_number").val().trim(),
 			'new_oui_brand'	: $("#modal_form_new_oui_brand").val().trim()
 		};
-		epm_advanced_tab_oui_manager_ajax(data_ajax, function(status, data) {
+		epm_gloabl_manager_ajax(data_ajax, function(status, data) {
 			if (status === true)
 			{
 				fpbxToast(data.message, '', 'success');
@@ -311,7 +311,7 @@ function epm_advanced_document_ready () {
 						'command'	 : "oui_remove",
 						'oui_remove' : rowData.id
 					};
-					epm_advanced_tab_oui_manager_ajax(data_ajax, function(status, data) {
+					epm_gloabl_manager_ajax(data_ajax, function(status, data) {
 						if (status === true)
 						{
 							fpbxToast(data.message, '', 'success');
@@ -1216,7 +1216,7 @@ function epm_advanced_tab_oui_manager_bt_del(id_del = null)
 				'command': 	  "oui_del",
 				'id_del': 	  id_del
 			};
-			epm_advanced_tab_oui_manager_ajax(data_ajax, function(status, data) {
+			epm_gloabl_manager_ajax(data_ajax, function(status, data) {
 				if (status === true)
 				{
 					fpbxToast("OUI delete Success!", '', 'success');
@@ -1228,77 +1228,7 @@ function epm_advanced_tab_oui_manager_bt_del(id_del = null)
 }
 
 /**
- * Perform an AJAX request to FreePBX and handle the response.
- *
- * @param {Array|null} data_ajax - Array containing the data to be sent with the AJAX request. Must be an array of key-value pairs or null.
- * @param {function} [callback] - Optional callback function that will be called after the AJAX request completes. It receives two parameters:
- *                                - {boolean} status: `true` if the request was successful, `false` otherwise.
- *                                - {Object|null} data: The data returned from the server on success, or `null` on failure.
- * @returns {boolean} Returns `false` if `data_ajax` is invalid, otherwise performs the AJAX request.
- * 
- * @example
- * // Example 1: Call the function with valid data and a callback
- * var data = {
- *     module: "endpointman",
- *     module_sec: "epm_advanced",
- *     module_tab: "oui_manager",
- *     command: "oui_brands"
- * };
- * epm_advanced_tab_oui_manager_ajax(data, function(status, response) {
- *     if (status) {
- *         console.log('AJAX request succeeded', response);
- *     } else {
- *         console.error('AJAX request failed');
- *     }
- * });
- * 
- * @example
- * // Example 2: Call the function without a callback
- * var data = {
- *     module: "endpointman",
- *     module_sec: "epm_advanced",
- *     module_tab: "oui_manager",
- *     command: "oui_brands"
- * };
- * epm_advanced_tab_oui_manager_ajax(data);
- */
-function epm_advanced_tab_oui_manager_ajax(data_ajax = null, callback)
-{
-	// Set callback to function if not defined
-	callback = callback || function(status, data) { };
-
-	// Check if the modal is valid
-	if (typeof data_ajax === 'undefined' || data_ajax === null || data_ajax === "" || data_ajax === false || typeof data_ajax !== 'object')
-	{
-		callback(false, null);
-		return false;
-	}
-
-	$.ajax({
-		type	: 'POST',
-		url		: window.FreePBX.ajaxurl,
-		data	: data_ajax,
-		dataType: 'json',
-		timeout	: 60000,
-		error: function(xhr, ajaxOptions, thrownError)
-		{
-			fpbxToast( sprintf(_('ERROR AJAX (%s): %s'), xhr.status, thrownError), '', 'error');
-			callback(false, null);
-			return;
-		},
-		success: function(data)
-		{
-			if (data.status !== true)
-			{
-				fpbxToast(data.message, '', 'error');
-			}
-			callback(data.status, data);
-		}
-	});
-}
-
-/**
-* Fetch the list of brands via AJAX and populate the select element in the modal.
+ * Fetch the list of brands via AJAX and populate the select element in the modal.
  * 
  * @param {jQuery} modal - jQuery object representing the modal container.
  * @param {jQuery} select_brand - jQuery object representing the select element for brands.

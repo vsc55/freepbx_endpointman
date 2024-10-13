@@ -1,6 +1,5 @@
 <?php if (!defined('FREEPBX_IS_AUTH')) { die('No direct script access allowed'); } ?>
 
-<?= $endpoint_warn ?>
 <script>
     var $hwgrid = $('#hwgrid');
     var mydata = 
@@ -389,6 +388,7 @@
     });
 </script>
 
+<?= $endpoint_warn ?>
 <div class="container-fluid">
     <h2><?= _('Config File Placeholder Values') ?></h2>
     <div class="fpbx-container">

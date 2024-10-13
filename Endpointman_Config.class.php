@@ -18,10 +18,15 @@ require_once('lib/epm_packages.class.php');
 require_once('lib/provisioner/ProvisionerBrand.class.php');
 require_once('lib/provisioner/ProvisionerModel.class.php');
 
-
-#[\AllowDynamicProperties]
 class Endpointman_Config
 {
+
+	public $epm;
+	public $freepbx;
+	public $db;
+	public $config;
+	public $system;
+
 	public $error = array (
 		'file2json' => '',
 	);

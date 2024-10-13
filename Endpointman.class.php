@@ -361,27 +361,28 @@ class Endpointman extends FreePBX_Helpers implements BMO {
 		{
 			case "epm_devices":
 				$return_status = $this->epm_devices->ajaxRequest($req, $setting);
-				break;
+			break;
 
 			case "epm_oss":
 				$return_status = $this->epm_oss->ajaxRequest($req, $setting);
-				break;
+			break;
 
 			case "epm_placeholders":
 				$return_status = $this->epm_placeholders->ajaxRequest($req, $setting);
-				break;
+			break;
 
 			case "epm_config":
 				$return_status = $this->epm_config->ajaxRequest($req, $setting, $data);
-				break;
+			break;
 
 			case "epm_advanced":
 				$return_status = $this->epm_advanced->ajaxRequest($req, $setting, $data);
-				break;
+			break;
 
 			case "epm_templates":
-				$return_status = $this->epm_templates->ajaxRequest($req, $setting);
-				break;
+				$return_status = $this->epm_templates->ajaxRequest($req, $setting, $data);
+			break;
+
 			default:
 				$return_status = false;
 		}
@@ -428,7 +429,7 @@ class Endpointman extends FreePBX_Helpers implements BMO {
 				break;
 
 				case "epm_templates":
-					$data_return = $this->epm_templates->ajaxHandler($data['module_tab'], $data['command']);
+					$data_return = $this->epm_templates->ajaxHandler($data);
 				break;
 
 				case "epm_config":
@@ -1189,7 +1190,7 @@ class Endpointman extends FreePBX_Helpers implements BMO {
 				break;
 
 			case "epm_templates":
-				$this->epm_templates->myShowPage($pagedata);
+				$this->epm_templates->myShowPage($pagedata, $data);
 				return $pagedata;
 				break;
 
@@ -1198,7 +1199,7 @@ class Endpointman extends FreePBX_Helpers implements BMO {
 				break;
 
 			// case "epm_advanced":
-			// 	$this->epm_advanced->myShowPage($pagedata);
+			// 	$this->epm_advanced->myShowPage($pagedata, $data);
 			// 	break;
 
 			case "":
@@ -1254,66 +1255,7 @@ class Endpointman extends FreePBX_Helpers implements BMO {
 			break;
 
 			case "main.templates":
-				if ((! isset($_REQUEST['subpage'])) || ($_REQUEST['subpage'] == "")) {
-					$_REQUEST['subpage'] = "manager";
-					$data['request']['subpage'] = "manager";
-				}
-				$data['subpage']  = $_REQUEST['subpage'] ?? 'manager';
-				$data['command']  = $_REQUEST['command'] ?? '';
-				$data['id']  	  = $_REQUEST['id'] ?? '';
-				$data['custom']	  = $_REQUEST['custom'] ?? '';
-
-				$data['product_list']  = sql("SELECT * FROM endpointman_product_list WHERE id > 0", 'getAll', \PDO::FETCH_ASSOC);
-				$data['mac_list']      = sql("SELECT * FROM endpointman_mac_list", 'getAll', \PDO::FETCH_ASSOC);
-
-				// $data['showpage'] = $this->myShowPage();
-				$tabs = array(
-					'manager' => array(
-						"name" => _("Current Templates"),
-						"page" => '/views/epm_templates_manager.page.php'
-					),
-					'editor' => array(
-						"name" => _("Template Editor"),
-						"page" => '/views/epm_templates_editor.page.php'
-					),
-				);
-				foreach($tabs as $key => &$page)
-				{
-					$data_tab = array();
-					switch($key)
-					{
-						case 'manager':
-							if ($data['subpage'] != "manager")
-							{
-								$page['content'] = _("Invalid page!");
-								continue 2;
-							}		
-							$data_tab['template_list'] = sql("SELECT DISTINCT endpointman_product_list.* FROM endpointman_product_list, endpointman_model_list WHERE endpointman_product_list.id = endpointman_model_list.product_id AND endpointman_model_list.hidden = 0 AND endpointman_model_list.enabled = 1 AND endpointman_product_list.hidden != 1 AND endpointman_product_list.cfg_dir !=  ''", 'getAll', \PDO::FETCH_ASSOC);
-							break;
-
-						case 'editor':
-							if ($data['subpage'] != "editor")
-							{
-								$page['content'] = _("Invalid page!");
-								continue 2;
-							}
-
-							$data_tab['idsel'] = $_REQUEST['idsel'] ?? null;
-							// $data_tab['edit_template_display'] = $this->epm_templates->edit_template_display($data_tab['idsel'], $data['custom']);
-							break;
-					}
-					$data_tab = array_merge($data, $data_tab);
-
-					// ob_start();
-					// include($page['page']);
-					// $page['content'] = ob_get_contents();
-					// ob_end_clean();
-					$page['content'] = load_view(__DIR__ . '/' . $page['page'], $data_tab);
-				}
-				$data['tabs'] = $tabs;
-				unset($tabs);
-				
-
+				$this->epm_templates->showPage($data);
 				$data_return = load_view(__DIR__."/views/page.main.templates.php", $data);
 			break;
 

@@ -4,12 +4,12 @@
 	<div class="row">
 		<div class="col-sm-12">
 			<div id="toolbar-grid">
-				<button type="button" class="btn btn-primary btn-lg" data-toggle="modal" data-target="#AddDlgModal"><i class='fa fa-plus'></i> <?= _('Add New Template')?></button>
-				<a class='btn btn-default' href="javascript:epm_global_refresh_table('#mygrid', true);" ><i class='fa fa-refresh'></i> <?= _('Refresh Table')?></a>
+				<button type="button" class="btn btn-primary btn-lg" data-toggle="modal" data-target="#modal_add_tempalte"><i class='fa fa-plus'></i> <?= _('Add New Template')?></button>
+				<button type="button" class="btn btn-primary btn-lg" id="epm_template_refresh"><i class='fa fa-refresh'></i> <?= _('Refresh Table') ?></button>
 			</div>
 			
-			<table id="mygrid"
-				data-url="ajax.php?module=endpointman&amp;module_sec=epm_templates&amp;module_tab=manager&amp;command=list_current_template"
+			<table id="epm_templates_grid"
+				data-url="<?= $config['url_grid'] ?>"
 				data-cache="false"
 				data-cookie="true"
 				data-cookie-id-table="template_custom_table"
@@ -41,11 +41,11 @@
 
 
 
-<div class="modal fade" id="AddDlgModal" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
-	<div class="modal-dialog modal-lg" role="document">
+<div class="modal fade" id="modal_add_tempalte" tabindex="-1" role="dialog" data-backdrop="static" data-keyboard="false" aria-labelledby="modal_add_tempalte_title" aria-hidden="true">
+	<div class="modal-dialog modal-dialog-centered modal-lg" role="document">
 		<div class="modal-content">
 			<div class="modal-header">
-				<h4 class="modal-title"><?= _("Add New Template") ?></h4>
+				<h4 id="modal_add_tempalte_title" class="modal-title"><?= _("New Template") ?></h4>
 			</div>
 			<div class="modal-body">
 
@@ -54,12 +54,12 @@
 						<div class="col-md-12">
 							<div class="row">
 								<div class="form-group">
-									<div class="col-md-4">
-										<label class="control-label" for="NewTemplateName"><?= _("Template Name")?></label>
-										<i class="fa fa-question-circle fpbx-help-icon" data-for="NewTemplateName"></i>
+									<div class="col-md-3">
+										<label class="control-label" for="modal_form_new_template_name_template"><?= _("Template Name")?></label>
+										<i class="fa fa-question-circle fpbx-help-icon" data-for="modal_form_new_template_name_template"></i>
 									</div>
-									<div class="col-md-8">
-										<input type="text" class="form-control" id="NewTemplateName" name="NewTemplateName" value="" placeholder="<?= _("New Name Template...")?>">
+									<div class="col-md-9">
+										<input type="text" class="form-control" id="modal_form_new_template_name_template" name="modal_form_new_template_name_template" value="" maxlength="255" placeholder="<?= _("New Name Template...")?>">
 									</div>
 								</div>
 							</div>
@@ -67,7 +67,7 @@
 					</div>
 					<div class="row">
 						<div class="col-md-12">
-							<span class="help-block fpbx-help-block" id="NewTemplateName-help"><?= _("TODO: Help")?></span>
+							<span class="help-block fpbx-help-block" id="modal_form_new_template_name_template-help"><?= _("Name with which this template will be seen.")?></span>
 						</div>
 					</div>
 				</div>
@@ -77,17 +77,30 @@
 						<div class="col-md-12">
 							<div class="row">
 								<div class="form-group">
-									<div class="col-md-4">
-										<label class="control-label" for="NewProductSelect"><?= _("Product Select")?></label>
-										<i class="fa fa-question-circle fpbx-help-icon" data-for="NewProductSelect"></i>
+									<div class="col-md-3">
+										<label class="control-label" for="modal_form_new_template_products"><?= _("Product Select")?></label>
+										<i class="fa fa-question-circle fpbx-help-icon" data-for="modal_form_new_template_products"></i>
 									</div>
-									<div class="col-md-8">
-										<select class="form-control selectpicker show-tick" data-style="" data-live-search-placeholder="<?= _('Search') ?>" data-live-search="true" name="NewProductSelect" id="NewProductSelect">
-											<option value=""><?= _("Select Product:")?></option>
-											<?php foreach($template_list as $row) : ?>
-												<option value="<?= $row['id'] ?>"><?= $row['short_name'] ?></option>
-											<?php endforeach; ?>
-										</select>
+									<div class="col-md-9">
+
+										<div class="input-group">
+											<select class="form-control selectpicker show-tick" data-style="" data-live-search-placeholder="<?= _('Search') ?>" data-size="10" data-live-search="true" name="modal_form_new_template_products" id="modal_form_new_template_products">
+												<?php
+												/*
+												<option value=""><?= _("Select Product:")?></option>
+												<?php foreach($template_list as $row) : ?>
+													<option value="<?= $row['id'] ?>"><?= $row['short_name'] ?></option>
+												<?php endforeach; 
+												*/
+												?>
+											</select>
+											<div class="input-group-append">
+												<button class="btn btn-secondary" type="button" id="epm_template_new_modal_btn_refresh_products">
+													<i class="fa fa-refresh" aria-hidden="true"></i>
+												</button>
+											</div>
+										</div>
+
 									</div>
 								</div>
 							</div>
@@ -95,7 +108,7 @@
 					</div>
 					<div class="row">
 						<div class="col-md-12">
-							<span class="help-block fpbx-help-block" id="NewProductSelect-help"><?= _("TODO: Help")?></span>
+							<span class="help-block fpbx-help-block" id="modal_form_new_template_products-help"><?= _("List of installed products from which a template can be generated.")?></span>
 						</div>
 					</div>
 				</div>
@@ -105,12 +118,21 @@
 						<div class="col-md-12">
 							<div class="row">
 								<div class="form-group">
-									<div class="col-md-4">
-										<label class="control-label" for="NewCloneModel"><?= _("Clone Template From") ?></label>
-										<i class="fa fa-question-circle fpbx-help-icon" data-for="NewCloneModel"></i>
+									<div class="col-md-3">
+										<label class="control-label" for="modal_form_new_template_model_clone"><?= _("Clone Template From") ?></label>
+										<i class="fa fa-question-circle fpbx-help-icon" data-for="modal_form_new_template_model_clone"></i>
 									</div>
-									<div class="col-md-8">
-										<select class="form-control selectpicker show-tick" data-style="" data-live-search-placeholder="<?= _('Search') ?>" data-live-search="true" name="NewCloneModel" id="NewCloneModel"></select>
+									<div class="col-md-9">
+
+										<div class="input-group">
+											<select class="form-control selectpicker show-tick" data-style="" data-live-search-placeholder="<?= _('Search') ?>" data-size="10" data-live-search="true" name="modal_form_new_template_model_clone" id="modal_form_new_template_model_clone"></select>
+											<div class="input-group-append">
+												<button class="btn btn-secondary" type="button" id="epm_template_new_modal_btn_refresh_model_clone">
+													<i class="fa fa-refresh" aria-hidden="true"></i>
+												</button>
+											</div>
+										</div>
+
 									</div>
 								</div>
 							</div>
@@ -118,7 +140,7 @@
 					</div>
 					<div class="row">
 						<div class="col-md-12">
-							<span class="help-block fpbx-help-block" id="NewCloneModel-help"><?= _("TODO: Help")?></span>
+							<span class="help-block fpbx-help-block" id="modal_form_new_template_model_clone-help"><?= _("TODO: Help")?></span>
 						</div>
 					</div>
 				</div>
@@ -126,30 +148,8 @@
 			</div>
 			<div class="modal-footer">
 				<button type="button" class="btn btn-danger" data-dismiss="modal"><i class='fa fa-times'></i> <?= _("Cancel")?></button>
-				<button type="button" class="btn btn-primary" name="button_save" id="AddDlgModal_bt_new"><i class='fa fa-check'></i> <?= _("Save")?></button>
+				<button type="button" class="btn btn-primary" id="modal_form_new_template_btn_add"><i class='fa fa-check'></i> <?= _("Add New Tempalte")?></button>
 			</div>
 		</div>
 	</div>
 </div>
-
-
-	
-	
- <?php
-/*
- <script type="text/javascript" charset="utf-8">
- $(function(){
- $("select#model_class").change(function(){
- $.ajaxSetup({ cache: false });
- $.getJSON("config.php?type=tool&quietmode=1&handler=file&module=endpointman&file=ajax_select.html.php&atype=model_clone",{id: $(this).val()}, function(j){
- var options = '';
- for (var i = 0; i < j.length; i++) {
- options += '<option value="' + j[i].optionValue + '">' + j[i].optionDisplay + '</option>';
- }
- $("#model_clone").html(options);
- $('#model_clone option:first').attr('selected', 'selected');
- })
- })
- })
- </script>
- */

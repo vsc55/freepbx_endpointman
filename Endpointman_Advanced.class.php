@@ -10,9 +10,14 @@
 namespace FreePBX\modules;
 use FreePBX;
 
-#[\AllowDynamicProperties]
 class Endpointman_Advanced
 {
+	public $epm;
+	public $freepbx;
+	public $db;
+	public $config;
+	public $epm_config;
+
 	public function __construct($epm)
 	{
 		$this->epm 		  = $epm;
@@ -2118,17 +2123,6 @@ class Endpointman_Advanced
 
 	//TODO: PENDIENTE REVISAR
 	
-
-
-
-
-
-
-
-	
-	
-
-
 
 	/**** FUNCIONES SEC MODULO "epm_advanced\manual_upload" ****/
 	public function epm_advanced_manual_upload_list_files_brans_export()

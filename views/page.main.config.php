@@ -1,7 +1,6 @@
 <?php if (!defined('FREEPBX_IS_AUTH')) { die('No direct script access allowed'); } ?>
 
 <?= $endpoint_warn ?>
-<br>
 <div class="container-fluid" id="epm_config">
 	<h1><?= _("End Point Configuration Manager")?></h1>
 	<h2><?= _("Package Manager")?></h2>
