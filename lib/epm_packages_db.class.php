@@ -32,6 +32,18 @@ class PackagesDB
      * 
      * @param string $name Brand name
      * @return Provisioner\ProvisionerBrandDB Return a ProvisionerBrandDB object with the brand data
+     * 
+     * @example
+     * $name = 'brand_name';
+     * $brand = $this->getBrandByName($name);
+     * if ($brand->isExistID())
+     * {
+     *  echo "Brand exists";
+     * }
+     * else
+     * {
+     *  echo "Brand not exists";
+     * }
      */
     public function getBrandByDirectory($name)
     {
@@ -40,11 +52,24 @@ class PackagesDB
         return $brand;
     }
 
+
     /**
      * Get a brand by ID
      * 
      * @param string $id Brand ID
      * @return Provisioner\ProvisionerBrandDB Return a ProvisionerBrandDB object with the brand data
+     * 
+     * @example
+     * $id = 'brand_id';
+     * $brand = $this->getBrandByID($id);
+     * if ($brand->isExistID())
+     * {
+     *   echo "Brand exists";
+     * }
+     * else
+     * {
+     *   echo "Brand not exists";
+     * }
      */
     public function getBrandByID($id)
     {
@@ -57,6 +82,20 @@ class PackagesDB
      * Get all brands
      * 
      * @return array Return an array with all brands
+     * 
+     * @example
+     * $brands = $this->getBrands();
+     * foreach ($brands as $brand)
+     * {
+     *   echo $brand->getName();
+     * }
+     * 
+     * @example
+     * $brands = $this->getBrands(true, 'name', 'DESC');
+     * foreach ($brands as $brand)
+     * {
+     *  echo $brand->getName();
+     * }
      */
     public function getBrands(bool $showAll = true, string $orderby = "id", string $order = "ASC")
     {
@@ -195,7 +234,6 @@ class PackagesDB
             {
                 return false;
             }
-            dbug($data);
             throw new \Exception(sprintf(_("Brand ID '%s' already exists"), $id));
         }
 
@@ -220,7 +258,24 @@ class PackagesDB
     }
 
 
-
+    /**
+     * Get a product by ID
+     * 
+     * @param string $id Product ID
+     * @return Provisioner\ProvisionerFamilyDB Return a ProvisionerFamilyDB object with the product data
+     * 
+     * @example
+     * $id = 'product_id';
+     * $product = $this->getProductByID($id);
+     * if ($product->isExistID())
+     * {
+     *   echo "Product exists";
+     * }
+     * else
+     * {
+     *  echo "Product not exists";
+     * }
+     */
     public function getProductByID($id)
     {
         $product = new Provisioner\ProvisionerFamilyDB($this->epm);
@@ -228,6 +283,24 @@ class PackagesDB
         return $product;
     }
 
+    /**
+     * Get a Model by ID
+     * 
+     * @param string $id Model ID
+     * @return Provisioner\ProvisionerModelDB Return a ProvisionerModelDB object with the model data
+     * 
+     * @example
+     * $id = 'model_id';
+     * $model = $this->getModelByID($id);
+     * if ($model->isExistID())
+     * {
+     *    echo "Model exists";
+     * }
+     * else
+     * {
+     *   echo "Model not exists";
+     * }
+     */
     public function getModelByID($id)
     {
         $model = new Provisioner\ProvisionerModelDB($this->epm);
@@ -237,15 +310,107 @@ class PackagesDB
 
 
 
-    public function getModelsEnabled()
+    /**
+     * Get all models with is enabled
+     * 
+     * @param bool $showAll True to show all models or false to show only the models is hidden is false
+     * @param bool $indexModels True to index the models by ID or false to return the models as an array
+     * @return array Return an array with models or an array indexed by ID depending on the $indexModels parameter
+     * 
+     * @example
+     * $models = $this->getModelsEnabled();
+     * foreach ($models as $model)
+     * {
+     *   echo $model->getName();
+     * }
+     * 
+     * @example
+     * $models = $this->getModelsEnabled(true, false);
+     * foreach ($models as $model)
+     * {
+     *  echo $model->getName();
+     * }
+     */
+    public function getModelsEnabled(bool $showAll = false, bool $indexModels = true)
     {
         $models = [];
-        
-        return $models;
-        
+        foreach ($this->getBrands(true, 'name') as $brand)
+        {
+            foreach($brand->getProducts($showAll) as $product)
+            {
+                $models_product = $product->getModels($showAll, true);
+                if ($models_product)
+                {
+                    // $models = array_merge($models, $models_product);
+                    foreach ($models_product as $model)
+                    {
+                        $id = $model->getID();
+                        $models[$id] = $model;
+                    }
+                }   
+            }
+        }
+        return $indexModels ? $models : array_values($models);
     }
 
+    /**
+     * Get all products with models enabled
+     * 
+     * @param bool $showAll True to show all products or false to show only the products and models is hidden is false
+     * @param bool $indexProducts True to index the products by ID or false to return the products as an array
+     * @return array Return an array with products or an array indexed by ID depending on the $indexProducts parameter
+     * 
+     * @example
+     * $products = $this->getProductsByModelsEnabled();
+     * foreach ($products as $product)
+     * {
+     *  echo $product->getName();
+     * }
+     * 
+     * @example
+     * $products = $this->getProductsByModelsEnabled(true, false);
+     * foreach ($products as $product)
+     * {
+     * echo $product->getName();
+     * }
+     */
+    public function getProductsByModelsEnabled(bool $showAll = false, bool $indexProducts = true)
+    {
+        $products = [];
+        foreach ($this->getBrands(true, 'name') as $brand)
+        {
+            foreach($brand->getProducts($showAll) as $product)
+            {
+                $modelCount = $product->countModels($showAll, true);
+                if ($modelCount > 0)
+                {
+                    $products[$product->getID()] = $product;
+                }
+            }
+        }
+        return $indexProducts ? $products : array_values($products);
+    }
 
+    /**
+     * Get All OUIs
+     * 
+     * @param bool $indexOUI True to index the OUIs by OUI or false to return the OUIs as an array
+     * @return array Return an array with OUIs or an array indexed by OUI depending on the $indexOUI parameter
+     * 
+     * @example
+     * $ouis = $this->getOUIAll();
+     * foreach ($ouis as $oui)
+     * {
+     *   echo $oui['oui'];
+     * }
+     * 
+     * @example
+     * $ouis = $this->getOUIAll(false);
+     * foreach ($ouis as $oui)
+     * {
+     *   echo $oui['oui'];
+     * }
+     */
     public function getOUIAll(bool $indexOUI = true)
     {
         $ouis = [];
@@ -264,11 +429,7 @@ class PackagesDB
                 );
             }
         }
-        if (!$indexOUI)
-        {
-            $ouis = array_values($ouis);
-        }
-        return $ouis;
+        return $indexOUI ? $ouis : array_values($ouis);
     }
 
 }

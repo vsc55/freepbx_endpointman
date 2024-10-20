@@ -514,7 +514,15 @@ class ProvisionerBrand extends ProvisionerBase
         }
         else
         {
-            $result = $this->system->download_file($url, $file);
+            try
+            {
+                $result = $this->system->download_file($url, $file);
+            }
+            catch (\Exception $e)
+            {
+                if ($noException) { return false; }
+                throw $e;
+            }
         }
 
         if ($reload && $result)
@@ -548,14 +556,21 @@ class ProvisionerBrand extends ProvisionerBase
             }
             catch (\Exception $e)
             {
-                $msg_err = $e->getMessage();
                 if ($noException) { return false; }
                 throw $e;
             }
         }
         else
         {
-            $result = $this->system->download_file($url, $file);
+            try
+            {
+                $result = $this->system->download_file($url, $file);
+            }
+            catch (\Exception $e)
+            {
+                if ($noException) { return false; }
+                throw $e;
+            }
         }
         return $result;
     }

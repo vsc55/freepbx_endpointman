@@ -63,19 +63,22 @@
 		}
 	}
 ?>
+
 <br/>
 <div id="toolbar-all-side list-group">
 	<?php foreach ($menuConfig as $section): ?>
 		<?php if ($section['condition']($li)): ?>
 			<span class="list-group-item">
 				<h3><?= $section['title'] ?></h3>
-				<?php foreach ($section['items'] as $name => $item): ?>
-					<?php if (array_key_exists($name, $li)): ?>
-						<a href="?display=<?= $name ?>" class="btn list-group-item">
-							<i class="fa <?= $item['icon'] ?>"></i>&nbsp; <?= $item['label'] ?>
-						</a>
-					<?php endif; ?>
-				<?php endforeach; ?>
+				<div class="btn-group d-flex" role="group">
+					<?php foreach ($section['items'] as $name => $item): ?>
+						<?php if (array_key_exists($name, $li)): ?>
+							<a href="?display=<?= $name ?>" class="btn list-group-item">
+								<i class="fa <?= $item['icon'] ?>"></i>&nbsp; <?= $item['label'] ?>
+							</a>
+						<?php endif; ?>
+					<?php endforeach; ?>
+				</div>
 			</span>
 		<?php endif; ?>
 	<?php endforeach; ?>

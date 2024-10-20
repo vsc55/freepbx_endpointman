@@ -99,22 +99,15 @@ function epm_templates_document_ready () {
 		epm_template_new_list_products(modal, select_product);
 	});
 
-	$('#epm_template_new_modal_btn_refresh_model_clone').on('click', function() {
-
-		var modal 		 = $("#modal_add_tempalte");
-		var select_model = $('#modal_form_new_template_model_clone');
-		epm_template_new_list_model_clone(modal, select_model);
-	});
-
-	$('#modal_form_new_template_products').on('change', function()
+	$('#epm_template_new_modal_btn_refresh_model_clone, #modal_form_new_template_products').on('click change', function()
 	{
-		var modal 		   = $("#modal_add_tempalte");
-		var product_select = $(this).val();
-		var select_model   = $('#modal_form_new_template_model_clone');
+		var modal 			= $("#modal_add_tempalte");
+		var select_model 	= $('#modal_form_new_template_model_clone');
+		var product_select  = $("#modal_form_new_template_products").val();
 
 		// Clean the select elements since the product may not have been selected
 		select_model.empty().selectpicker('refresh');
-
+	
 		if (product_select === "")
 		{
 			fpbxToast(_("Please Select a Product!"), '', 'warning');
@@ -419,6 +412,14 @@ function epm_templates_grid_FormatThAction(value, row, index)
 	// Return the outerHTML of the 'div' container
 	return $div.prop('outerHTML');
 }
+
+
+
+
+
+
+
+
 
 
 

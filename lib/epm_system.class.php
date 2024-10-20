@@ -256,17 +256,19 @@ class epm_system {
 
                     curl_setopt($ch, CURLOPT_FILE, $fp);
                     curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
+                    curl_setopt($ch, CURLOPT_NOPROGRESS, true);
         
                     $response = curl_exec($ch);
                     $httpCode  = curl_getinfo($ch, CURLINFO_HTTP_CODE);
                     $httpError = $response === false ? curl_error($ch) : null;
        
+                    curl_close($ch);
+                    fclose($fp);
+
                     if ($response === false)
                     {
                         $msg_error = sprintf(_("Error Downloading file '%s' (%s): %s"), $url_file, $httpCode, $httpError);
                     }
-                    curl_close($ch);
-                    fclose($fp);
                 }
             }
         }

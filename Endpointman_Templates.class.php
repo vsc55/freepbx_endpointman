@@ -77,47 +77,26 @@ class Endpointman_Templates
 					{
 						case "list_current_template":
 							$retarr = $this->epm_templates_list_current_templates();
-							break;
+						break;
 							
 						case "model_clone":
 							$retarr = $this->epm_templates_model_clone($data);
-							break;
+						break;
 							
 						case "add_template":
 							$retarr = $this->epm_templates_add_template($data);
-							break;
+						break;
 							
 						case "del_template":
 							$retarr = $this->epm_templates_del_template($data);
-							break;
+						break;
 						
 						case 'add_products_list':
-							$list_products = sql("SELECT DISTINCT endpointman_product_list.* FROM endpointman_product_list, endpointman_model_list WHERE endpointman_product_list.id = endpointman_model_list.product_id AND endpointman_model_list.hidden = 0 AND endpointman_model_list.enabled = 1 AND endpointman_product_list.hidden != 1 AND endpointman_product_list.cfg_dir !=  ''", 'getAll', \PDO::FETCH_ASSOC);
-							$products = [];
-							$products[] = array(
-								'id'   		=> '',
-								'name' 		=> _("None"),
-								'is_select' => true,
-							);
-							foreach($list_products as $row)
-							{
-								$products[] = array(
-									'id'   		=> $row['id'],
-									'name' 		=> $row['short_name'],
-									'is_select' => false,
-								);
-							}
-							$retarr = array(
-								"status"  => true,
-								"message" => "OK",
-								"options" => $products,
-								"count"   => count($products)
-							);
-							unset($list_products);
-							break;
+							$retarr = $this->epm_templates_add_products_list();
+						break;
 						
 						case 'add_template_list_models':
-							break;
+						break;
 	
 						default:
 							$command_allow = false;
@@ -677,7 +656,31 @@ class Endpointman_Templates
 		return $row_out;
 	}
 	
-	
+	public function epm_templates_add_products_list()
+	{
+		$products = [];
+		$products[] = array(
+			'id'   		=> '',
+			'name' 		=> _("None"),
+			'is_select' => true,
+		);
+
+		foreach($this->epm->packagesdb->getProductsByModelsEnabled(false, false) as $row)
+		{
+			$products[] = array(
+				'id'   		=> $row->getId(),
+				'name' 		=> $row->getShortName(),
+				'is_select' => false,
+			);
+		}
+		
+		return array(
+			"status"  => true,
+			"message" => "OK",
+			"options" => $products,
+			"count"   => count($products)
+		);
+	}
 	
 	
 	

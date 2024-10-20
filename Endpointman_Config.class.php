@@ -748,7 +748,7 @@ class Endpointman_Config
 		foreach ($this->epm->get_hw_brand_list(true) as $ava_brands)
 		{
 			$raw_name = $ava_brands['directory'];
-			if (!$master_json->isBrandExists($raw_name))
+			if (!$master_json->isBrandExist($raw_name))
 			{
 				$out[$raw_name] = array(
 					'update' 		  => -1,
@@ -786,11 +786,10 @@ class Endpointman_Config
 	 */
     public function update_check($echomsg = false, &$error=array())
 	{
-		$outputError = function($key, $errorMessage) use (&$error, $echomsg) {
+		$outputError = function($key, $errorMessage) use (&$error, $echomsg)
+		{
 			$error[$key] = $errorMessage;
-			if ($echomsg) {
-				out($errorMessage);
-			}
+			if ($echomsg) { out($errorMessage); }
 		};
 		$out = function($msg, $end_newline = true) use ($echomsg)
 		{
@@ -817,8 +816,6 @@ class Endpointman_Config
         if (!$this->epm->getConfig('use_repo'))
 		{
 			$url_status	= $this->system->buildUrl($this->epm->URL_UPDATE, "update_status");
-			dbug($url_status);
-
 			$out("⚡ Checking status server...", false);
 			try
 			{
@@ -1257,6 +1254,8 @@ class Endpointman_Config
 					*/
 				}
 			}
+
+			return $json_brands;
         }
     }
 
@@ -1265,140 +1264,166 @@ class Endpointman_Config
 	 * Downloads and installs/updates a brand.
 	 *
 	 * @param string $id The ID of the brand to download.
+	 * @param bool $echomsg (optional) Whether to echo error messages.
+	 * @param array $error (optional) Reference to an array to store error messages.
 	 * @return bool Returns true if the brand was successfully installed/updated, false otherwise.
+	 * 
 	 */
-    public function download_brand($id)
+    public function download_brand($id, bool $echomsg = true, array $error = array()) : bool
 	{
+		$outputError = function($key, $errorMessage) use (&$error, $echomsg)
+		{
+			$error[$key] = $errorMessage;
+			if ($echomsg) { out($errorMessage); }
+		};
+		$out = function($msg, $end_newline = true) use ($echomsg)
+		{
+			if ($echomsg)
+			{
+				if ($end_newline) { out($msg); }
+				else 		      { outn($msg); }
+			}
+		};
+
 		if (!is_numeric($id) || $id < 1)
 		{
-			out(sprintf(_("❌ Invalid Brand ID '%s'!"), $id));
+			$outputError('download_brand', sprintf(_("❌ Invalid Brand ID '%s'!"), $id));
 			return false;
 		}
 		elseif ($this->epm->getConfig('use_repo'))
 		{
-			out(_("❌ Installing brands is disabled while in repo mode!"));
+			$outputError('download_brand', _("❌ Installing brands is disabled while in repo mode!"));
 			return false;
 		}
 
 		$brand_db = $this->epm->packagesdb->getBrandByID($id);
 		if (! $brand_db->isExistID())
 		{
-			out(sprintf(_("❌ Brand with id '%s' not found in the database!"), $id));
+			$outputError('download_brand', sprintf(_("❌ Brand with id '%s' not found in the database!"), $id));
 			return false;
 		}
 
-		out(sprintf(_("⚡ Install/Update Brand '%s' ..."), $brand_db->getName()));
+		$out(sprintf(_("⚡ Install/Update Brand '%s' ..."), $brand_db->getName()));
 		if (empty($brand_db->getDirectory()))
 		{
-			out(_("❌ Brand Directory Is Not Set!"));
+			$outputError('download_brand', _("❌ Brand Directory Is Not Set!"));
 			return false;
 		}
 
 		$brand = $this->epm->packages->getBrandByDirectory($brand_db->getDirectory());
 		if(empty($brand))
 		{
-			out(_("❌ Brand Object is Empty!"));	
+			$outputError('download_brand', _("❌ Brand Object is Empty!"));
 			return false;
 		}
 
-		out(_("⚡ Downloading Brand JSON ..."));
+		$out(_("⚡ Downloading Brand JSON ..."));
 		try
 		{
-			if (! $brand->downloadBrand(true, false, true))
+			if (! $brand->downloadBrand($echomsg, false, true))
 			{
-				out(_("💥 Error Connecting to the Package Repository. Module not installed. Please Try again later."));
+				$outputError('download_brand', _("💥 Error Connecting to the Package Repository. Module not installed. Please Try again later."));
 				return false;
 			}
 		}
 		catch (\Exception $e)
 		{
-			out(sprintf(_("❌ %s"), $e->getMessage()));
-			out(_("❌ Error Connecting to the Package Repository. Module not installed. Please Try again later."));
-			out(sprintf(_("❌ You Can Also Manually Update The Repository By Downloading Files here: <a href='%s' target='_blank'> Release Repo </a>"), "http://www.provisioner.net/releases3"));
-			out(_("❌ Then Use Manual Upload in Advanced Settings."));
+			$outputError('download_brand', sprintf("❌ %s", $e->getMessage()));
+			$out(_("❌ Error Connecting to the Package Repository. Module not installed. Please Try again later."));
+			$out(sprintf(_("❌ You Can Also Manually Update The Repository By Downloading Files here: <a href='%s' target='_blank'> Release Repo </a>"), "http://www.provisioner.net/releases3"));
+			$out(_("❌ Then Use Manual Upload in Advanced Settings."));
 			return false;
 		}
 
 		$package = $brand->getPackage();
 		if (empty($package))
 		{
-			out(_("❌ No Package Found in JSON File!"));
+			$outputError('download_brand', _("❌ No Package Found in JSON File!"));
 			return false;
 		}
 
-		out(_("⚡ Downloading Brand Package ..."));
+		$out(_("⚡ Downloading Brand Package ..."));
 		try
 		{
-			if (! $brand->downloadPackage(true, false))
+			if (! $brand->downloadPackage($echomsg, false))
 			{
-				out(_("❌ Error Connecting to the Package Repository. Module not installed. Please Try again later."));
+				$outputError('download_brand', _("💥 Error Connecting to the Package Repository. Module not installed. Please Try again later."));
 				return false;
 			}
 		}
 		catch (\Exception $e)
 		{
-			out(sprintf("❌ %s", $e->getMessage()));
+			$outputError('download_brand', sprintf("❌ %s", $e->getMessage()));
 			return false;
 		}
 		if (!$brand->isExistPackageFile())
 		{
-			out(_("❌ Can't Find Downloaded File!"));
+			$outputError('download_brand', _("❌ Can't Find Downloaded File!"));
 			return false;
 		}
 
 		if (empty($brand->getMd5Sum()))
 		{
-			out(_("💥 Skipping MD5 Check!"));
+			$out(_("💥 Skipping MD5 Check!"));
 		}
 		else
 		{
-			outn(_("⚡ Checking MD5sum of Package ..."));
+			$out(_("⚡ Checking MD5sum of Package ..."), false);
 			if (! $brand->checkMD5PackageFile(true, true))
 			{
-				out(" ❌");
-				out(_("💥 Error MD5 Check Failed!"));
-				
+				$out(" ❌");
+				$outputError('download_brand', _("💥 Error MD5 Check Failed!"));
 				return false;
 			}
 			else
 			{
-				out(" ✔");
-				out(_("✅ MD5 Check Passed!"));
+				$out(" ✔");
+				$out(_("✅ MD5 Check Passed!"));
 			}
 		}
 		
-		outn(_("⚡ Extracting Tarball ..."));
+		$out(_("⚡ Extracting Tarball ..."), false);
 		try
 		{
 			if (! $brand->extractPackage(false))
 			{
-				out(_(" ❌"));
-				out(_("💥 Error Extracting Package!"));
+				$out(" ❌");
+				$outputError('download_brand', _("💥 Error Extracting Package!"));
 				return false;
 			}
-			out(" ✔");
+			$out(" ✔");
 		}
 		catch (\Exception $e)
 		{
-			out(" ❌");
-			out(sprintf("💥 %s", $e->getMessage()));
+			$out(" ❌");
+			$outputError('download_brand', sprintf("💥 %s", $e->getMessage()));
 			return false;
 		}
 
-		$return_update_brand = $this->update_brand($brand, true);
+		$out(sprintf(_("⚡ Updating Brand Data '%s'..."), $brand->getName()), false);
+		if (! $this->update_brand($brand, true, $echomsg, $error))
+		{
+			$return_data = false;
+			$out(" ❌");
+			$outputError('download_brand', sprintf(_("💥 Error: %s"), $error['update_brand']));
+		}
+		else
+		{
+			$return_data = true;
+			$out(" ✔");
+		}
 
 		if ($brand->isPackageExtractFolderExist())
 		{
-			outn(_("⚡ Removing Temporary Files ..."));
+			$out(_("⚡ Removing Temporary Files ..."), false);
 			$brand->removePackageExtract();
-        	out(" ✔");
+        	$out(" ✔");
 		}
 
+		$out(" ");
+		$out(_("✅ Brand Installed/Updated Finished!"));
 
-		out(" ");
-		out(_("✅ Brand Installed/Updated Successfully!"));
-
-		return $return_update_brand;
+		return $return_data;
     }
 
 
@@ -1408,455 +1433,488 @@ class Endpointman_Config
 	 * 
 	 * @param ProvisionerBrand $brand The brand object to update.
 	 * @param bool $remote (optional) Whether the brand is remote or local.
+	 * @param bool $echomsg (optional) Whether to echo error messages.
+	 * @param array $error (optional) Reference to an array to store error messages.
 	 * @return bool Returns true if the brand was successfully installed/updated, false otherwise.
+	 * 
      */
-    public function update_brand(?ProvisionerBrand $brand, $remote = true)
+    public function update_brand(?ProvisionerBrand $brand, bool $remote = true, bool $echomsg = true, array &$error = array()) : bool
 	{
+		$outputError = function($key, $errorMessage) use (&$error, $echomsg)
+		{
+			$error[$key] = $errorMessage;
+			if ($echomsg) { out($errorMessage); }
+		};
+		$out = function($msg, $end_newline = true) use ($echomsg)
+		{
+			if ($echomsg)
+			{
+				if ($end_newline) { out($msg); }
+				else 		      { outn($msg); }
+			}
+		};
+
 		if (empty($brand))
 		{
-			out(_("❌ Update Brand Error, No Brand Object Given!"));
-			return false;
-		}
-
-    	out(sprintf(_("⚡ Update Brand '%s' ..."), $brand->getName()));
-		out( sprintf(_("⚡ Processing '%s' ..."), $brand->getName()));
-		if (empty($brand->getDirectory()) || empty($brand->getBrandID()))
-		{
-			out(_("❌ Error: Invalid JSON Structure in file json!"));
-			return false;
+			$outputError('update_brand', _("❌ Update Brand Error, No Brand Object Given!"));
 		}
 		else
 		{
-			out(_("✅ Appears to be a valid Provisioner.net JSON file.....Continuing ✔"));
-			outn(sprintf(_("⚡ Creating Directory Structure for Brand '%s' and Moving Files ..."), $brand->getName()));
-			try
+			$out(sprintf(_("⚡ Update Brand '%s' ..."), $brand->getName()));
+			$out(sprintf(_("⚡ Processing '%s' ..."), $brand->getName()));
+			if (empty($brand->getDirectory()) || empty($brand->getBrandID()))
 			{
-				$error_move  = array();
-				$return_move = $brand->movePackageExtracted($remote, $error_move, false);
-				out($return_move ? " ✔": " ❌");
-
-				foreach ($error_move as $error)
-				{
-					out(sprintf(_("💥 Warning: Unable to move file '%s'"), $error));
-				}
-				unset($error_move);
-
-				if ($return_move === false)
-				{
-					out(_("❌ Error: Unable to move files!"));
-					return false;
-				}
-			}
-			catch (\Exception $e)
-			{
-				out(sprintf("❌ %s", $e->getMessage()));
-				return false;
-			}
-			finally
-			{
-				$brand->removePackageExtract();
-				unset($return_move);
-			}
-
-			try
-			{
-				$brand->importJSON(null, false, true);
-			}
-			catch (\Exception $e)
-			{
-				out(sprintf("❌ %s", $e->getMessage()));
-				return false;
-			}
-
-			$brand_db = $this->epm->packagesdb->getBrandByID($brand->getBrandID());
-			if ($brand_db->isExistID())
-			{
-				outn( sprintf(_("⚡ Updating Brand '%s' ..."), $brand->getName()));
-				$brand_db->setLocal($remote);
-				$brand_db->setInstalled(true);
-				$brand_db->setLastModified($brand->getLastModified());
+				$outputError('update_brand', _("❌ Error: Invalid JSON Structure in file json!"));
 			}
 			else
 			{
-				outn( sprintf(_("⚡ Inserting Brand '%s' ..."), $brand->getName()));
+				$out(_("✅ Appears to be a valid Provisioner.net JSON file.....Continuing ✔"));
+				$out(sprintf(_("⚡ Creating Directory Structure for Brand '%s' and Moving Files ..."), $brand->getName()), false);
 				try
 				{
-					$data_new = array(
-						'id'		=> $brand->getBrandID(),
-						'name'		=> $brand->getName(),
-						'directory'	=> $brand->getDirectory(),
-						'cfg_ver'	=> $brand->getLastModified(),
-						'local' 	=> $remote,
-						'installed' => true,
-					);
-					$brand_db->create($data_new, false, false);
-					unset($data_new);
+					$error_move  = array();
+					$return_move = $brand->movePackageExtracted($remote, $error_move, false);
+					$out($return_move ? " ✔": " ❌");
+
+					foreach ($error_move as $error_move_item)
+					{
+						$out(sprintf(_("💥 Warning: Unable to move file '%s'"), $error_move_item));
+					}
+					unset($error_move);
+
+					if ($return_move === false)
+					{
+						$outputError('update_brand', _("❌ Error: Unable to move files!"));
+						return false;
+					}
 				}
 				catch (\Exception $e)
 				{
-					out(" ❌");
-					out(sprintf(_("❌ Unable to add brand '%s', error: %s"), $brand->getName(), $e->getMessage()));
+					$outputError('update_brand', sprintf("❌ %s", $e->getMessage()));
 					return false;
 				}
-			}
-			out(" ✔");
-
-			outn(_("⚡ Updating OUI list in DB ..."));
-			foreach ($brand->getOUI() as $oui)
-			{
-				if(empty($oui)) { continue; }
-				$brand_db->setOUI($oui);
-			}
-			out(" ✔");
-
-			foreach ($brand->getFamilyList() as &$family)
-			{
-				$product_db = $brand_db->getProduct($family->getFamilyId());
-
-				out(_("⚡ Updating Family Lines ..."));
-				if ($product_db->isExistID())
+				finally
 				{
-					outn( sprintf(_("⚡ - Updating Family '%s'..."), $family->getShortName()));
-					$product_db->setName($family->getName());
-					$product_db->setShortName($family->getShortName());
-					$product_db->setLastModified($family->getLastModified());
-					$product_db->setConfigFiles($family->getConfigurationFiles());
+					$brand->removePackageExtract();
+					unset($return_move);
+				}
+
+				try
+				{
+					$brand->importJSON(null, false, true);
+				}
+				catch (\Exception $e)
+				{
+					$outputError('update_brand', sprintf("❌ %s", $e->getMessage()));
+					return false;
+				}
+
+				$brand_db = $this->epm->packagesdb->getBrandByID($brand->getBrandID());
+				if ($brand_db->isExistID())
+				{
+					$out(sprintf(_("⚡ Updating Brand '%s' ..."), $brand->getName()), false);
+					$brand_db->setLocal($remote);
+					$brand_db->setInstalled(true);
+					$brand_db->setLastModified($brand->getLastModified());
 				}
 				else
 				{
-					outn( sprintf(_("⚡ - Inserting Family '%s'..."), $family->getShortName()));
+					$out(sprintf(_("⚡ Inserting Brand '%s' ..."), $brand->getName()), false);
 					try
 					{
 						$data_new = array(
-							'id'			=> $family->getFamilyId(),
-							'brand'			=> $family->getBrandID(),
-							'short_name'	=> $family->getShortName(),
-							'long_name'		=> $family->getName(),
-							'cfg_dir'		=> $family->getDirectory(),
-							'cfg_ver'		=> $family->getLastModified(),
-							'config_files'	=> $family->getConfigurationFiles(),
-							'hidden'		=> 0,
+							'id'		=> $brand->getBrandID(),
+							'name'		=> $brand->getName(),
+							'directory'	=> $brand->getDirectory(),
+							'cfg_ver'	=> $brand->getLastModified(),
+							'local' 	=> $remote,
+							'installed' => true,
 						);
-						$product_db->create($data_new, false, false);
+						$brand_db->create($data_new, false, false);
 						unset($data_new);
 					}
 					catch (\Exception $e)
 					{
-						out(" ❌");
-						out(sprintf(_("❌ Unable to add product '%s', error: %s"), $family->getShortName(), $e->getMessage()));
-						continue;
+						$out(" ❌");
+						$outputError('update_brand', sprintf(_("❌ Unable to add brand '%s', error: %s"), $brand->getName(), $e->getMessage()));
+						return false;
 					}
 				}
-				out(" ✔");
+				$out(" ✔");
 
-
-				if ($family->countModels() > 0)
+				$out(_("⚡ Updating OUI list in DB ..."), false);
+				foreach ($brand->getOUI() as $oui)
 				{
-					out(_("⚡ - Updating Model Lines ... "));
+					if(empty($oui)) { continue; }
+					$brand_db->setOUI($oui);
 				}
-				foreach ($family->getModelList() as &$model)
+				$out(" ✔");
+
+				foreach ($brand->getFamilyList() as &$family)
 				{
-					//TODO: Pending the migrate of the class ProvisionerModelDB
-					foreach ($this->epm->get_hw_mac($model->getModelId(), 'model', 'id, global_custom_cfg_data, global_user_cfg_data') as $mac_list_item)
+					$product_db = $brand_db->getProduct($family->getFamilyId());
+					if (! $product_db)
 					{
-						$global_custom_cfg_data = unserialize($mac_list_item['global_custom_cfg_data'] ?? '');
+						$out(sprintf(_("💥 Warning: Product '%s' for the brand '%s' is not exist!"), $family->getFamilyId(), $brand->getName()));
+						continue;
+					}
 
-						if ((is_array($global_custom_cfg_data)) AND (!array_key_exists('data', $global_custom_cfg_data)))
+					$out(_("⚡ Updating Family Lines ..."));
+					if ($product_db->isExistID())
+					{
+						$out( sprintf(_("⚡ - Updating Family '%s'..."), $family->getShortName()), false);
+						$product_db->setName($family->getName());
+						$product_db->setShortName($family->getShortName());
+						$product_db->setLastModified($family->getLastModified());
+						$product_db->setConfigFiles($family->getConfigurationFiles());
+					}
+					else
+					{
+						$out( sprintf(_("⚡ - Inserting Family '%s'..."), $family->getShortName()), false);
+						try
 						{
-							outn(_("⚡ -- Old Data Detected! Migrating ... "));
+							$data_new = array(
+								'id'			=> $family->getFamilyId(),
+								'brand'			=> $family->getBrandID(),
+								'short_name'	=> $family->getShortName(),
+								'long_name'		=> $family->getName(),
+								'cfg_dir'		=> $family->getDirectory(),
+								'cfg_ver'		=> $family->getLastModified(),
+								'config_files'	=> $family->getConfigurationFiles(),
+								'hidden'		=> 0,
+							);
+							$product_db->create($data_new, false, false);
+							unset($data_new);
+						}
+						catch (\Exception $e)
+						{
+							$out(" ❌");
+							$out(sprintf(_("❌ Unable to add product '%s', error: %s"), $family->getShortName(), $e->getMessage()));
+							continue;
+						}
+					}
+					$out(" ✔");
 
-							$new_data = array();
-							$new_ari  = array();
-							foreach ($global_custom_cfg_data as $key => $old_keys)
+
+					if ($family->countModels() > 0)
+					{
+						$out(_("⚡ - Updating Model Lines ... "));
+					}
+					foreach ($family->getModelList() as &$model)
+					{
+						//TODO: Pending the migrate of the class ProvisionerModelDB
+						foreach ($this->epm->get_hw_mac($model->getModelId(), 'model', 'id, global_custom_cfg_data, global_user_cfg_data') as $mac_list_item)
+						{
+							$global_custom_cfg_data = unserialize($mac_list_item['global_custom_cfg_data'] ?? '');
+
+							if ((is_array($global_custom_cfg_data)) AND (!array_key_exists('data', $global_custom_cfg_data)))
 							{
-								if (array_key_exists('value', $old_keys))
+								$out(_("⚡ -- Old Data Detected! Migrating ... "), false);
+
+								$new_data = array();
+								$new_ari  = array();
+								foreach ($global_custom_cfg_data as $key => $old_keys)
 								{
-									$new_data[$key] = $old_keys['value'];
+									if (array_key_exists('value', $old_keys))
+									{
+										$new_data[$key] = $old_keys['value'];
+									}
+									else
+									{
+										$breaks = explode("_", $key);
+										$new_data["loop|" . $key] = $old_keys[$breaks[2]];
+									}
+									if (array_key_exists('ari', $old_keys))
+									{
+										$new_ari[$key] = 1;
+									}
 								}
-								else
-								{
-									$breaks = explode("_", $key);
-									$new_data["loop|" . $key] = $old_keys[$breaks[2]];
-								}
-								if (array_key_exists('ari', $old_keys))
-								{
-									$new_ari[$key] = 1;
-								}
+
+
+								$update_hw_mac = array(
+									'global_custom_cfg_data' => serialize(array('data' => $new_data, 'ari'  => $new_ari)),
+								);
+								$this->epm->set_hw_mac($mac_list_item['id'], $update_hw_mac, 'id');
+								unset($update_hw_mac);
+								$out(" ✔");
 							}
 
-
-							$update_hw_mac = array(
-								'global_custom_cfg_data' => serialize(array('data' => $new_data, 'ari'  => $new_ari)),
-							);
-							$this->epm->set_hw_mac($mac_list_item['id'], $update_hw_mac, 'id');
-							unset($update_hw_mac);
-							out(" ✔");
-						}
-
-						$global_user_cfg_data = unserialize($mac_list_item['global_user_cfg_data'] ?? '');
-						$old_check = FALSE;
-						if (is_array($global_user_cfg_data))
-						{
-							foreach ($global_user_cfg_data as $stuff)
+							$global_user_cfg_data = unserialize($mac_list_item['global_user_cfg_data'] ?? '');
+							$old_check = FALSE;
+							if (is_array($global_user_cfg_data))
 							{
-								if (is_array($stuff))
+								foreach ($global_user_cfg_data as $stuff)
 								{
-									if (array_key_exists('value', $stuff))
+									if (is_array($stuff))
 									{
-										$old_check = true;
-										break;
+										if (array_key_exists('value', $stuff))
+										{
+											$old_check = true;
+											break;
+										}
+										else
+										{
+											break;
+										}
 									}
 									else
 									{
 										break;
 									}
 								}
-								else
-								{
-									break;
-								}
 							}
-						}
 
-						if ((is_array($global_user_cfg_data)) AND ($old_check))
-						{
-							outn(_("⚡ -- Old Data Detected! Migrating ..."));
-							$new_data = array();
-							foreach ($global_user_cfg_data as $key => $old_keys)
+							if ((is_array($global_user_cfg_data)) AND ($old_check))
 							{
-								if (array_key_exists('value', $old_keys))
+								$out(_("⚡ -- Old Data Detected! Migrating ..."), false);
+								$new_data = array();
+								foreach ($global_user_cfg_data as $key => $old_keys)
 								{
-									$exploded = explode("_", $key);
-									$counted  = count($exploded);
-									$counted  = $counted - 1;
-									if (is_numeric($exploded[$counted]))
+									if (array_key_exists('value', $old_keys))
 									{
-										$key = "loop|" . $key;
+										$exploded = explode("_", $key);
+										$counted  = count($exploded);
+										$counted  = $counted - 1;
+										if (is_numeric($exploded[$counted]))
+										{
+											$key = "loop|" . $key;
+										}
+										$new_data[$key] = $old_keys['value'];
 									}
-									$new_data[$key] = $old_keys['value'];
 								}
+
+								$update_hw_mac = array(
+									'global_user_cfg_data' => serialize($new_data),
+								);
+								$this->epm->set_hw_mac($mac_list_item['id'], $update_hw_mac, 'id');
+								unset($update_hw_mac);
+								$out(" ✔");
 							}
-
-							$update_hw_mac = array(
-								'global_user_cfg_data' => serialize($new_data),
-							);
-							$this->epm->set_hw_mac($mac_list_item['id'], $update_hw_mac, 'id');
-							unset($update_hw_mac);
-							out(" ✔");
 						}
-					}
 
 
-					foreach ($this->epm->get_hw_template($model->getModelId(), 'model_id', 'id, global_custom_cfg_data') as $template_item)
-					{
-						$global_custom_cfg_data = unserialize($template_item['global_custom_cfg_data'] ?? '');
-
-						if ((is_array($global_custom_cfg_data)) AND (!array_key_exists('data', $global_custom_cfg_data))) 
+						foreach ($this->epm->get_hw_template($model->getModelId(), 'model_id', 'id, global_custom_cfg_data') as $template_item)
 						{
-							out(_("⚡ -- Old Data Detected! Migrating ..."));
-							$new_data = array();
-							$new_ari  = array();
-							foreach ($global_custom_cfg_data as $key => $old_keys)
+							$global_custom_cfg_data = unserialize($template_item['global_custom_cfg_data'] ?? '');
+
+							if ((is_array($global_custom_cfg_data)) AND (!array_key_exists('data', $global_custom_cfg_data))) 
 							{
-								if (array_key_exists('value', $old_keys))
+								$out(_("⚡ -- Old Data Detected! Migrating ..."), false);
+								$new_data = array();
+								$new_ari  = array();
+								foreach ($global_custom_cfg_data as $key => $old_keys)
 								{
-									$new_data[$key] = $old_keys['value'];
+									if (array_key_exists('value', $old_keys))
+									{
+										$new_data[$key] = $old_keys['value'];
+									}
+									else
+									{
+										$breaks = explode("_", $key);
+										$new_data["loop|" . $key] = $old_keys[$breaks[2]];
+									}
+									if (array_key_exists('ari', $old_keys))
+									{
+										$new_ari[$key] = 1;
+									}
 								}
-								else
-								{
-									$breaks = explode("_", $key);
-									$new_data["loop|" . $key] = $old_keys[$breaks[2]];
-								}
-								if (array_key_exists('ari', $old_keys))
-								{
-									$new_ari[$key] = 1;
-								}
+								
+								$update_hw_template = array(
+									'global_custom_cfg_data' => serialize(array('data' => $new_data, 'ari'  => $new_ari)),
+								);
+								$this->epm->set_hw_template($template_item['id'], $update_hw_template, 'id');
+								unset($update_hw_mac);
+
+								out(" ✔");
 							}
-							
-							$update_hw_template = array(
-								'global_custom_cfg_data' => serialize(array('data' => $new_data, 'ari'  => $new_ari)),
-							);
-							$this->epm->set_hw_template($template_item['id'], $update_hw_template, 'id');
-							unset($update_hw_mac);
+						}
 
-							// $sql  = sprintf("UPDATE %s SET global_custom_cfg_data = :cfg_data WHERE id = :id", "endpointman_template_list");
-							// $stmt = $this->db->prepare($sql);
-							// $stmt->execute([
-							// 	':cfg_data' => serialize(array('data' => $new_data, 'ari'  => $new_ari)),
-							// 	':id'	    => $data['id']
-							// ]);
-
-							// out(_("Done!"));
-							out(" ✔");
+						$model_db = $product_db->getModel($model->getModelId());
+						if ($model_db->isExistID())
+						{
+							$out(sprintf(_("⚡ - Updating Model '%s' ..."), $model->getModel()), false);
+							$model_db->setModel($model->getModel());
+							$model_db->setMaxLines($model->getMaxLines());
+							$model_db->setTemplateList($model->getTemplateList());
+							try
+							{
+								$model_db->setTemplateData($model->importTemplates(12, null, false));
+								$out (" ✔");
+							}
+							catch (\Exception $e)
+							{
+								$out(" ❌");
+								$out(sprintf(_("❌ Unable to update model '%s', error: %s"), $model->getModel(), $e->getMessage()));
+							}
+						}
+						else
+						{
+							$out( sprintf(_("⚡ - Inserting Model '%s' ..."), $model->getModel()), false);
+							try
+							{
+								$data_model = array(
+									'id' 		 	=> $model->getModelId(),
+									'brand'		 	=> $model->getBrandID(),
+									'model'		 	=> $model->getModel(),
+									'max_lines'		=> $model->getMaxLines(),
+									'template_list'	=> $model->getTemplateList(),
+									'template_data' => $model->importTemplates(12, null, false),
+									'product_id' 	=> $model->getFamilyId(),
+									'enabled'	 	=> false,
+									'hidden'		=> false,
+								);
+								$model_db->create($data_model, false, false);
+								unset($data_model);
+								$out (" ✔");
+							}
+							catch (\Exception $e)
+							{
+								$out(" ❌");
+								$out(sprintf(_("❌ Unable to add model '%s', error: %s"), $model->getModel(), $e->getMessage()));
+								continue;
+							}
 						}
 					}
+					//END Updating Model Lines................
 
-					$model_db = $product_db->getModel($model->getModelId());
-					if ($model_db->isExistID())
+
+					//Phone Models Move Here
+					foreach ($this->epm->get_hw_model_list($family->getFamilyId(), true) as $model_item)
 					{
-						outn( sprintf(_("⚡ - Updating Model '%s' ..."), $model->getModel()));
-						$model_db->setModel($model->getModel());
-						$model_db->setMaxLines($model->getMaxLines());
-						$model_db->setTemplateList($model->getTemplateList());
-						try
+						$model_id 	= $model_item['id']    ?? '';
+						$model_name = $model_item['model'] ?? '';
+						
+						if (empty($model_name) || empty($model_id))
 						{
-							$model_db->setTemplateData($model->importTemplates(12, null, false));
-							out (" ✔");
-						}
-						catch (\Exception $e)
-						{
-							out(" ❌");
-							out(sprintf(_("❌ Unable to update model '%s', error: %s"), $model->getModel(), $e->getMessage()));
-						}
-					}
-					else
-					{
-						outn( sprintf(_("⚡ - Inserting Model '%s' ..."), $model->getModel()));
-						try
-						{
-							$data_model = array(
-								'id' 		 	=> $model->getModelId(),
-								'brand'		 	=> $model->getBrandID(),
-								'model'		 	=> $model->getModel(),
-								'max_lines'		=> $model->getMaxLines(),
-								'template_list'	=> $model->getTemplateList(),
-								'template_data' => $model->importTemplates(12, null, false),
-								'product_id' 	=> $model->getFamilyId(),
-								'enabled'	 	=> false,
-								'hidden'		=> false,
-							);
-							$model_db->create($data_model, false, false);
-							unset($data_model);
-							out (" ✔");
-						}
-						catch (\Exception $e)
-						{
-							out(" ❌");
-							out(sprintf(_("❌ Unable to add model '%s', error: %s"), $model->getModel(), $e->getMessage()));
 							continue;
 						}
+
+						if (! $family->isModelExist($model_name))
+						{
+							$out(sprintf(_("Moving/Removing Model '%s' not present in JSON file ..."), $model_name), false);
+
+							$this->epm->del_hw_model($model_id);
+
+							
+							//TODO: Mover Query a otro sitio
+							$sql = sprintf('SELECT id FROM %s WHERE model LIKE :model_name', "endpointman_model_list");
+							$stmt = $this->db->prepare($sql);
+							$stmt->execute([
+								':model_name' => $model_name
+							]);
+							$new_model_id = $stmt->rowCount() === 0 ? false : ($stmt->fetchColumn() ?? false);
+
+							// If the model is not found, set the model to 0
+							$update_model = array(
+								'model' => $new_model_id ? $new_model_id: '0',
+							);
+							$this->epm->set_hw_mac($model_id, $update_model, 'model');
+							unset($update_model);
+							unset($new_model_id);
+
+							$out(_(" ✔"));
+						}
 					}
-				}
-				//END Updating Model Lines................
 
-
-				//Phone Models Move Here
-				foreach ($this->epm->get_hw_model_list($family->getFamilyId(), true) as $model_item)
-				{
-					$model_id 	= $model_item['id']    ?? '';
-					$model_name = $model_item['model'] ?? '';
-					
-					if (empty($model_name) || empty($model_id))
+					/* DONT DO THIS YET
+					if ($family->isFirmwareRequired() && $remote)
 					{
-						continue;
+						out(_("Firmware Requirment Detected, Initiating Firmware Installation..."));
+						$this->install_firmware($product_db);
 					}
-
-					if (! $family->isModelExist($model_name))
-					{
-						outn(sprintf(_("Moving/Removing Model '%s' not present in JSON file ..."), $model_name));
-
-						$this->epm->del_hw_model($model_id);
-
-						
-						//TODO: Mover Query a otro sitio
-						$sql = sprintf('SELECT id FROM %s WHERE model LIKE :model_name', "endpointman_model_list");
-						$stmt = $this->db->prepare($sql);
-						$stmt->execute([
-							':model_name' => $model_name
-						]);
-						$new_model_id = $stmt->rowCount() === 0 ? false : ($stmt->fetchColumn() ?? false);
-
-						// If the model is not found, set the model to 0
-						$update_model = array(
-							'model' => $new_model_id ? $new_model_id: '0',
-						);
-						$this->epm->set_hw_mac($model_id, $update_model, 'model');
-						unset($update_model);
-						unset($new_model_id);
-
-						out(_(" ✔"));
-					}
+					*/
 				}
-
-				/* DONT DO THIS YET
-				if ($family->isFirmwareRequired() && $remote)
-				{
-					out(_("Firmware Requirment Detected, Initiating Firmware Installation..."));
-					$this->install_firmware($product_db);
-				}
-				*/
+				$out(_("✅ All Done!"));
+				//END Updating Family Lines
+				return true;
 			}
-			out(_("✅ All Done!"));
-			//END Updating Family Lines
 		}
+		return false;
     }
 
 	
 	/**
-	 * Removes a brand from the system.
+	 * Removes a brand from the system (including all products and models).
 	 *
 	 * @param int $id The ID of the brand to remove.
 	 * @param bool $force Whether to force the removal of the brand.
+	 * @param bool $echomsg Whether to echo messages.
+	 * @param array $error An array to store error messages.
 	 * @return bool Returns true if the brand is successfully removed, false otherwise.
+	 * 
+	 * @example
+	 * $error = array();
+	 * $this->remove_brand(1, false, true, $error);
+	 * if (!empty($error['remove_brand'])) { out(_("❌ Error: " . $error['remove_brand'])); }
 	 */
-    public function remove_brand($id = null, $force = false)
+    public function remove_brand($id = null, bool $force = false, bool $echomsg = true, array &$error = array()) : bool
 	{
+		$outputError = function($key, $errorMessage) use (&$error, $echomsg)
+		{
+			$error[$key] = $errorMessage;
+			if ($echomsg) { out($errorMessage); }
+		};
+		$out = function($msg, $end_newline = true) use ($echomsg)
+		{
+			if ($echomsg)
+			{
+				if ($end_newline) { out($msg); }
+				else 		      { outn($msg); }
+			}
+		};
+
 		if (!is_numeric($id) || $id < 1)
 		{
-			out(sprintf(_("❌ Uninstall Brand Error, Brand ID '%s' is invalid!"), $id));
-			return false;
+			$outputError('remove_brand', sprintf(_("❌ Uninstall Brand Error, Brand ID '%s' is invalid!"), $id));
 		}
 		elseif ($this->epm->getConfig('use_repo') && !$force)
 		{
-			out(_("❌ Uninstalling brands is disabled while in repo mode!"));
-			return false;
+			$outputError('remove_brand', _("❌ Uninstalling brands is disabled while in repo mode!"));
         }
-
-		$brand_db = $this->epm->packagesdb->getBrandByID($id);
-		$brand 	  = $this->epm->packages->getBrandByDirectory($brand_db->getDirectory());
-		if (! $brand_db->isExistID())
+		else
 		{
-			out(sprintf(_("❌ Uninstall Brand Error, Brand ID '%s' not found in the database!"), $id));
-			return false;
-		}
-		else if(empty($brand))
-		{
-			out(_("❌ Failed to get data from the json file!"));
-			return false;
-		}
-
-		out(sprintf(_("⚡ Uninstalla Brand '%s' ..."), $brand_db->getName()));
-        if (!$this->epm->getConfig('use_repo') && !$force)
-		{
-			if (empty($brand_db->getDirectory()))
+			$brand_db = $this->epm->packagesdb->getBrandByID($id);
+			$brand 	  = $this->epm->packages->getBrandByDirectory($brand_db->getDirectory());
+			if (! $brand_db->isExistID())
 			{
-				out(_("❌ Brand Directory Is Not Set!"));
-				return false;
+				$outputError('remove_brand', sprintf(_("❌ Uninstall Brand Error, Brand ID '%s' not found in the database!"), $id));
 			}
-		
-			foreach ($brand_db->getProducts() as &$product)
+			else if(empty($brand))
 			{
-				if (!$product->isSetFirmwareVer())
+				$outputError('remove_brand', _("❌ Failed to get data from the json file!"));
+			}
+			else if (empty($brand_db->getDirectory()))
+			{
+				$outputError('remove_brand', _("❌ Brand Directory Is Not Set!"));
+			}
+			else
+			{
+				$out(sprintf(_("⚡ Uninstalla Brand '%s' ..."), $brand_db->getName()));
+				if (!$this->epm->getConfig('use_repo') && !$force)
 				{
-					continue;
+					foreach ($brand_db->getProducts() as &$product)
+					{
+						if (!$product->isSetFirmwareVer())
+						{
+							continue;
+						}
+						$this->remove_firmware($product);
+					}
+					$brand->uninstall();
 				}
-				$this->remove_firmware($product);
+
+				try
+				{
+					$brand_db->delete();
+					$out(_("✅ Uninstall Brand Success!"));
+				}
+				catch (\Exception $e)
+				{
+					$outputError('remove_brand', sprintf("❌ %s", $e->getMessage()));
+				}
 			}
-			$brand->uninstall();
 		}
-
-		try
-		{
-			$brand_db->delete();
-		}
-		catch (\Exception $e)
-		{
-			out(sprintf(_("❌ %s"), $e->getMessage()));
-			return false;
-		}
-
-		out(_("✅ Uninstall Brand Success!"));
-		return true;
+		return empty($error['remove_brand']) ? true : false;
     }
 
 

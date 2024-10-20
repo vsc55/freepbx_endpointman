@@ -51,7 +51,7 @@ class ProvisionerFamilyDB extends ProvisionerBaseDB
      * @throws \Exception If the ID does not exist.
      * @throws \Exception If the query fails.
      */
-    public function isExistID(?int $id = null, bool $noException = true)
+    public function isExistID(?int $id = null, bool $noException = true) : bool
     {
         if ($this->destory)
         {
