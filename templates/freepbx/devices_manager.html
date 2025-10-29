@@ -1,0 +1,546 @@
+
+<div class="container-fluid">
+{include="global_header"}
+<h2><?= _('Device List') ?></h2>
+<div class="fpbx-container">
+<div class="display full-border">
+{if condition="isset($show_error_box)"}
+{include="message_box"}
+{/if}
+<script type="text/javascript" charset="utf-8">
+   $(function(){
+        $("select#brand_edit").change(function(){
+            $.ajaxSetup({ cache: false });
+            $.getJSON("config.php?type=tool&quietmode=1&handler=file&module=endpointman&file=ajax_select.html.php&atype=model",{id: $(this).val()}, function(j){
+                var options = '';
+                for (var i = 0; i < j.length; i++) {
+                    options += '<option value="' + j[i].optionValue + '">' + j[i].optionDisplay + '</option>';
+                }
+                $("#model_new").html(options);
+                $('#model_new option:first').attr('selected', 'selected');
+                $("#template_list").html('<option></option>');
+                $('#template_list option:first').attr('selected', 'selected');
+            })
+        })
+    })
+    $(function(){
+        $("select#product_select").change(function(){
+            $.ajaxSetup({ cache: false });
+            $.getJSON("config.php?type=tool&quietmode=1&handler=file&module=endpointman&file=ajax_select.html.php&atype=template",{id: $(this).val()}, function(j){
+                var options = '';
+                for (var i = 0; i < j.length; i++) {
+                    options += '<option value="' + j[i].optionValue + '">' + j[i].optionDisplay + '</option>';
+                }
+                $("#template_selector").html(options);
+                $('#template_selector option:first').attr('selected', 'selected');
+            })
+        })
+    })
+    $(function(){
+        $("select#model_select").change(function(){
+            $.ajaxSetup({ cache: false });
+            $.getJSON("config.php?type=tool&quietmode=1&handler=file&module=endpointman&file=ajax_select.html.php&atype=mtemplate",{id: $(this).val()}, function(j){
+                var options = '';
+                for (var i = 0; i < j.length; i++) {
+                    options += '<option value="' + j[i].optionValue + '">' + j[i].optionDisplay + '</option>';
+                }
+                $("#model_template_selector").html(options);
+                $('#model_template_selector option:first').attr('selected', 'selected');
+            })
+        })
+    })
+    $(function(){
+        $("select#model_new").change(function(){
+            $.ajaxSetup({ cache: false });
+            $.getJSON("config.php?type=tool&quietmode=1&handler=file&module=endpointman&file=ajax_select.html.php&atype=template2",{id: $(this).val()}, function(j){
+                var options = '';
+                for (var i = 0; i < j.length; i++) {
+                    options += '<option value="' + j[i].optionValue + '">' + j[i].optionDisplay + '</option>';
+                }
+                $("#template_list").html(options);
+                $('#template_list option:first').attr('selected', 'selected');
+            }),
+            $.ajaxSetup({ cache: false });
+            $.getJSON("config.php?type=tool&quietmode=1&handler=file&module=endpointman&file=ajax_select.html.php&atype=lines",{id: $(this).val()}, function(j){
+                var options = '';
+                for (var i = 0; i < j.length; i++) {
+                    options += '<option value="' + j[i].optionValue + '">' + j[i].optionDisplay + '</option>';
+                }
+                $("#line_list").html(options);
+                $('#line_list option:first').attr('selected', 'selected');
+            })
+        })
+    })
+
+    $(function(){
+        $("select#brand_list_selected").change(function(){
+            $.ajaxSetup({ cache: false });
+            $.getJSON("config.php?type=tool&quietmode=1&handler=file&module=endpointman&file=ajax_select.html.php&atype=model",{id: $(this).val()}, function(j){
+                var options = '';
+                for (var i = 0; i < j.length; i++) {
+                    options += '<option value="' + j[i].optionValue + '">' + j[i].optionDisplay + '</option>';
+                }
+                $("#model_list_selected").html(options);
+                $('#model_list_selected option:first').attr('selected', 'selected');
+            })
+        })
+    })
+    function toggleDisplayAll(mode) {
+        $(".toggle_all").each(function (i) {
+            var rowClass = 'rowGroup'+$(this).attr('id');
+            if(mode == 'expand') {
+                $("#img2"+rowClass).removeClass().addClass('info icon-chevron-up');
+                $("#img3"+rowClass).removeClass().addClass('info icon-chevron-up');
+                $('.'+rowClass).show();
+                $('#expander').hide();
+                $('#collapser').show();
+            } else {
+                $("#img2"+rowClass).removeClass().addClass('info icon-chevron-down');
+                $("#img3"+rowClass).removeClass().addClass('info icon-chevron-down');
+                $('.'+rowClass).hide();
+                $('#expander').show();
+                $('#collapser').hide();
+            }
+        });
+    }
+
+    function toggleDisplay(tbl, rowClass) {
+        if($("#img2"+rowClass).hasClass("icon-chevron-down")) {
+            $("#img2"+rowClass).removeClass().addClass('info icon-chevron-up');
+            $("#img3"+rowClass).removeClass().addClass('info icon-chevron-up');
+            $('.'+rowClass).show();
+        } else {
+            $("#img2"+rowClass).removeClass().addClass('info icon-chevron-down');
+            $("#img3"+rowClass).removeClass().addClass('info icon-chevron-down');
+            $('.'+rowClass).hide();
+        }
+    }
+    function addTableRow(jQtable){
+        jQtable.each(function(){
+            var $table = $(this);
+            // Number of td's in the last table row
+            var n = $('tr:last td', this).length;
+            var tds = '<tr>';
+            for(var i = 0; i < n; i++){
+                tds += '<td>&nbsp;</td>';
+            }
+            tds += '</tr>';
+            if($('tbody', this).length > 0){
+                $('tbody', this).append(tds);
+            }else {
+                $(this).append(tds);
+            }
+        });
+    }
+    function add_device() {
+        $('#adding').append('<input type="hidden" name="sub_type" value="add"/>');
+        /*
+        $('#adding').ajaxSubmit(function(responseText, statusText, xhr, $form) { 
+            //ffalert('status: ' + statusText + '\n\nresponseText: \n' + responseText + '\n\nThe output div should have already been updated with the responseText.'); 
+            $(this).resetForm();
+            $('#devList tr:last').after('<tr><td>stuff</td></tr>');
+            return false;
+        });
+        */
+        //return false //to prevent normal browser submit and page navigation 
+        document.adding.submit();
+    }
+    function find_devices() {
+        $('#spinner').toggle();
+        $('#go').append('<input type="hidden" name="sub_type" value="go"/>');
+        document.go.submit();
+    }
+    function managed_options(type) {
+        $('#managed').append('<input type="hidden" name="sub_type" value="'+ type +'"/>');
+        document.managed.submit();
+    }
+    function add_searched_devices() {
+        $('#unmanaged').append('<input type="hidden" name="sub_type" value="add_selected_phones"/>');
+        //$('#devList tr:last').after('<tr><td>stuff</td></tr>');
+        document.unmanaged.submit();
+    }
+    function submit_global(type) {
+        $('#globalmanaged').append('<input type="hidden" name="sub_type" value="'+ type +'"/>');
+        document.globalmanaged.submit();
+    }
+    function submit_global2(type) {
+        $('#globalmanaged2').append('<input type="hidden" name="sub_type" value="'+ type +'"/>');
+        document.globalmanaged2.submit();
+    }
+    function submit_global3(type) {
+        $('#globalmanaged3').append('<input type="hidden" name="sub_type" value="'+ type +'"/>');
+        document.globalmanaged3.submit();
+    }
+    function submit_wtype(type,id) {
+        $('#adding').append('<input type="hidden" name="edit_id" value="'+ id +'"/><input type="hidden" name="sub_type" value="'+ type +'"/>');
+        document.adding.submit();
+    }
+    function edit_device(type,id,sub) {
+        $('#adding').append('<input type="hidden" name="edit_id" value="'+ id +'"/><input type="hidden" name="sub_type" value="'+ type +'"/><input type="hidden" name="sub_type_sub" value="'+ sub +'"/>');
+        document.adding.submit();
+    }
+    function delete_device(id) {
+        if (confirm('Are you sure you want to delete this device?')) {
+            submit_wtype('delete_device',id);
+        }
+    }
+    function popitup(url, name, id) {
+        if(id != '0') {
+            newwindow=window.open(url + '&model_list=' + document.getElementById('model_new').value + '&template_list=' + document.getElementById('template_list').value + '&rand=' + new Date().getTime(),'name2','height=1000,width=950,scrollbars=yes,location=no');
+            if (window.focus) {newwindow.focus()}
+            return false;
+        }
+    }
+
+    function submit_stype(type,id) {
+        newwindow=window.open('config.php?display=epm_config&quietmode=1&handler=file&file=popup.html.php&module=endpointman&pop_type=edit_specifics&edit_id=' + id + '&rand=' + new Date().getTime(),'name2','height=700,width=750,scrollbars=yes,location=no');
+        if (window.focus) {newwindow.focus()}
+        return false;
+    }
+    function togglePhones(action) {
+        $('#devList .device').prop('checked', action);
+    }
+</script>
+
+<h3>{if condition="$mode != 'EDIT'"}<?php echo _('Add')?>{else}<?php echo _('Edit')?>{/if} <?php echo _('Device')?></h3>
+<form name="adding" id="adding" action='config.php?type=tool&amp;display=epm_devices' method='POST' />
+<table id="devList" data-toolbar="#toolbar-all" data-pagination="false" data-show-columns="false" data-show-toggle="false" data-search="false" data-show-refresh="false" data-detail-formatter="device" data-minimum-count-columns="1" data-show-pagination-switch="false" data-id-field="id" data-page-list="[5,10, 25, 50, 100, ALL]" data-show-footer="false" data-side-pagination="device" class="table table-striped table-hover">	
+  <thead>
+    <tr>
+
+        <th width="13%" align='center'><?php echo _('MAC Address')?></th>
+		<th width="13%" align='center'><?php echo _('IPEI (DECT Handset)')?></th>
+        <th width="13%" align='center'><?php echo _('Brand')?></th>
+        <th width="10%" align='center'><?php echo _('Model')?></th>
+        <th width="10%" align='center'><?php echo _('Line')?></th>
+        <th width="19%" align='center'><?php echo _('Extension Number')?></th>
+		
+        <th width="15%" align='center'><?php echo _('Template')?></th>
+
+        <th width="6%"></th>
+		<th width="6%"></th>
+
+    </tr>
+  </thead>
+  <tbody>
+	{if condition="$no_add == FALSE"}
+    <tr>
+
+
+    <td align='center'>
+	{if condition="$mode == 'EDIT'"}
+	{$mac}
+	{else}
+        <input name='mac' type='text' tabindex='1' size="17" maxlength="17">
+		
+	{/if}</td>
+	
+	   <td align='center'>
+	{if condition="$mode == 'EDIT'"}
+	{else}
+<input name='ipei' type='text' tabindex='1' size="17" maxlength="17">
+	{/if}</td>
+    <td align='center'>  <label>
+	{if condition="$mode == 'EDIT'"}
+            {$name}
+	{else}
+            <select name="brand_list" id="brand_edit">
+                {loop name="brand_ava"}
+                <option value="{$value.value}" {if condition="isset($value.selected)"}selected{/if}>{$value.text}</option>
+                {/loop}
+            </select></label>
+	{/if}
+    </td>
+    <td align='center'>
+        <label>
+	{if condition="$mode == 'EDIT'"}
+            <input name="display" type="hidden" value="epm_devices">
+            <select name="model_list" id="model_new">
+                {loop name="models_ava"}
+                <option value="{$value.value}" {if condition="!empty($value.selected)"}selected{/if}>{$value.text}</option>
+                {/loop}
+            </select>
+	{else}
+            <select name="model_list" id="model_new"><option></option></select>
+	{/if}
+        </label></td>
+{if condition="$mode == 'EDIT'"}
+    <td align='center'></td>
+    <td align='center'></td>
+{else}
+    <td align='center'>
+        <label>
+            <select name="line_list" id="line_list" >
+                <option></option>
+            </select>
+        </label></td>
+    <td align='center'>
+        <select name="ext_list" id="select">
+            {loop name="display_ext"}
+            <option value="{$value.value}">{$value.text}</option>
+            {/loop}
+        </select>
+        </label>
+    </td>
+{/if}
+    <td align='center'>  <div id="demo"><select name="template_list" id="template_list">
+                {loop name="display_templates"}
+                <option value="{$value.value}" {if condition="isset($value.selected)"}selected{/if}>{$value.text}</option>
+                {/loop}
+            </select>
+            <a href="#" onclick="return popitup('config.php?display=epm_templates&subpage=editor&custom={$custom}&idsel={$template_id}', 'Template Editor', '{$template_id}')"><i class='icon-pencil'></i></a></div>
+        </label></td>
+    <td align='center'>
+	{if condition="$mode == 'EDIT'"}
+        <button type='submit' name='button_save' onclick="edit_device('edit',{$edit_id},'button_save');"><i class='icon-save blue'></i> <?php echo _('Save')?></button>
+		<td></td>
+	{else}
+        <button type='button' name='button_add' onclick="add_device();"><i class='icon-plus success'></i>&nbsp;<?php echo _('Add')?></button>
+	{/if}
+    </td>
+
+ {if condition="$mode != 'EDIT'"}   <td align='center'><button type='reset'><i class='icon-rotate-left red'></i> <?php echo _('Reset')?></td>{/if}
+</tr>
+{loop name="line_list_edit"}
+<tr>
+    <td align='center' width='2%'>&nbsp;</td>
+	
+<td align='center'><input name='ipei_{$value.luid}' value='{$value.ipei}' type='text' tabindex='1' size="17" maxlength="17"></td>
+    <td align='center'></td>
+    <td align='center'></td>
+    <td align='center'>
+        <label>
+            <select name="line_list_{$value.luid}" id="line_list" >
+                {loop name="value.line_list"}
+                <option value="{$value.value}" {if condition="isset($value.selected)"}selected{/if}>{$value.text}</option>
+                {/loop}
+            </select>
+        </label></td>
+    <td align='center'>
+        <select name="ext_list_{$value.luid}" id="select">
+            {loop name="value.reg_list"}
+            <option value="{$value.value}" {if condition="isset($value.selected)"}selected{/if}>{$value.text}</option>
+            {/loop}
+        </select>
+        </label>
+    </td>
+    <td align='center'></td>
+    <td align='center'>{if condition="!isset($disabled_delete_line)"}<div id="demo"><a href="#" onclick="edit_device('edit',{$value.luid},'delete');"><i class="red icon-remove" title="Delete Line from Device to the Left"></i></div>{/if}</a></td>
+ 
+</tr>
+{/loop}
+{if condition="$mode == 'EDIT'"}
+<tr>
+    <td align='center'>&nbsp;</td>
+    <td align='center'></td>
+    <td align='center'></td>
+    <td align='center'></td>
+    <td align='center'>&nbsp;</td>
+    <td align='center'>&nbsp;</td>
+    <td align='center'></td>
+    <td align='center'><div id="demo"><a href="#" onclick="edit_device('edit',{$edit_id},'add_line_x');"><i class="green icon-plus" title="Add a Line to the device currently being edited"></i></a></div></td>
+
+</tr> 
+{/if}
+{/if}
+  </tbody>
+</table>
+</form>
+
+{if condition="$searched == 1"}
+<table width='90%' align='center'>
+    <tr>
+        <td align='center'>&nbsp;</td>
+        <td align='center'>&nbsp;</td>
+        <td align='center'>&nbsp;</td>
+        <td colspan="3" align='center'><h3><?php echo _('Unmanaged Extensions')?></h3></td>
+        <td align='center'>&nbsp;</td>
+        <td align='center'>&nbsp;</td>
+        <td align='center'>&nbsp;</td>
+    </tr>
+	{if condition="is_array($unmanaged)"}
+    <form id="unmanaged" action='' method='POST'>
+		{loop name="unmanaged"}
+        <input name="mac_{$value.id}" type="hidden" value="{$value.mac_strip}">
+        <input name="brand_{$value.id}" type="hidden" value="{$value.brand_id}">
+        <tr id="{$value.mac_strip}">
+            <td align='center' width='20'><input type="checkbox" name="add[]" value="{$value.id}"></td>
+            <td align='center' width='148'>{$value.mac_strip}<br />({$value.ip})</td>
+            <td width="188" align='center'>{$value.brand}</td>
+            <td width="216" align='center'>
+
+                <select name="model_list_{$value.id}">
+
+	    {loop name="value.list"}
+
+                    <option value="{$value.id}">{$value.model}</option>
+
+	      {/loop}
+
+                </select></td>
+            <td width="141" align='center'>
+
+            </td>
+
+            <td width="276" align='center'>
+                <select name="ext_list_{$value.id}" id="ext">
+
+	    {loop name="display_ext"}
+
+                    <option value="{$value.value}">{$value.text}</option>
+
+	      {/loop}
+
+                </select></td>
+            <td align='center' width='220'>&nbsp;</td>
+            <td align='center' width='154'></td>
+            <td align='center' width='73'>&nbsp;</td>
+        </tr>
+		{/loop}
+        <tr>
+        <table width="90%" border="0" cellspacing="0" cellpadding="0">
+            <tr>
+                <td><center><input type="submit" name="button_add_selected_phones" onclick="add_searched_devices();" value="<?php echo _('Add Selected Phones')?>"><br /><input type="checkbox" name="reboot_sel">Reboot Phones</center></td>
+            </tr>
+        </table>
+        </tr>
+    </form>
+	{/if}
+</table>
+{/if}
+<br/>
+<br/>
+<form id="managed" action='config.php?type=tool&amp;display=epm_devices' method='POST'>
+<h3><?php echo _('Current Managed Extensions')?></h3>
+
+<button type="button" id="selecter"   style="zoom: 0.8" onclick="togglePhones(true)"  ><i class="info icon-check"       id="toggle_all_phones_on"  title="Click to Select All Phones"  ></i> Select All</button>
+<button type="button" id="deselecter" style="zoom: 0.8" onclick="togglePhones(false)" ><i class="info icon-check-empty" id="toggle_all_phones_off" title="Click to Deselect All Phones"></i> Deselect All</button>
+
+					<table id='devList'
+					data-toolbar="#toolbar-all" data-toggle="table" data-pagination="true" 
+					data-show-columns="true" 
+					data-show-toggle="true" 
+					
+					
+					data-toolbar="#toolbar"
+           data-search="true"
+           data-show-refresh="true"
+
+		   
+		   
+		   data-detail-formatter="device"
+           data-minimum-count-columns="1"
+           data-show-pagination-switch="true"
+           data-pagination="true"
+		   
+		   data-id-field="id"
+           data-page-list="[5,10, 25, 50, 100, ALL]"
+           data-show-footer="false"
+			data-side-pagination="device"		
+			class="table table-striped">		
+					
+						<thead>
+							<tr>
+								<th data-sortable="false"><?php echo _(" ")?></th>
+								<th data-sortable="true"><?php echo _("MAC Address")?></th>
+								<th data-sortable="true"><?php echo _("IPEI")?></th>
+								<th data-sortable="true"><?php echo _("Brand")?></th>
+								<th data-sortable="true"><?php echo _("Model")?></th>
+								<th data-sortable="false"><?php echo _("Line")?></th>
+								<th data-sortable="true"><?php echo _("Extension")?></th>
+								<th data-sortable="true"><?php echo _("Template")?></th>
+								<th ><?php echo _("Actions")?></th>
+
+							</tr>
+						</thead>
+    <tbody>
+	{loop name="list"}
+	
+
+     {loop name="value.line"}
+	<?php $value3 = array_merge($value1, $value2);
+	//print_r($value3);
+	?>
+
+        <tr class="rowGroup{$value.master_id} toggle_all" id="{$value.master_id}" style="display:none;">
+			<td align='center' width="7%"><i class="icon-off icon-large <?php if ($value3['status']['status'] === TRUE) {echo "green";} else { echo "red";}?> alt="<?php echo $value3['status']['ip'];?>:<?php echo $value3['status']['port'];?>"></i><input type="checkbox" class="device" name="selected[]" value="<?php echo $value3['ext'];?>"></td>
+            <td align='center' width='13%'><?php echo $value3['mac'];?></td>
+			<td align='center' width='13%'><?php echo $value3['ipei'];?></td>
+            <td width="13%" align='center'><?php echo $value3['name'];?></td>
+            <td width="10%" align='center'><?php echo $value3['model'];?></td>
+            <td width="10%" align='center'>{$value.line}</td>
+            <td width="19%" align='center'>{$value.ext} - {$value.description}</td>
+            <td align='center' width='15%'><a href="#" onclick="submit_stype('edit',<?php echo $value3['id'];?>);"><?php echo $value3['template_name'];?></a></td>
+			<td align='center' width='6%'><div id="demo"><a href="#" onclick="submit_wtype('edit',<?php echo $value3['id'];?>);"><i class='fa fa-edit' alt='<?php echo _('Edit')?>' title="Edit phone"></i></a></div></td>
+        </tr>
+        {/loop}
+	{/loop}
+
+    </tbody>
+					</table>
+
+
+
+
+
+
+
+
+
+<br/>
+<h4><?php echo _('Selected Phone(s) Options')?></h4>
+<p><button style="width: 100px" type="submit" style="vertical-align:middle" name="button_delete_selected_phones" onclick="managed_options('delete_selected_phones');"><i class="icon-trash red"></i> <?php echo _('Delete')?></button> <?php echo ('Delete Selected Phones')?></p>
+<p><button style="width: 100px" type="submit" name="button_rebuild_selected" onclick="managed_options('rebuild_selected_phones');"><i class="icon-refresh green"></i> <?php echo _('Rebuild')?></button> <?php echo _('Rebuild Configs for Selected Phones')?> (<label><input type="checkbox" name="reboot"><font size="-1">Reboot Phones</font></label>)</p>
+<p><button style="width: 100px" style="vertical-align:middle" type="submit" name="button_update_phones" onclick="managed_options('change_brand');"><i class='blue icon-random'></i> <?php echo _('Update')?></button>
+<?php echo _('Change Selected Phones to')?>&nbsp;
+<select name="brand_list_selected" id="brand_list_selected"><option><?php echo _('Brand')?></option>{loop name="brand_ava"}<option value="{$value.value}" {if condition="isset($value.selected)"}selected{/if}>{$value.text}</option>{/loop}</select> <select name="model_list_selected" id="model_list_selected"><option><?php echo _('Model')?></option></select> (<label><input type="checkbox" name="reboot_change"><font size="-1">Reboot Phones</font></label>)</p>
+</form>
+
+<h4><?php echo _('Global Phone Options')?></h4>
+{if condition="$no_add == FALSE"}
+<p>
+<form id='go' action='config.php?type=tool&amp;display=epm_devices' method='POST'>
+  <button style="width: 100px" type="Submit" name="button_go" id="button_go" onclick="find_devices();"><i class='icon-search blue'></i> <?php echo _('Search')?></button>
+  <?php echo _('Search for new devices in netmask')?>
+  <input name="netmask" type="text" value="{$netmask}">
+  (<label><input name="nmap" type="checkbox" value="1" checked><font size="-1"><?php echo _('Use NMAP')?></font></label>)
+</form>
+</p>
+{/if}
+
+<p><form action='' name='globalmanaged' id='globalmanaged' method='POST'>
+<button style="width: 100px" type='Submit' name='button_rebuild_configs_for_all_phones' onclick="submit_global('rebuild_configs_for_all_phones');"><i class='icon-refresh green'></i> <?php echo _('Rebuild')?></button> <?php echo _('Rebuild Configs for All Phones')?>&nbsp;(<label><input type="checkbox" name="reboot"><font size="-1">Reboot Phones</font></label>)
+</form></p>
+
+<p><form action='' name='globalmanaged2' id='globalmanaged2' method='POST'>
+<button style="width: 100px" type='Submit' name='button_reboot_this_brand' onclick="submit_global2('reboot_brand');"><i class='icon-off red'></i> <?php echo _('Reboot')?></button> <?php echo _('Reboot This Brand')?> <select name="rb_brand">{loop name="brand_ava"}<option value="{$value.value}">{$value.text}</option>{/loop}</select>
+</form></p>
+
+<p><form action='' name='globalmanaged3' id='globalmanaged3' method='POST'>
+<button style="width: 100px" type="submit" name="button_rebuild_reboot" onclick="submit_global3('rebuild_reboot');"><i class="icon-random blue"></i> <?php echo _('Configure')?></button>
+<?php echo _('Reconfigure all')?> (products) <select name="product_select" id="product_select">{loop name="product_list"}<option value="{$value.value}">{$value.text}</option>{/loop}</select> <?php echo _('with')?>
+<label><select name="template_selector" id="template_selector"><option></option></select></label>
+(<label><input type="checkbox" name="reboot"><font size='-1'>Reboot Phones</font></label>)
+</form></p>
+
+<p><form action='' name='globalmanaged4' id='globalmanaged4' method='POST'>
+<button style="width: 100px" type="submit" name="button_rebuild_reboot" onclick="submit_global3('mrebuild_reboot');"><i class="icon-random blue"></i> <?php echo _('Configure')?></button>
+<?php echo _('Reconfigure all')?> (models) <select name="model_select" id="model_select">{loop name="model_list"}<option value="{$value.value}">{$value.text}</option>{/loop}</select> <?php echo _('with')?>
+<label><select name="model_template_selector" id="model_template_selector"><option></option></select></label>
+(<label><input type="checkbox" name="reboot"><font size='-1'>Reboot Phones</font></label>)
+</form></p>
+
+</form>
+
+{if condition="!isset($disable_help)"}
+<script>
+    $("#demo img[title]").tooltip();
+</script>
+{/if}
+<script>
+    $("#collapser").hide();
+</script>
+{include="global_footer"}
+</div>
+</div>
+</div>

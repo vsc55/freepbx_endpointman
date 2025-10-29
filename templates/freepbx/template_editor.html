@@ -1,0 +1,146 @@
+<h2>Template Manager</h2>
+<h3>Template Editor</h3>
+<hr>
+{if condition="isset($in_ari)"}
+<html>
+    <head>
+        <link href="theme/coda-slider-2.0a.css" rel="stylesheet" type="text/css" />
+        <script type="text/javascript" src="theme/js/jquery.easing.1.3.js"></script>
+        <script type="text/javascript" src="theme/js/jquery.coda-slider-3.0.js"></script>
+        <script type="text/javascript">
+            $().ready(function() {
+                $('#coda-slider-9').codaSlider({
+                    dynamicArrows: false,
+                    continuous: false
+                });
+            });
+        </script>
+    </head>
+    <body>
+{else}
+        <link href="assets/endpointman/theme/coda-slider.css" media="screen, projection" rel="stylesheet" type="text/css" />
+
+<script language="javascript" type="text/javascript">
+    $().ready(function() {
+        $('#coda-slider-9').codaSlider({
+            dynamicArrows: false,
+            continuous: false
+        });
+    });
+    function Reload() {
+        window.location.reload();
+    }
+        function popitup(url, name) {
+            newwindow=window.open(url + '&custom=' + document.getElementById('custom').value + '&tid=' + document.getElementById('id').value + '&value=' + document.getElementById('altconfig_'+ name).value + '&rand=' + new Date().getTime(),'name','height=710,width=800,scrollbars=yes,location=no');
+                if (window.focus) {newwindow.focus()}
+                return false;
+        }
+        function popitup2(url, name) {
+            newwindow=window.open(url + '&custom=' + document.getElementById('custom').value + '&tid=' + document.getElementById('id').value + '&value=0_' + name + '&rand=' + new Date().getTime(),'name','height=700,width=800,scrollbars=yes,location=no');
+                if (window.focus) {newwindow.focus()}
+                return false;
+        }
+        function popitup3(url) {
+            newwindow=window.open(url + '&custom=' + document.getElementById('custom').value + '&tid=' + document.getElementById('id').value + '&value=0_' + name + '&rand=' + new Date().getTime(),'name','height=700,width=800,scrollbars=yes,location=no');
+                if (window.focus) {newwindow.focus()}
+                return false;
+        }
+</script>
+	{if condition="$custom != 0"}
+        <strong><?php echo _('Template Name')?>:</strong> <i>Custom Template: Extension {$ext}</i><br />
+        <strong><?php echo _('Product Line')?>:</strong> {$product}<br />
+        <strong><?php echo _('Clone of Model')?>:</strong> {$model}<br />
+	{/if}
+        <form action="config.php?type=tool&display=epm_templates" method="post">
+        {if condition="isset($silent_mode)"}
+        <input name="silent_mode" id="silent_mode" type="hidden" value="1">
+        {/if}
+	{if condition="$custom == 0"}
+        <strong><?php echo _('Template Name')?>:</strong> <i>{$template_name}</i><br />
+        <strong><?php echo _('Product Line')?>:</strong> {$product}<br />
+        <strong><?php echo _('Clone of Model')?>:</strong>
+        <select name="model_list" disabled>
+        {loop name="models_ava"}
+        <option value="{$value.value}" {if condition="!empty($value.selected)"}selected{/if}>{$value.text}</option>
+        {/loop}
+        </select><br/>
+        <strong><?php echo _('Display')?></strong>
+        {if condition="isset($silent_mode)"}
+        <select name="area_list" onchange="window.location.href='config.php?display=epm_config&quietmode=1&handler=file&file=popup.html.php&module=endpointman&pop_type=edit_template&edit_id={$hidden_id}&model_list=126&template_list=0&rand='+ new Date().getTime() + '&maxlines='+this.options[this.selectedIndex].value">
+        {else}
+        <select name="area_list" onchange="window.location.href='config.php?type=tool&edit_template=true&display=epm_templates&custom='+ document.getElementById('custom').value +'&id='+ document.getElementById('id').value +'&maxlines='+this.options[this.selectedIndex].value">
+        {/if}
+        {loop name="area_ava"}
+        <option value="{$value.value}" {if condition="!empty($value.selected)"}selected{/if}>{$value.text}</option>
+        {/loop}
+        </select>
+        <strong><?php echo _('Line settings on this page')?></strong><i><font size="-2"> (Note: This is NOT the number of supported lines on the phone(s))</font></i>
+	{/if}
+        <br />
+        <strong><?php echo _('Edit Global Settings Overrides')?>: </strong> <a href="#" onclick="return popitup3('config.php?type=tool&display=epm_config&amp;quietmode=1&amp;handler=file&amp;file=popup.html.php&amp;module=endpointman&amp;pop_type=global_over')"><?php echo _('Global Settings')?> <i class='icon-pencil blue' ALT='<?php echo _('Edit')?>'></i></a>
+        <br />
+	{if condition="$alt != 0"}
+        {loop name="alt_configs"}
+            <p><strong><?php echo _('Edit File Configurations for:')?></strong>
+            <a href="#" onclick="return popitup('config.php?type=tool&display=epm_config&amp;quietmode=1&amp;handler=file&amp;file=popup.html.php&amp;module=endpointman&amp;pop_type=alt_cfg_edit', '{$value.name}')">
+            <code>{$value.name}</code> <i class='icon-pencil blue' ALT='<?php echo _('Edit')?> {$value.name}'></i></a>
+            <br>
+            <strong><?php echo _('Select Alternative File Configurations for')?> <code>{$value.name}</code></strong>
+            <select name="{$value.name}" id="altconfig_{$value.name}">';
+            <option value="0_{$value.name}">{$value.name} (No Change)</option>';
+            {loop name="value.list"}
+                <option value="{$value.id}_{$value.name}" {if condition="isset($value.selected)"}selected{/if}>{$value.name}</option>';
+            {/loop}
+            </select>
+            <br/>
+        {/loop}
+            <br/>
+	{/if}
+        {loop name="only_configs"}
+            <strong><?php echo _('Edit File Configurations for:')?></strong>&nbsp;
+            <a href="#" onclick="return popitup2('config.php?type=tool&display=epm_config&amp;quietmode=1&amp;handler=file&amp;file=popup.html.php&amp;module=endpointman&amp;pop_type=alt_cfg_edit', '{$value.name}')"><code>{$value.name}</code>&nbsp;<i class='icon-pencil blue' ALT='<?php echo _('Edit')?>'></i></a>
+            <br/>
+        {/loop}
+            <br />
+            {include="variables"}
+            <br />
+            {/if}
+
+            <div class="coda-slider-wrapper">
+                <div class="coda-slider preload" id="coda-slider-9">
+		{loop name="template_editor"}
+                    <div class="panel">
+                        <div class="panel-wrapper">
+                            <h2 class="title">{$value.title}</h2>
+                            <table width="100%" border="0" cellspacing="0" cellpadding="0">
+                               {loop name="value.data"}
+                                 <tr>
+                                 {if condition="$value.type == 'input'"}<td nowrap>{if condition="isset($value.tooltip)"}<a href="#" class="info">{$value.description}<span>{$value.tooltip}</span></a>{else}{$value.description}{/if}:</td><td nowrap><input type='text' name='{$value.key}' id='{$value.key}' value='{$value.value}' size="{if condition="isset($value.max_chars)"}{$value.max_chars}{else}90{/if}">
+                                 {elseif condition="$value.type == 'textarea'"}<td nowrap>{if condition="isset($value.tooltip)"}<a href="#" class="info">{$value.description}<span>{$value.tooltip}</span></a>{else}{$value.description}{/if}:</td><td nowrap><textarea rows="{if condition="isset($value.rows)"}{$value.rows}{else}2{/if}" cols="{if condition="isset($value.cols)"}{$value.cols}{else}20{/if}" name='{$value.key}' id='{$value.key}'>{$value.value}</textarea>
+                                 {elseif condition="$value.type == 'radio'"}<td nowrap>{if condition="isset($value.tooltip)"}<a href="#" class="info">{$value.description}<span>{$value.tooltip}</span></a>{else}{$value.description}{/if}:</td><td nowrap>{loop name="value.data"}[<label>{if condition="isset($value.tooltip)"}<a href="#" class="info">{$value.description}<span>{$value.tooltip}</span></a>{else}{$value.description}{/if}: <input type='radio' name='{$value.key}' id='{$value.key}' value='{$value.value}' {if condition="array_key_exists('checked',$value)"}{$value.checked}{/if}></label>]{/loop}
+                                 {elseif condition="$value.type == 'list'"}<td nowrap>{if condition="isset($value.tooltip)"}<a href="#" class="info">{$value.description}<span>{$value.tooltip}</span></a>{else}{$value.description}{/if}:</td><td nowrap><select name='{$value.key}' id='{$value.key}'>{loop name="value.data"}<option value='{$value.value}' {if condition="array_key_exists('selected',$value)"}{$value.selected}{/if}>{$value.description}</option>{/loop}</select>
+                                 {elseif condition="$value.type == 'checkbox'"}<td nowrap>{if condition="isset($value.tooltip)"}<a href="#" class="info">{$value.description}<span>{$value.tooltip}</span></a>{else}{$value.description}{/if}:</td><td nowrap><input type='checkbox' name='{$value.key}' id='{$value.key}' value='{$value.value}'>
+                                 {elseif condition="$value.type == 'break'"}<td nowrap colspan="2">&nbsp;
+                                 {elseif condition="$value.type == 'group'"}<td nowrap colspan="2"><hr><H3>{if condition="isset($value.tooltip)"}<a href="#" class="info">{$value.description}<span>{$value.tooltip}</span></a>{else}{$value.description}{/if}</H3>
+                                 {elseif condition="$value.type == 'header'"}<td nowrap colspan="2"><strong>{if condition="isset($value.tooltip)"}<a href="#" class="info">{$value.description}<span>{$value.tooltip}</span></a>{else}{$value.description}{/if}</strong>
+                                 {/if}
+                                 {if condition="isset($value.aried)"}<label><input type='checkbox' name='ari_{$value.ari.key}' {if condition="isset($value.ari.checked)"}{$value.ari.checked}{/if}>End User Editable (<a href="http://projects.colsolgrp.net/documents/29" target="_blank">Through ARI Module</a>)</label></td>
+                                 {else}</td>
+                                 {/if}
+                                 </tr>
+                               {/loop}
+                            </table>
+                        </div>
+                    </div>
+		{/loop}
+                </div><!-- .coda-slider -->
+            </div><!-- .coda-slider-wrapper -->
+            <input name="id" id="id" type="hidden" value="{$hidden_id}">
+            <input name="custom" id="custom" type="hidden" value="{$hidden_custom}">
+            {if condition="!isset($in_ari)"}
+            <label>Reboot Phone(s) <input type='checkbox' name='epm_reboot'></label>
+            <br />
+            <button type="submit" name="button_save_template"><i class='icon-save blue'></i> <?php echo _('Save Template');?></button>
+        </form>
+        {include="global_footer"}
+        {/if}

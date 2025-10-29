@@ -52,7 +52,7 @@ if($amp_conf['AMPENGINE'] != 'asterisk')
 
 
 
-include 'includes/functions.inc';
+include FreePBX::Endpointman()->MODULE_PATH.'/includes/functions.inc';
 global $endpoint, $debug;
 $debug = NULL;
 $endpoint = new endpointmanager();

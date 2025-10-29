@@ -1,0 +1,59 @@
+<html>
+<head>
+<title>PBX Endpoint Configuration Manager</title>
+<script type="text/javascript" src="assets/js/jquery-1.7.1.min.js" language="javascript"></script>
+<script type="text/javascript" src="assets/js/jquery-ui-1.8.9.min.js" language="javascript"></script>
+<link href="assets/endpointman/css/main.css" rel="stylesheet" type="text/css">
+<link href="assets/css/mainstyle.css" rel="stylesheet" type="text/css" />
+<link href="assets/css/jquery-ui.css" rel="stylesheet" type="text/css" />
+<link href="//netdna.bootstrapcdn.com/font-awesome/3.2.1/css/font-awesome.css" rel="stylesheet">
+<script language="javascript">
+function Close() {
+	self.close();
+}
+
+function submitform() {
+	$('#myform').append('<input type="hidden" name="button_save" value="Save"/>');
+	document.myform.submit();
+}
+</script>
+</head>
+<body name="specific_pop">
+<div id="page_body">
+	<h1><face="Arial"><center><?php echo _('End Point Configuration Manager')?></center></h1>
+        <hr>
+{if condition="isset($show_error_box)"}
+	{include="message_box"}
+{/if}
+{include="variables"}
+	<form name="myform" id="myform" method="post" action=""><input type="hidden" id="value" name="value" value="{$value}" />
+		<table width="90%" class="alt_table" border="0" cellspacing="0" cellpadding="0">
+{loop name="html_array"}
+			<tr><th align='left' colspan="2"><strong>{$value.title}</strong></th><th>Use Defaults</th></tr>
+	{loop name="value.data"}
+			<tr>
+		{if condition="$value.type == 'input'"}<td nowrap>{if condition="isset($value.tooltip)"}<a href="#" class="info">{$value.description}<span>{$value.tooltip}</span></a>{else}{$value.description}{/if}:</td><td nowrap><input type='text' name='{$value.key}' id='{$value.key}' value='{$value.value}' size="{if condition="isset($value.max_chars)"}{$value.max_chars}{else}90{/if}">
+		{elseif condition="$value.type == 'textarea'"}<td nowrap>{if condition="isset($value.tooltip)"}<a href="#" class="info">{$value.description}<span>{$value.tooltip}</span></a>{else}{$value.description}{/if}:</td><td nowrap><textarea rows="{if condition="isset($value.rows)"}{$value.rows}{else}2{/if}" cols="{if condition="isset($value.cols)"}{$value.cols}{else}20{/if}" name='{$value.key}' id='{$value.key}'>{$value.value}</textarea>
+		{elseif condition="$value.type == 'radio'"}<td nowrap>{if condition="isset($value.tooltip)"}<a href="#" class="info">{$value.description}<span>{$value.tooltip}</span></a>{else}{$value.description}{/if}:</td><td nowrap>{loop name="value.data"}[<label>{if condition="isset($value.tooltip)"}<a href="#" class="info">{$value.description}<span>{$value.tooltip}</span></a>{else}{$value.description}{/if}: <input type='radio' name='{$value.key}' id='{$value.key}' value='{$value.value}' {if condition="array_key_exists('checked',$value)"}{$value.checked}{/if}></label>]{/loop}
+		{elseif condition="$value.type == 'list'"}<td nowrap>{if condition="isset($value.tooltip)"}<a href="#" class="info">{$value.description}<span>{$value.tooltip}</span></a>{else}{$value.description}{/if}:</td><td nowrap><select name='{$value.key}' id='{$value.key}'>{loop name="value.data"}<option value='{$value.value}' {if condition="array_key_exists('selected',$value)"}{$value.selected}{/if}>{$value.description}</option>{/loop}</select>
+		{elseif condition="$value.type == 'checkbox'"}<td nowrap>{if condition="isset($value.tooltip)"}<a href="#" class="info">{$value.description}<span>{$value.tooltip}</span></a>{else}{$value.description}{/if}:</td><td nowrap><input type='checkbox' name='{$value.key}' id='{$value.key}' value='{$value.value}'>
+		{elseif condition="$value.type == 'break'"}<td nowrap colspan="2">&nbsp;
+		{elseif condition="$value.type == 'group'"}<td nowrap colspan="2"><hr><H3>{if condition="isset($value.tooltip)"}<a href="#" class="info">{$value.description}<span>{$value.tooltip}</span></a>{else}{$value.description}{/if}</H3>
+		{elseif condition="$value.type == 'header'"}<td nowrap colspan="2"><strong>{if condition="isset($value.tooltip)"}<a href="#" class="info">{$value.description}<span>{$value.tooltip}</span></a>{else}{$value.description}{/if}</strong>
+		{/if}
+		{if condition="isset($value.aried)"}<label><input type='checkbox' name='ari_{$value.ari.key}' {if condition="isset($value.ari.checked)"}{$value.ari.checked}{/if}>End User Editable (<a href="http://projects.colsolgrp.net/documents/29" target="_blank">Through ARI Module</a>)</label></td>
+		{else}</td>
+		{/if}
+
+			</tr>
+	{/loop}
+{/loop}
+		</table>
+		<p>
+		<button type=submit onClick="javascript:submitform();"><i class="icon-check green"></i> Submit</button>
+		<button type=button onClick="javascript:Close();"><i class="icon-remove red"></i> Cancel</button>
+	</p>
+	</form>
+</div>
+</body>
+</html>
